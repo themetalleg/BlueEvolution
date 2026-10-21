@@ -2,6 +2,11 @@ set(filedeps)
 set(desktopdir ${SHARE_INSTALL_PREFIX}/applications)
 set(blueevolution_desktop_id io.github.themetalleg.BlueEvolution.desktop)
 
+configure_file(blueevolution.in blueevolution @ONLY)
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/blueevolution
+	DESTINATION ${BIN_INSTALL_DIR}
+)
+
 option(WITH_WMCLASS_OVERRIDE "Override WMClass in the .desktop file" "")
 
 if("${WITH_WMCLASS_OVERRIDE}" STREQUAL "" OR "${WITH_WMCLASS_OVERRIDE}" STREQUAL "OFF")

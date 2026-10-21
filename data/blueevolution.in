@@ -1,0 +1,2 @@
+#!/bin/sh
+exec "@BIN_INSTALL_DIR@/evolution" "$@"

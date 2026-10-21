@@ -619,23 +619,6 @@
       "build-commands": [
         "./update-appdata.sh stable"
       ]
-    },
-    {
-      "name": "blueevolution-launcher",
-      "buildsystem": "simple",
-      "sources": [
-        {
-          "type": "script",
-          "dest-filename": "blueevolution",
-          "commands": [
-            "#!/bin/sh",
-            "exec /app/bin/evolution \"$@\""
-          ]
-        }
-      ],
-      "build-commands": [
-        "install -Dm755 blueevolution /app/bin/blueevolution"
-      ]
     }
   ]
 }
