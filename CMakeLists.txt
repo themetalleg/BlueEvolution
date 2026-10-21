@@ -6,8 +6,9 @@ cmake_policy(VERSION 3.15)
 project(evolution
 	VERSION 3.62.1
 	LANGUAGES C)
-set(PROJECT_BUGREPORT "https://gitlab.gnome.org/GNOME/evolution/issues/")
-set(PROJECT_URL "https://gitlab.gnome.org/GNOME/evolution/-/wikis/home")
+set(BLUEEVOLUTION_VERSION "0.1.0-dev" CACHE STRING "BlueEvolution release version")
+set(PROJECT_BUGREPORT "https://github.com/themetalleg/BlueEvolution/issues")
+set(PROJECT_URL "https://github.com/themetalleg/BlueEvolution")
 
 # Base Version: This is for API/version tracking for things like
 # D-Bus server files. This should always be the major/minor of

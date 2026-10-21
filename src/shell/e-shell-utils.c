@@ -295,6 +295,7 @@ e_shell_utils_run_preferences (EShell *shell)
 void
 e_shell_utils_run_help_about (EShell *shell)
 {
+	#define BLUEEVOLUTION_VERSION_STRING BLUEEVOLUTION_VERSION " (Evolution " VERSION ")"
 	#define EVOLUTION_COPYRIGHT \
 		"Copyright \xC2\xA9 1999 - 2008 Novell, Inc. and Others\n" \
 		"Copyright \xC2\xA9 Since 2008 The Evolution Team"
@@ -340,16 +341,16 @@ e_shell_utils_run_help_about (EShell *shell)
 
 	gtk_show_about_dialog (
 		e_shell_get_active_window (shell),
-		"program-name", "Evolution",
-		"version", VERSION VERSION_SUBSTRING " " VERSION_COMMENT,
+		"program-name", "BlueEvolution",
+		"version", BLUEEVOLUTION_VERSION_STRING,
 		"copyright", EVOLUTION_COPYRIGHT,
-		"comments", _("Groupware Suite"),
-		"website", PACKAGE_URL,
-		"website-label", _("Website"),
+		"comments", _("BlueEvolution \xE2\x80\x94 an independent fork of GNOME Evolution with a modern, Outlook-inspired interface."),
+		"website", "https://github.com/themetalleg/BlueEvolution",
+		"website-label", _("BlueEvolution on GitHub"),
 		"authors", authors,
 		"documenters", documenters,
 		"translator-credits", translator_credits,
-		"logo-icon-name", "evolution",
+		"logo-icon-name", "blueevolution",
 		"license-type", GTK_LICENSE_GPL_2_0,
 		NULL);
 }

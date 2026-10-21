@@ -1,5 +1,17 @@
-![icon] Evolution
-============
+# BlueEvolution
+
+BlueEvolution — an independent fork of GNOME Evolution with a modern,
+Outlook-inspired interface.
+
+This repository is based on GNOME Evolution 3.62.1. The current development
+change adds a BlueEvolution-specific Appearance preference; the broader UI
+redesign and distribution work are not complete yet.
+
+See [BLUEEVOLUTION.md](BLUEEVOLUTION.md) for the baseline, implementation
+status, build notes, and known limitations. Upstream Evolution documentation
+follows.
+
+## GNOME Evolution
 
 **Evolution** is the integrated mail, calendar and address book suite from
 the Evolution Team.

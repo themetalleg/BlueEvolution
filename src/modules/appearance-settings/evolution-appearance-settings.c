@@ -26,6 +26,7 @@ struct _EAppearanceSettings {
 	guint watch_handle;
 	GCancellable *cancellable;
 	GDBusProxy *proxy;
+	guint system_color_scheme;
 };
 
 struct _EAppearanceSettingsClass {
@@ -225,11 +226,13 @@ e_appearance_settings_page_new (EPreferencesWindow *window)
 	GtkGrid *grid;
 	GtkWidget *widget, *main_radio, *main_symbolic_icons_radio;
 	GSettings *settings;
+	GSettings *blue_settings;
 	AppearanceData *ad;
 	gchar *filename;
 	gint row = 0;
 
 	settings = e_util_ref_settings ("org.gnome.evolution.shell");
+	blue_settings = e_util_ref_settings ("io.github.themetalleg.BlueEvolution");
 
 	bold = pango_attr_list_new ();
 	pango_attr_list_insert (bold, pango_attr_weight_new (PANGO_WEIGHT_BOLD));
@@ -246,6 +249,21 @@ e_appearance_settings_page_new (EPreferencesWindow *window)
 		"border-width", 12,
 		"row-spacing", 2,
 		NULL);
+
+	widget = gtk_label_new (_("Theme"));
+	g_object_set (widget,
+		"halign", GTK_ALIGN_START,
+		"hexpand", FALSE,
+		NULL);
+	gtk_grid_attach (grid, widget, 0, row, 1, 1);
+
+	widget = gtk_combo_box_text_new ();
+	gtk_combo_box_text_append (GTK_COMBO_BOX_TEXT (widget), "system", _("Follow system"));
+	gtk_combo_box_text_append (GTK_COMBO_BOX_TEXT (widget), "light", _("Light"));
+	gtk_combo_box_text_append (GTK_COMBO_BOX_TEXT (widget), "dark", _("Dark"));
+	g_settings_bind (blue_settings, "appearance-mode", widget, "active-id", G_SETTINGS_BIND_DEFAULT);
+	gtk_grid_attach (grid, widget, 1, row, 1, 1);
+	row++;
 
 	widget = gtk_label_new (_("Title Bar Mode"));
 	g_object_set (widget,
@@ -570,8 +588,44 @@ e_appearance_settings_page_new (EPreferencesWindow *window)
 	gtk_widget_show_all (widget);
 
 	g_clear_object (&settings);
+	g_clear_object (&blue_settings);
 
 	return widget;
+}
+
+static void
+e_appearance_settings_apply_mode (EAppearanceSettings *extension)
+{
+	GSettings *settings;
+	GtkSettings *gtk_settings;
+	gchar *mode;
+	gboolean prefer_dark;
+
+	settings = e_util_ref_settings ("io.github.themetalleg.BlueEvolution");
+	mode = g_settings_get_string (settings, "appearance-mode");
+	gtk_settings = gtk_settings_get_default ();
+	if (g_strcmp0 (mode, "system") == 0 && extension->system_color_scheme == 0) {
+		gtk_settings_reset_property (gtk_settings, "gtk-application-prefer-dark-theme");
+		g_free (mode);
+		g_clear_object (&settings);
+		return;
+	}
+
+	prefer_dark = g_strcmp0 (mode, "dark") == 0 ||
+		(g_strcmp0 (mode, "system") == 0 && extension->system_color_scheme == 1);
+	g_object_set (gtk_settings,
+		"gtk-application-prefer-dark-theme", prefer_dark,
+		NULL);
+	g_free (mode);
+	g_clear_object (&settings);
+}
+
+static void
+on_appearance_mode_changed_cb (GSettings *settings G_GNUC_UNUSED,
+			       const gchar *key G_GNUC_UNUSED,
+			       gpointer user_data)
+{
+	e_appearance_settings_apply_mode (E_APPEARANCE_SETTINGS (user_data));
 }
 
 static void
@@ -589,17 +643,12 @@ on_color_scheme_read (GObject *source_object,
 		GVariant *result_variant_boxed = NULL;
 		GVariant *color_scheme_variant = NULL;
 		guint32 color_scheme;
-		GtkSettings *settings;
 
 		g_variant_get (result_variant, "(v)", &result_variant_boxed);
 		color_scheme_variant = g_variant_get_variant (result_variant_boxed);
 		color_scheme = g_variant_get_uint32 (color_scheme_variant);
-		settings = gtk_settings_get_default ();
-		g_object_set (
-			G_OBJECT (settings),
-			"gtk-application-prefer-dark-theme",
-			color_scheme == 1,
-			NULL);
+		extension->system_color_scheme = color_scheme;
+		e_appearance_settings_apply_mode (extension);
 		g_clear_pointer (&color_scheme_variant, g_variant_unref);
 		g_clear_pointer (&result_variant_boxed, g_variant_unref);
 		g_clear_pointer (&result_variant, g_variant_unref);
@@ -619,20 +668,16 @@ on_desktop_portal_setting_changed (GDBusProxy *self,
 	const gchar *namespace = NULL;
 	const gchar *key = NULL;
 	GVariant *color_scheme_variant = NULL;
+	EAppearanceSettings *extension = E_APPEARANCE_SETTINGS (user_data);
 
 	g_variant_get (parameters, "(&s&sv)", &namespace, &key, &color_scheme_variant);
 	if (!g_strcmp0 (namespace, "org.freedesktop.appearance") &&
 	    !g_strcmp0 (key, "color-scheme")) {
 		guint32 color_scheme;
-		GtkSettings *settings;
 
 		color_scheme = g_variant_get_uint32 (color_scheme_variant);
-		settings = gtk_settings_get_default ();
-		g_object_set (
-			G_OBJECT (settings),
-			"gtk-application-prefer-dark-theme",
-			color_scheme == 1,
-			NULL);
+		extension->system_color_scheme = color_scheme;
+		e_appearance_settings_apply_mode (extension);
 	}
 	g_clear_pointer (&color_scheme_variant, g_variant_unref);
 }
@@ -717,6 +762,7 @@ appearance_settings_constructed (GObject *object)
 	EShellWindow *shell_window;
 	EShell *shell;
 	GtkWidget *preferences_window;
+	GSettings *settings;
 
 	extension = E_APPEARANCE_SETTINGS (object);
 	extensible = e_extension_get_extensible (E_EXTENSION (extension));
@@ -733,6 +779,12 @@ appearance_settings_constructed (GObject *object)
 		NULL,
 		e_appearance_settings_page_new,
 		950);
+
+	settings = e_util_ref_settings ("io.github.themetalleg.BlueEvolution");
+	g_signal_connect_object (settings, "changed::appearance-mode",
+		G_CALLBACK (on_appearance_mode_changed_cb), extension, 0);
+	e_appearance_settings_apply_mode (extension);
+	g_clear_object (&settings);
 
 	extension->watch_handle = g_bus_watch_name (
 		G_BUS_TYPE_SESSION,

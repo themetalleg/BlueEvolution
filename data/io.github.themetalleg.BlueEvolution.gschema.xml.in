@@ -1,0 +1,14 @@
+<schemalist gettext-domain="evolution">
+  <schema id="io.github.themetalleg.BlueEvolution" path="/io/github/themetalleg/BlueEvolution/">
+    <key name="appearance-mode" type="s">
+      <default>'system'</default>
+      <choices>
+        <choice value='system'/>
+        <choice value='light'/>
+        <choice value='dark'/>
+      </choices>
+      <_summary>Application appearance</_summary>
+      <_description>Choose whether BlueEvolution follows the desktop appearance or uses its light or dark appearance.</_description>
+    </key>
+  </schema>
+</schemalist>

@@ -1,5 +1,6 @@
 set(filedeps)
 set(desktopdir ${SHARE_INSTALL_PREFIX}/applications)
+set(blueevolution_desktop_id io.github.themetalleg.BlueEvolution.desktop)
 
 option(WITH_WMCLASS_OVERRIDE "Override WMClass in the .desktop file" "")
 
@@ -15,15 +16,15 @@ if(HAVE_LDAP)
 endif(HAVE_LDAP)
 
 configure_file(org.gnome.Evolution.desktop.in.in
-	org.gnome.Evolution.desktop.in
+	${blueevolution_desktop_id}.in
 	@ONLY
 )
 
-intltool_merge(${CMAKE_CURRENT_BINARY_DIR}/org.gnome.Evolution.desktop.in org.gnome.Evolution.desktop --desktop-style --utf8)
+intltool_merge(${CMAKE_CURRENT_BINARY_DIR}/${blueevolution_desktop_id}.in ${blueevolution_desktop_id} --desktop-style --utf8)
 
-list(APPEND filedeps ${CMAKE_CURRENT_BINARY_DIR}/org.gnome.Evolution.desktop)
+list(APPEND filedeps ${CMAKE_CURRENT_BINARY_DIR}/${blueevolution_desktop_id})
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.gnome.Evolution.desktop
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${blueevolution_desktop_id}
 	DESTINATION ${desktopdir}
 )
 
@@ -45,13 +46,14 @@ if("${APPDATA_RELEASES}" STREQUAL "")
 endif("${APPDATA_RELEASES}" STREQUAL "")
 
 configure_file(org.gnome.Evolution.metainfo.xml.in.in
-	org.gnome.Evolution.metainfo.xml.in
+	io.github.themetalleg.BlueEvolution.metainfo.xml.in
 	@ONLY
 )
 
-add_appdata_file(${CMAKE_CURRENT_BINARY_DIR}/org.gnome.Evolution.metainfo.xml.in org.gnome.Evolution.metainfo.xml)
+add_appdata_file(${CMAKE_CURRENT_BINARY_DIR}/io.github.themetalleg.BlueEvolution.metainfo.xml.in io.github.themetalleg.BlueEvolution.metainfo.xml)
 
 set(SCHEMAS
+	io.github.themetalleg.BlueEvolution.gschema.xml
 	org.gnome.evolution.gschema.xml
 	org.gnome.evolution.addressbook.gschema.xml
 	org.gnome.evolution.calendar.gschema.xml

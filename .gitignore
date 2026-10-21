@@ -3,3 +3,5 @@ _build
 .build
 *.orig
 *.rej
+Screenshots/
+screenshots/

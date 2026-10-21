@@ -15,6 +15,9 @@
 /* Version number of the project */
 #define VERSION "@PROJECT_VERSION@"
 
+/* BlueEvolution's independently versioned release number */
+#define BLUEEVOLUTION_VERSION "@BLUEEVOLUTION_VERSION@"
+
 /* Version substring, for packagers */
 #define VERSION_SUBSTRING "@VERSION_SUBSTRING@"
 

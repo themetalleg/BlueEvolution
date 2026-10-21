@@ -309,7 +309,7 @@ main (gint argc,
 		#endif
 
 		e_passwords_init ();
-		gtk_window_set_default_icon_name ("evolution");
+		gtk_window_set_default_icon_name ("blueevolution");
 
 		#ifdef ENABLE_MAINTAINER_MODE
 		icon_theme = gtk_icon_theme_get_default ();

@@ -1,12 +1,12 @@
 [Desktop Entry]
-_Name=Evolution
+_Name=BlueEvolution
 _GenericName=Groupware Suite
-_X-GNOME-FullName=Evolution Mail and Calendar
-_Comment=Manage your email, contacts and schedule
+_X-GNOME-FullName=BlueEvolution Mail and Calendar
+_Comment=BlueEvolution — an independent fork of GNOME Evolution with a modern, Outlook-inspired interface.
 _Keywords=email;calendar;contact;addressbook;task;
 Actions=new-window;compose;contacts;calendar;mail;memos;tasks;
-Exec=evolution %U
-Icon=evolution
+Exec=blueevolution %U
+Icon=io.github.themetalleg.BlueEvolution
 Terminal=false
 Type=Application
 Categories=GNOME;GTK;Office;Email;Calendar;ContactManagement;X-Red-Hat-Base;
@@ -17,28 +17,28 @@ MimeType=text/calendar;text/x-vcard;text/directory;application/mbox;message/rfc8
 @WMCLASS_OVERRIDE@
 [Desktop Action new-window]
 _Name=New Window
-Exec=evolution -c current
+Exec=blueevolution -c current
 
 [Desktop Action compose]
 _Name=Compose a Message
-Exec=evolution mailto:
+Exec=blueevolution mailto:
 
 [Desktop Action contacts]
 _Name=Contacts
-Exec=evolution -c contacts
+Exec=blueevolution -c contacts
 
 [Desktop Action calendar]
 _Name=Calendar
-Exec=evolution -c calendar
+Exec=blueevolution -c calendar
 
 [Desktop Action mail]
 _Name=Mail
-Exec=evolution -c mail
+Exec=blueevolution -c mail
 
 [Desktop Action memos]
 _Name=Memos
-Exec=evolution -c memos
+Exec=blueevolution -c memos
 
 [Desktop Action tasks]
 _Name=Tasks
-Exec=evolution -c tasks
+Exec=blueevolution -c tasks

@@ -29,7 +29,7 @@ e_shell_window_private_init (EShellWindow *shell_window)
 	 *     of specific shell views, but we need a sane fallback. */
 	g_warn_if_fail (g_snprintf (priv->active_view, sizeof (priv->active_view), "mail") < sizeof (priv->active_view));
 
-	gtk_window_set_title (GTK_WINDOW (shell_window), _("Evolution"));
+	gtk_window_set_title (GTK_WINDOW (shell_window), _("BlueEvolution"));
 }
 
 static gboolean
@@ -379,6 +379,7 @@ e_shell_window_update_title (EShellWindow *shell_window)
 	EShellView *shell_view;
 	const gchar *view_title;
 	const gchar *view_name;
+	gchar *window_title;
 
 	g_return_if_fail (E_IS_SHELL_WINDOW (shell_window));
 
@@ -386,16 +387,10 @@ e_shell_window_update_title (EShellWindow *shell_window)
 	shell_view = e_shell_window_get_shell_view (shell_window, view_name);
 	view_title = e_shell_view_get_title (shell_view);
 
-	if (e_util_get_use_header_bar ()) {
-		gtk_window_set_title (GTK_WINDOW (shell_window), view_title);
-	} else {
-		gchar *window_title;
-
-		/* Translators: This is used for the main window title. */
-		window_title = g_strdup_printf (_("%s — Evolution"), view_title);
-		gtk_window_set_title (GTK_WINDOW (shell_window), window_title);
-		g_free (window_title);
-	}
+	/* Translators: This is used for the main window title. */
+	window_title = g_strdup_printf (_("%s - BlueEvolution"), view_title);
+	gtk_window_set_title (GTK_WINDOW (shell_window), window_title);
+	g_free (window_title);
 }
 
 GMenuModel *
