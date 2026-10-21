@@ -55,6 +55,26 @@ jobs:
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           flatpak install --user --assumeyes flathub org.gnome.Sdk//49 org.gnome.Platform//49
 
+      - name: Import optional Flatpak signing key
+        env:
+          FLATPAK_GPG_PRIVATE_KEY: ${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          if [[ -z "${FLATPAK_GPG_PRIVATE_KEY:-}" ]]; then
+            echo "FLATPAK_GPG_PRIVATE_KEY is not configured; this draft will be unsigned."
+            exit 0
+          fi
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          install -d -m 700 "$GNUPGHOME"
+          printf '%s' "$FLATPAK_GPG_PRIVATE_KEY" | gpg --batch --import
+          key_id=$(gpg --batch --with-colons --list-secret-keys | awk -F: '$1 == "sec" { print $5; exit }')
+          if [[ -z "$key_id" ]]; then
+            echo "The configured FLATPAK_GPG_PRIVATE_KEY contains no secret key." >&2
+            exit 1
+          fi
+          echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
+          echo "FLATPAK_GPG_KEY_ID=$key_id" >> "$GITHUB_ENV"
+
       - name: Build Flatpak and checksum
         env:
           BLUEEVOLUTION_VERSION: ${{ steps.release.outputs.version }}
@@ -66,7 +86,13 @@ jobs:
         env:
           VERSION: ${{ steps.release.outputs.version }}
           BUNDLE: ${{ runner.temp }}/BlueEvolution-${{ steps.release.outputs.version }}-x86_64.flatpak
+          FLATPAK_GPG_PRIVATE_KEY: ${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}
         run: |
+          if [[ -n "${FLATPAK_GPG_PRIVATE_KEY:-}" ]]; then
+            signing_status="The OSTree commit is GPG-signed; the corresponding public key is embedded in the bundle."
+          else
+            signing_status="This draft is unsigned. The SHA-256 file detects corruption but is not a publisher signature."
+          fi
           cat > "$RUNNER_TEMP/release-notes.md" <<EOF
           ## BlueEvolution ${VERSION}
 
@@ -81,7 +107,7 @@ jobs:
 
           ### Integrity and updates
 
-          The accompanying SHA-256 file detects accidental corruption; it is not a publisher signature. This draft is unsigned. Flatpak-managed updates are not yet published; install a newer release bundle manually. GitHub release notes and mail content are never executed by the app.
+          ${signing_status} The accompanying SHA-256 file also detects accidental corruption. Flatpak-managed updates are not yet published; install a newer release bundle manually. GitHub release notes and mail content are never executed by the app.
 
           GitHub provides the corresponding source archives with this release.
           EOF

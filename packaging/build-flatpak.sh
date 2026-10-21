@@ -29,6 +29,15 @@ app_id=$(jq -r '.["app-id"]' "$manifest")
 command=$(jq -r '.command' "$manifest")
 branch=$(jq -r '.branch' "$manifest")
 mapfile -t finish_args < <(jq -r '.["finish-args"][]' "$manifest")
+export_args=()
+bundle_key_args=()
+
+if [[ -n "${FLATPAK_GPG_KEY_ID:-}" ]]; then
+	public_key="$build_root/flatpak-signing-key.gpg"
+	gpg --batch --yes --output "$public_key" --export "$FLATPAK_GPG_KEY_ID"
+	export_args=(--gpg-sign "$FLATPAK_GPG_KEY_ID")
+	bundle_key_args=(--gpg-keys "$public_key")
+fi
 
 flatpak-builder --user --disable-rofiles-fuse --build-only --force-clean \
 	--state-dir="$state_dir" --repo="$repo_dir" "$build_dir" "$manifest"
@@ -40,10 +49,11 @@ flatpak build-finish \
 	--runtime="$runtime/x86_64/$runtime_version" \
 	--sdk="$sdk/x86_64/$runtime_version" \
 	"${finish_args[@]}" "$build_dir"
-flatpak build-export --arch=x86_64 --no-update-summary "$repo_dir" "$build_dir" "$branch"
+flatpak build-export --arch=x86_64 --no-update-summary "${export_args[@]}" "$repo_dir" "$build_dir" "$branch"
 flatpak build-bundle \
 	--arch=x86_64 \
 	--runtime-repo="${FLATPAK_RUNTIME_REPO:-https://dl.flathub.org/repo/flathub.flatpakrepo}" \
+	"${bundle_key_args[@]}" \
 	"$repo_dir" "$bundle" "$app_id" "$branch"
 sha256sum "$bundle" > "$bundle.sha256"
 

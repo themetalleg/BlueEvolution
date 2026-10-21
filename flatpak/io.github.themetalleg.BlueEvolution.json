@@ -223,7 +223,8 @@
       "config-opts": [
         "-Dvapi=false",
         "-Dgoabackend=false",
-        "-Dintrospection=false"
+        "-Dintrospection=false",
+        "-Dlibdir=lib"
       ],
       "cleanup": [
         "/bin"

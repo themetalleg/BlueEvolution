@@ -44,7 +44,7 @@ packaging/build-flatpak.sh
 
 The bundle and checksum are written under `build/flatpak/`. Install a bundle with `flatpak install --user --bundle build/flatpak/BlueEvolution-0.1.0-dev-x86_64.flatpak`; launch it with `flatpak run io.github.themetalleg.BlueEvolution`; remove it with `flatpak uninstall --user io.github.themetalleg.BlueEvolution`. A Flatpak install has its own application data directory and keyfile settings. The upstream Flatpak permissions intentionally continue to share the user's Secret Service/keyring, GPG home, and PKI files for existing authentication and signing integrations. Native non-Flatpak builds are not isolated and are not safe for side-by-side use yet.
 
-The release workflow builds a `.flatpak` bundle and SHA-256 file and creates a draft for tags named `blueevolution-vX.Y.Z`. The checksum detects corruption but does not authenticate the publisher. No signing key is configured, so unsigned drafts must not be described as verified releases. Users currently update by installing a newer bundle manually; no in-app GitHub release checker or unattended installation exists.
+The release workflow builds a `.flatpak` bundle and SHA-256 file and creates a draft for tags named `blueevolution-vX.Y.Z`. To enable signing, create a dedicated GPG release key and add its ASCII-armored private key as the GitHub Actions repository secret `FLATPAK_GPG_PRIVATE_KEY`. The key must be usable noninteractively; restrict repository Actions access and rotate/revoke it if exposed. The workflow signs the OSTree commit and embeds the public key in the bundle. Without this secret, drafts are unsigned; the SHA-256 file detects corruption only and is not publisher authentication. Users currently update by installing a newer bundle manually; no in-app GitHub release checker or unattended installation exists.
 
 The build ran in GNOME's Flatpak SDK with temporary `HOME`/XDG paths and in-memory settings. It did not connect to live mail accounts. The SDK's optional AppStream compose extension is not available from the configured Flathub remote, so package generation uses Flatpak's native build-finish/export commands instead of AppStream composition.
 
@@ -56,10 +56,10 @@ This project retains Evolution's source history, per-file license headers, contr
 
 ## Not Yet Available
 
-- No public BlueEvolution GitHub repository or release exists yet.
+- No stable public release exists yet.
 - No `.deb` package exists; the tested packaging route is Flatpak.
 - Draft prerelease `blueevolution-v0.1.0-dev` is available in [GitHub Releases](https://github.com/themetalleg/BlueEvolution/releases/tag/untagged-0d68cdcb56ca5df51b08). It contains a real x86_64 Flatpak and a SHA-256 integrity file, but is unsigned and must not be treated as publisher-authenticated.
-- The release workflow was manually started for `0.1.1-dev`; its run status is visible in GitHub Actions. The upstream PR workflow requires repository Actions settings to allow `GITHUB_TOKEN` to create pull requests.
+- GitHub Actions has run the draft workflow; two attempts exposed missing dependency pkg-config paths in the hosted build. Explicit `/app/lib` settings are being added before another run. The upstream PR workflow requires repository Actions settings to allow `GITHUB_TOKEN` to create pull requests.
 - No in-app update checker, signed assets, or publisher-authenticated update metadata exists.
 - The Outlook-inspired message-list and reading-pane redesign is not implemented.
 - No screenshots of the customized interface have been captured yet.
