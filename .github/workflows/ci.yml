@@ -55,7 +55,6 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/blueevolution-home" "$RUNNER_TEMP/blueevolution-config" "$RUNNER_TEMP/blueevolution-data" "$RUNNER_TEMP/blueevolution-cache"
           flatpak-builder --run \
-            --state-dir="$RUNNER_TEMP/flatpak-state" \
             --env=HOME="$RUNNER_TEMP/blueevolution-home" \
             --env=XDG_CONFIG_HOME="$RUNNER_TEMP/blueevolution-config" \
             --env=XDG_DATA_HOME="$RUNNER_TEMP/blueevolution-data" \

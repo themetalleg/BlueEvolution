@@ -55,7 +55,9 @@ flatpak build-bundle \
 	--runtime-repo="${FLATPAK_RUNTIME_REPO:-https://dl.flathub.org/repo/flathub.flatpakrepo}" \
 	"${bundle_key_args[@]}" \
 	"$repo_dir" "$bundle" "$app_id" "$branch"
-sha256sum "$bundle" > "$bundle.sha256"
+bundle_dir=$(dirname "$bundle")
+bundle_name=$(basename "$bundle")
+(cd "$bundle_dir" && sha256sum "$bundle_name" > "$bundle_name.sha256")
 
 echo "Bundle: $bundle"
 echo "Checksum: $bundle.sha256"
