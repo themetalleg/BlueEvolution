@@ -243,7 +243,8 @@
         "-Denable-installed-tests=false",
         "-Denable-introspection=false",
         "-Denable-gtk-doc=false",
-        "-Dsoup2=false"
+        "-Dsoup2=false",
+        "-Dlibdir=lib"
       ],
       "cleanup": [
         "/share/gtk-doc"

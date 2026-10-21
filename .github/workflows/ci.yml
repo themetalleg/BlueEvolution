@@ -42,22 +42,25 @@ jobs:
             (.["finish-args"] | any(. == "--env=GSETTINGS_BACKEND=keyfile"))
           ' flatpak/io.github.themetalleg.BlueEvolution.json
 
-      - name: Build without exporting AppStream metadata
+      - name: Build Flatpak bundle
+        env:
+          BLUEEVOLUTION_VERSION: 0.1.0-dev
+          BUILD_ROOT: ${{ runner.temp }}/blueevolution-build
+          FLATPAK_STATE_DIR: ${{ runner.temp }}/flatpak-state
+          BUNDLE_PATH: ${{ runner.temp }}/BlueEvolution-ci-x86_64.flatpak
         run: |
-          flatpak-builder --user --disable-rofiles-fuse --build-only --force-clean \
-            --state-dir="$RUNNER_TEMP/flatpak-builder-state" \
-            "$RUNNER_TEMP/blueevolution-build" \
-            flatpak/io.github.themetalleg.BlueEvolution.json
+          packaging/build-flatpak.sh
 
       - name: Verify executable in isolated profile
         run: |
           mkdir -p "$RUNNER_TEMP/blueevolution-home" "$RUNNER_TEMP/blueevolution-config" "$RUNNER_TEMP/blueevolution-data" "$RUNNER_TEMP/blueevolution-cache"
           flatpak-builder --run \
+            --state-dir="$RUNNER_TEMP/flatpak-state" \
             --env=HOME="$RUNNER_TEMP/blueevolution-home" \
             --env=XDG_CONFIG_HOME="$RUNNER_TEMP/blueevolution-config" \
             --env=XDG_DATA_HOME="$RUNNER_TEMP/blueevolution-data" \
             --env=XDG_CACHE_HOME="$RUNNER_TEMP/blueevolution-cache" \
             --env=GSETTINGS_BACKEND=memory \
-            "$RUNNER_TEMP/blueevolution-build" \
-            flatpak/io.github.themetalleg.BlueEvolution.json \
+            "$RUNNER_TEMP/blueevolution-build/app" \
+            "$RUNNER_TEMP/blueevolution-build/manifest.json" \
             /app/bin/blueevolution --help
