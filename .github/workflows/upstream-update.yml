@@ -73,8 +73,8 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ github.token }}
-          branch: automation/upstream-stable
-          delete-branch: false
+          branch: automation/upstream-stable-v${{ steps.release.outputs.version }}
+          delete-branch: true
           title: "Update upstream Evolution to ${{ steps.release.outputs.version }}"
           body: |
             This review branch merges the latest stable GNOME Evolution release and pins the matching Evolution Data Server and EWS companion releases.
