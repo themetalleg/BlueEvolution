@@ -276,7 +276,8 @@
         "-Denable_vala=false",
         "-Dgtk_doc=false",
         "-Dintrospection=false",
-        "-Dtests=false"
+        "-Dtests=false",
+        "-Dlibdir=lib"
       ],
       "cleanup": [
         "/lib/girepository-1.0",
