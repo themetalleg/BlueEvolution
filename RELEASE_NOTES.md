@@ -1,6 +1,6 @@
 # 0.2.0-beta.1
 
-This is an early, unsigned beta for evaluation, not a production-ready replacement
+This is an early beta for evaluation, not a production-ready replacement
 for GNOME Evolution. Back up existing mail data and use a separate test account.
 
 ## Changes
@@ -18,8 +18,8 @@ for GNOME Evolution. Back up existing mail data and use a separate test account.
 ## Known Limitations
 
 - No in-app updater or published Flatpak update repository; updates are manual.
-- The beta is unsigned unless the release workflow is supplied a signing key.
-  SHA-256 checksums verify integrity, not publisher identity.
+- The integrity section above states whether this release has a publisher
+  signature. SHA-256 checksums verify file integrity, not publisher identity.
 - Authentication, sending/receiving, attachments and server synchronization have
   not been re-certified against live accounts for this beta. CI uses no accounts.
 - Native non-Flatpak installation is not supported for side-by-side use.
