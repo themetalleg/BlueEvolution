@@ -1,14 +1,4 @@
 <eui>
-  <headerbar id='main-headerbar'>
-    <start>
-      <item action='EMailShellView::mail-send-receive' label_priority='999999'/>
-    </start>
-    <end>
-      <item action='mail-reply-sender'/>
-      <item action='EMailReader::mail-reply-group'/>
-      <item action='EMailReader::mail-forward-as-group'/>
-    </end>
-  </headerbar>
   <menu id='main-menu'>
     <submenu action='file-menu'>
       <placeholder id='mail-send-receiver'>
@@ -83,9 +73,12 @@
     </submenu>
   </menu>
   <toolbar id='main-toolbar-with-headerbar'>
-    <placeholder id='toolbar-actions'/>
+    <placeholder id='toolbar-actions'>
+      <item action='EMailShellView::mail-send-receive'/>
+    </placeholder>
     <separator/>
     <placeholder id='mail-toolbar-common'/>
+    <separator/>
     <item action='mail-stop'/>
     <separator/>
     <placeholder id='mail-toolbar-navigation'/>

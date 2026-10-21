@@ -300,9 +300,9 @@ main (gint argc,
 	is_remote = g_application_get_is_remote (G_APPLICATION (shell));
 
 	if (!is_remote) {
-		#ifdef ENABLE_MAINTAINER_MODE
 		GtkIconTheme *icon_theme;
-		#endif
+		GSettings *appearance_settings;
+		gchar *appearance_mode;
 		#ifdef DEVELOPMENT
 		GSettings *settings;
 		gboolean skip_warning_dialog;
@@ -310,11 +310,17 @@ main (gint argc,
 
 		e_passwords_init ();
 		gtk_window_set_default_icon_name ("blueevolution");
+		appearance_settings = e_util_ref_settings ("io.github.themetalleg.BlueEvolution");
+		appearance_mode = g_settings_get_string (appearance_settings, "appearance-mode");
+		if (g_strcmp0 (appearance_mode, "light") == 0 || g_strcmp0 (appearance_mode, "dark") == 0)
+			g_object_set (gtk_settings_get_default (), "gtk-application-prefer-dark-theme",
+				g_strcmp0 (appearance_mode, "dark") == 0, NULL);
+		g_free (appearance_mode);
+		g_object_unref (appearance_settings);
 
-		#ifdef ENABLE_MAINTAINER_MODE
 		icon_theme = gtk_icon_theme_get_default ();
 		gtk_icon_theme_prepend_search_path (icon_theme, EVOLUTION_ICONDIR_IN_PREFIX);
-		#endif
+		g_object_set (gtk_settings_get_default (), "gtk-icon-theme-name", "BlueEvolution", NULL);
 
 		#ifdef DEVELOPMENT
 		settings = e_util_ref_settings ("org.gnome.evolution.shell");

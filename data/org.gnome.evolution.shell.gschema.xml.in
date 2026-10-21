@@ -68,7 +68,7 @@
       <_description>Whether the window buttons should be visible.</_description>
     </key>
     <key name="buttons-style" type="s">
-      <default>'toolbar'</default>
+      <default>'icons'</default>
       <_summary>Window button style</_summary>
       <_description>The style of the window buttons.  Can be “text”, “icons”, “both”, “toolbar”.  If “toolbar” is set, the style of the buttons is determined by the GNOME toolbar setting.</_description>
     </key>
@@ -118,12 +118,12 @@
       <_description>ID or alias of the component to be shown by default at start-up.</_description>
     </key>
     <key name="folder-bar-width" type="i">
-      <default>200</default>
+      <default>280</default>
       <_summary>Default sidebar width</_summary>
       <_description>The default width for the sidebar, in pixels.</_description>
     </key>
     <key name="folder-bar-width-sub" type="i">
-      <default>200</default>
+      <default>280</default>
       <_summary>Default sidebar width</_summary>
       <_description>The default width for the sidebar, in pixels.</_description>
     </key>
@@ -153,7 +153,7 @@
       <_description>When generating file names from custom strings some non-printable or reserved characters are replaced with an underscore. Here's a set of additional characters to be replaced.</_description>
     </key>
     <key name="toolbar-icon-size" enum="org.gnome.evolution.shell.ToolbarIconSize">
-      <default>'default'</default>
+      <default>'large'</default>
       <_summary>Override toolbar icon size</_summary>
       <_description>Controls the toolbar icon size. The 'default' value lets the system/code decide what is the best icon size for the toolbar. Changing the option requires application restart.</_description>
     </key>
@@ -173,7 +173,7 @@
       <_description>When enabled, the markdown editor shows a preview beside the editing text and updates it as the user types.</_description>
     </key>
     <key name="prefer-symbolic-icons" enum="org.gnome.evolution.shell.PreferSymbolicIcons">
-      <default>'auto'</default>
+      <default>'yes'</default>
       <_summary>Whether to prefer symbolic icons</_summary>
       <_description>Controls whether the application should prefer symbolic icons or not. The 'auto' value detects whether the icon theme is using symbolic icons. Note the symbolic icons cannot be used when the icon theme does not provide them. Similarly the color icons cannot be used, when they are not available.</_description>
     </key>

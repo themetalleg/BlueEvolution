@@ -1,0 +1,12 @@
+[Icon Theme]
+Name=BlueEvolution
+Comment=Bootstrap Icons for BlueEvolution
+Directories=scalable/actions
+Inherits=hicolor
+
+[scalable/actions]
+Size=16
+MinSize=8
+MaxSize=256
+Type=Scalable
+Context=Actions

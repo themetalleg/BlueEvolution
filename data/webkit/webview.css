@@ -60,8 +60,38 @@ img.navigable {
 }
 
 iframe:not([id$=".itip"]) {
-  border-width: 1px;
-  border-style: solid;
+  border: 0;
+}
+
+body.blueevolution-message-reader {
+  padding: 24px;
+}
+
+body.blueevolution-message-reader .headers,
+body.blueevolution-message-reader .-e-mail-formatter-header-color {
+  background-color: transparent !important;
+}
+
+body.blueevolution-message-content {
+  padding: 12px 0 24px;
+  line-height: 1.6;
+}
+
+body.blueevolution-message-reader table.header {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+body.blueevolution-message-reader th.header {
+  font-weight: normal;
+  opacity: 0.7;
+  text-align: start;
+}
+
+body.blueevolution-message-reader td.header a {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .part-container {
@@ -104,7 +134,22 @@ a.evo-awrap {
 
 /**** HEADERS ****/
 
+.blueevolution-message-subject {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0 0 20px;
+  overflow-wrap: anywhere;
+}
+
 button.header-collapse {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   width: 18px;
   height: 18px;
   margin: 0;

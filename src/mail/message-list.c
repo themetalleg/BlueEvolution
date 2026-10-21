@@ -19,6 +19,7 @@
 
 #include "e-mail-label-list-store.h"
 #include "e-mail-notes.h"
+#include "e-mail-list-cell.h"
 #include "e-mail-ui-session.h"
 #include "em-utils.h"
 
@@ -2237,7 +2238,8 @@ create_composite_cell (GSettings *mail_settings,
 		       gint col)
 {
 	ECell *cell_vbox, *cell_hbox, *cell_date, *cell_from, *top_cell_tree, *bottom_cell_tree, *cell_attach;
-	ECell *cell_preview;
+	ECell *cell_subject, *cell_preview, *preview_cell_tree;
+	ECell *list_cell;
 	gboolean show_email;
 	gboolean show_subject_above_sender;
 
@@ -2254,11 +2256,9 @@ create_composite_cell (GSettings *mail_settings,
 	/* Exclude the meeting icon. */
 	cell_attach = e_cell_toggle_new (attachment_icons, G_N_ELEMENTS (attachment_icons));
 
-	cell_date = e_cell_date_new (NULL, GTK_JUSTIFY_RIGHT);
-	e_cell_date_set_format_component (E_CELL_DATE (cell_date), "mail");
+	cell_date = e_mail_list_date_cell_new ();
 	g_object_set (
 		cell_date,
-		"bold-column", COL_UNREAD,
 		"italic-column", COL_ITALIC,
 		"color-column", COL_COLOUR,
 		NULL);
@@ -2271,45 +2271,50 @@ create_composite_cell (GSettings *mail_settings,
 		"color-column", COL_COLOUR,
 		NULL);
 
-	cell_preview = e_cell_text_new (NULL, GTK_JUSTIFY_LEFT);
+	cell_subject = e_cell_text_new (NULL, GTK_JUSTIFY_LEFT);
 	g_object_set (
-		cell_preview,
+		cell_subject,
 		"bold-column", COL_UNREAD,
 		"italic-column", COL_ITALIC,
 		"color-column", COL_COLOUR,
-		"is-markup", TRUE,
 		NULL);
 
-	if (show_subject_above_sender)
-		e_cell_hbox_append (E_CELL_HBOX (cell_hbox), cell_preview, COL_SUBJECT_WITH_BODY_PREVIEW, 68);
-	else
-		e_cell_hbox_append (E_CELL_HBOX (cell_hbox), cell_from, col, 68);
-
-	e_cell_hbox_append (E_CELL_HBOX (cell_hbox), cell_attach, COL_ATTACHMENT, 5);
-	e_cell_hbox_append (E_CELL_HBOX (cell_hbox), cell_date, COL_SENT, 27);
-
-	top_cell_tree = e_cell_tree_new (TRUE, FALSE, cell_hbox);
+	cell_preview = e_mail_list_preview_cell_new ();
+	g_object_set (cell_preview, "italic-column", COL_ITALIC, NULL);
 
 	if (show_subject_above_sender)
-		bottom_cell_tree = e_cell_tree_new (TRUE, TRUE, cell_from);
+		e_cell_hbox_append (E_CELL_HBOX (cell_hbox), cell_from, col, 100);
 	else
-		bottom_cell_tree = e_cell_tree_new (TRUE, TRUE, cell_preview);
+		e_cell_hbox_append (E_CELL_HBOX (cell_hbox), cell_subject, COL_SUBJECT, 100);
 
-	e_cell_vbox_append (E_CELL_VBOX (cell_vbox), top_cell_tree, show_subject_above_sender ? COL_SUBJECT_WITH_BODY_PREVIEW : col);
-	e_cell_vbox_append (E_CELL_VBOX (cell_vbox), bottom_cell_tree, show_subject_above_sender ? col : COL_SUBJECT_WITH_BODY_PREVIEW);
+	e_cell_hbox_append_natural (E_CELL_HBOX (cell_hbox), cell_attach, COL_ATTACHMENT);
+	e_cell_hbox_append_natural (E_CELL_HBOX (cell_hbox), cell_date, COL_SENT);
+
+	top_cell_tree = e_cell_tree_new (TRUE, FALSE, show_subject_above_sender ? cell_subject : cell_from);
+
+	bottom_cell_tree = e_cell_tree_new (TRUE, TRUE, cell_hbox);
+
+	preview_cell_tree = e_cell_tree_new (TRUE, TRUE, cell_preview);
+	e_cell_vbox_append (E_CELL_VBOX (cell_vbox), top_cell_tree, show_subject_above_sender ? COL_SUBJECT : col);
+	e_cell_vbox_append (E_CELL_VBOX (cell_vbox), bottom_cell_tree, show_subject_above_sender ? col : COL_SUBJECT);
+	e_cell_vbox_append (E_CELL_VBOX (cell_vbox), preview_cell_tree, COL_BODY_PREVIEW);
 
 	g_object_unref (top_cell_tree);
 	g_object_unref (bottom_cell_tree);
+	g_object_unref (preview_cell_tree);
 	g_object_unref (cell_hbox);
 	g_object_unref (cell_from);
+	g_object_unref (cell_subject);
 	g_object_unref (cell_preview);
 	g_object_unref (cell_attach);
 	g_object_unref (cell_date);
 
-	g_object_set_data (G_OBJECT (cell_vbox), "cell_date", cell_date);
-	g_object_set_data (G_OBJECT (cell_vbox), "cell_from", cell_from);
+	list_cell = e_mail_list_cell_new (cell_vbox, col, COL_SENT);
+	g_object_unref (cell_vbox);
+	g_object_set_data (G_OBJECT (list_cell), "cell_date", cell_date);
+	g_object_set_data (G_OBJECT (list_cell), "cell_from", cell_from);
 
-	return cell_vbox;
+	return list_cell;
 }
 
 static void
@@ -2522,7 +2527,7 @@ message_list_setup_etree (MessageList *message_list)
 
 		item = e_tree_get_item (E_TREE (message_list));
 
-		g_object_set (message_list, "uniform-row-height", TRUE, NULL);
+		g_object_set (message_list, "uniform-row-height", FALSE, NULL);
 		g_object_set_data (
 			G_OBJECT (((GnomeCanvasItem *) item)->canvas),
 			"freeze-cursor", &data);

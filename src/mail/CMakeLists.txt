@@ -63,6 +63,7 @@ set(SOURCES
 	e-mail-config-welcome-page.c
 	e-mail-config-window.c
 	e-mail-display.c
+	e-mail-list-cell.c
 	e-mail-display-popup-extension.c
 	e-mail-folder-create-dialog.c
 	e-mail-folder-sort-order-dialog.c
@@ -315,6 +316,20 @@ target_link_libraries(test-mail-autoconfig
 	${EVOLUTION_DATA_SERVER_LDFLAGS}
 	${GNOME_PLATFORM_LDFLAGS}
 )
+
+add_executable(test-blueevolution-mail-list test-blueevolution-mail-list.c)
+target_compile_options(test-blueevolution-mail-list PRIVATE
+	${EVOLUTION_DATA_SERVER_CFLAGS} ${GNOME_PLATFORM_CFLAGS})
+target_include_directories(test-blueevolution-mail-list PRIVATE
+	${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/src ${CMAKE_SOURCE_DIR}/src
+	${EVOLUTION_DATA_SERVER_INCLUDE_DIRS} ${GNOME_PLATFORM_INCLUDE_DIRS})
+target_link_libraries(test-blueevolution-mail-list
+	evolution-util ${EVOLUTION_DATA_SERVER_LDFLAGS} ${GNOME_PLATFORM_LDFLAGS})
+add_check_test(test-blueevolution-mail-list)
+set_tests_properties(test-blueevolution-mail-list PROPERTIES
+	ENVIRONMENT "GSETTINGS_SCHEMA_DIR=${CMAKE_BINARY_DIR}/data;GSETTINGS_BACKEND=memory;TZ=Europe/Zurich")
+install(TARGETS test-blueevolution-mail-list
+	DESTINATION ${LIBEXEC_INSTALL_DIR}/blueevolution/tests)
 
 add_subdirectory(default)
 add_subdirectory(importers)

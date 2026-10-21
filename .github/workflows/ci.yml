@@ -20,10 +20,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Install build tools
         run: |
           sudo apt-get update
-          sudo apt-get install --yes flatpak flatpak-builder jq libxml2-utils
+          sudo apt-get install --yes flatpak flatpak-builder jq libxml2-utils xvfb xauth
 
       - name: Install GNOME SDK
         run: |
@@ -32,6 +36,7 @@ jobs:
 
       - name: Validate metadata and packaging identity
         run: |
+          node scripts/import-bootstrap-icons.mjs --check
           xmllint --noout \
             data/io.github.themetalleg.BlueEvolution.gschema.xml.in \
             data/org.gnome.Evolution.metainfo.xml.in.in \
@@ -44,7 +49,7 @@ jobs:
 
       - name: Build Flatpak bundle
         env:
-          BLUEEVOLUTION_VERSION: 0.1.0-dev
+          BLUEEVOLUTION_VERSION: 0.2.0-beta.1
           BUILD_ROOT: ${{ runner.temp }}/blueevolution-build
           FLATPAK_STATE_DIR: ${{ runner.temp }}/flatpak-state
           BUNDLE_PATH: ${{ runner.temp }}/BlueEvolution-ci-x86_64.flatpak
@@ -63,3 +68,31 @@ jobs:
             "$RUNNER_TEMP/blueevolution-build/app" \
             "$RUNNER_TEMP/blueevolution-build/manifest.json" \
             /app/bin/blueevolution --help
+
+      - name: Run account-free regression tests
+        run: |
+          mkdir -p "$RUNNER_TEMP/regression-profile"/{home,config,data,cache}
+          xvfb-run --auto-servernum flatpak-builder --run \
+            --socket=x11 --nosocket=wayland --unshare=network \
+            --filesystem="$RUNNER_TEMP/regression-profile" \
+            "$RUNNER_TEMP/blueevolution-build/app" \
+            "$RUNNER_TEMP/blueevolution-build/manifest.json" \
+            /usr/bin/env \
+            HOME="$RUNNER_TEMP/regression-profile/home" \
+            XDG_CONFIG_HOME="$RUNNER_TEMP/regression-profile/config" \
+            XDG_DATA_HOME="$RUNNER_TEMP/regression-profile/data" \
+            XDG_CACHE_HOME="$RUNNER_TEMP/regression-profile/cache" \
+            GDK_BACKEND=x11 GSETTINGS_BACKEND=memory NO_AT_BRIDGE=1 \
+            GSETTINGS_SCHEMA_DIR=/app/share/glib-2.0/schemas \
+            /bin/sh -eu -c '
+              for test in test-blueevolution-mail-list test-ui-action test-blueevolution-appearance; do
+                "/app/libexec/blueevolution/tests/$test"
+              done
+            '
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BlueEvolution-beta-candidate-x86_64
+          path: |
+            ${{ runner.temp }}/BlueEvolution-ci-x86_64.flatpak
+            ${{ runner.temp }}/BlueEvolution-ci-x86_64.flatpak.sha256

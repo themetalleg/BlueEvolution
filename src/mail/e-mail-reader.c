@@ -3350,7 +3350,7 @@ e_mail_reader_init_ui_data_default (EMailReader *self)
 		  action_mail_mark_unimportant_cb, NULL, NULL, NULL },
 
 		{ "mail-mark-unread",
-		  "mail-mark-unread",
+		  "mail-unread-symbolic",
 		  N_("_Unread"),
 		  "<Shift><Control>k",
 		  N_("Mark the selected messages as not having been read"),
@@ -3378,7 +3378,7 @@ e_mail_reader_init_ui_data_default (EMailReader *self)
 		  action_mail_message_open_cb, NULL, NULL, NULL },
 
 		{ "mail-move",
-		  "mail-move",
+		  "folder-symbolic",
 		  N_("_Move to Folder…"),
 		  "<Shift><Control>v",
 		  N_("Move selected messages to another folder"),
@@ -3631,6 +3631,11 @@ e_mail_reader_init_ui_data_default (EMailReader *self)
 		const gchar *action_name;
 		const gchar *secondary_label;
 	} secondary_labels[] = {
+		{ "mail-delete", N_("_Delete") },
+		{ "mail-move", N_("_Move") },
+		{ "mail-reply-sender", N_("_Reply") },
+		{ "EMailReader::mail-reply-group", N_("Group Reply") },
+		{ "EMailReader::mail-forward-as-group", N_("_Forward") },
 		{ "mail-mark-read", N_("Mar_k as Read") },
 		{ "mail-mark-unread", N_("Mark as _Unread") },
 		{ "mail-mark-important", N_("Mark as _Important") },

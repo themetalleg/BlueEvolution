@@ -20,6 +20,8 @@
 
 #define H_PADDING 6
 #define V_PADDING 6
+#define NAV_RAIL_WIDTH 56
+#define NAV_BUTTON_SIZE 44
 
 struct _EShellSwitcherPrivate {
 	GList *proxies;
@@ -76,6 +78,20 @@ shell_switcher_layout_actions (EShellSwitcher *switcher)
 		return allocation.height;
 
 	icons_only = (switcher->priv->style == GTK_TOOLBAR_ICONS);
+	if (icons_only) {
+		y = allocation.y + V_PADDING;
+		for (p = switcher->priv->proxies; p != NULL; p = p->next) {
+			GtkAllocation button_allocation;
+
+			button_allocation.x = allocation.x + H_PADDING;
+			button_allocation.y = y;
+			button_allocation.width = NAV_BUTTON_SIZE;
+			button_allocation.height = NAV_BUTTON_SIZE;
+			gtk_widget_size_allocate (GTK_WIDGET (p->data), &button_allocation);
+			y += NAV_BUTTON_SIZE + V_PADDING;
+		}
+		return allocation.height;
+	}
 
 	/* Figure out the max width and height. */
 	for (p = switcher->priv->proxies; p != NULL; p = p->next) {
@@ -246,6 +262,12 @@ shell_switcher_get_preferred_width (GtkWidget *widget,
 	if (!self->priv->toolbar_visible)
 		return;
 
+	if (self->priv->style == GTK_TOOLBAR_ICONS) {
+		*minimum += NAV_RAIL_WIDTH;
+		*natural += NAV_RAIL_WIDTH;
+		return;
+	}
+
 	for (iter = self->priv->proxies; iter != NULL; iter = iter->next) {
 		GtkWidget *widget_proxy = iter->data;
 		gint child_min, child_nat;
@@ -278,6 +300,15 @@ shell_switcher_get_preferred_height (GtkWidget *switcher_widget,
 
 	if (!self->priv->toolbar_visible)
 		return;
+
+	if (self->priv->style == GTK_TOOLBAR_ICONS) {
+		gint rail_height = g_list_length (self->priv->proxies) *
+			(NAV_BUTTON_SIZE + V_PADDING) + V_PADDING;
+
+		*minimum = MAX (*minimum, rail_height);
+		*natural = MAX (*natural, rail_height);
+		return;
+	}
 
 	for (iter = self->priv->proxies; iter != NULL; iter = iter->next) {
 		GtkWidget *widget = iter->data;
@@ -316,6 +347,10 @@ shell_switcher_size_allocate (GtkWidget *widget,
 	child_allocation.y = allocation->y;
 	child_allocation.width = allocation->width;
 	child_allocation.height = height;
+	if (switcher->priv->toolbar_visible && switcher->priv->style == GTK_TOOLBAR_ICONS) {
+		child_allocation.x += NAV_RAIL_WIDTH;
+		child_allocation.width = MAX (1, child_allocation.width - NAV_RAIL_WIDTH);
+	}
 
 	child = gtk_bin_get_child (GTK_BIN (widget));
 	if (child != NULL)
@@ -413,7 +448,7 @@ shell_switcher_style_changed (EShellSwitcher *switcher,
 static GtkIconSize
 shell_switcher_get_icon_size (GtkToolShell *shell)
 {
-	return GTK_ICON_SIZE_BUTTON;
+	return GTK_ICON_SIZE_LARGE_TOOLBAR;
 }
 
 static GtkOrientation
@@ -530,6 +565,8 @@ e_shell_switcher_init (EShellSwitcher *switcher)
 	switcher->priv = e_shell_switcher_get_instance_private (switcher);
 
 	gtk_widget_set_has_window (GTK_WIDGET (switcher), FALSE);
+	gtk_style_context_add_class (gtk_widget_get_style_context (GTK_WIDGET (switcher)),
+		"blueevolution-navigation");
 
 	e_extensible_load_extensions (E_EXTENSIBLE (switcher));
 }
@@ -638,6 +675,7 @@ e_shell_switcher_add_action (EShellSwitcher *switcher,
 	GSettings *settings;
 	GVariant *target;
 	const gchar *view_name;
+	const gchar *navigation_icon = NULL;
 	gchar **strv;
 	gint ii;
 	gboolean skip = FALSE;
@@ -657,11 +695,24 @@ e_shell_switcher_add_action (EShellSwitcher *switcher,
 		skip = g_strcmp0 (view_name, strv[ii]) == 0;
 	}
 
-	g_clear_pointer (&target, g_variant_unref);
 	g_strfreev (strv);
 
-	if (skip)
+	if (skip) {
+		g_clear_pointer (&target, g_variant_unref);
 		return;
+	}
+
+	if (g_strcmp0 (view_name, "mail") == 0)
+		navigation_icon = "mail-unread-symbolic";
+	else if (g_strcmp0 (view_name, "addressbook") == 0)
+		navigation_icon = "system-users-symbolic";
+	else if (g_strcmp0 (view_name, "calendar") == 0)
+		navigation_icon = "x-office-calendar-symbolic";
+	else if (g_strcmp0 (view_name, "tasks") == 0)
+		navigation_icon = "view-list-symbolic";
+	else if (g_strcmp0 (view_name, "memos") == 0)
+		navigation_icon = "accessories-text-editor-symbolic";
+	g_clear_pointer (&target, g_variant_unref);
 
 	g_object_ref (switch_action);
 	tool_item = gtk_toggle_tool_button_new ();
@@ -672,10 +723,13 @@ e_shell_switcher_add_action (EShellSwitcher *switcher,
 		tool_item, "label",
 		G_BINDING_SYNC_CREATE);
 
-	e_binding_bind_property (
-		switch_action, "icon-name",
-		tool_item, "icon-name",
-		G_BINDING_SYNC_CREATE);
+	if (navigation_icon)
+		gtk_tool_button_set_icon_name (GTK_TOOL_BUTTON (tool_item), navigation_icon);
+	else
+		e_binding_bind_property (
+			switch_action, "icon-name",
+			tool_item, "icon-name",
+			G_BINDING_SYNC_CREATE);
 
 	widget = GTK_WIDGET (tool_item);
 	gtk_widget_set_tooltip_text (widget, e_ui_action_get_tooltip (switch_action));

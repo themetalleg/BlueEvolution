@@ -6,7 +6,7 @@ cmake_policy(VERSION 3.15)
 project(evolution
 	VERSION 3.62.1
 	LANGUAGES C)
-set(BLUEEVOLUTION_VERSION "0.1.0-dev" CACHE STRING "BlueEvolution release version")
+set(BLUEEVOLUTION_VERSION "0.2.0-beta.1" CACHE STRING "BlueEvolution release version")
 set(PROJECT_BUGREPORT "https://github.com/themetalleg/BlueEvolution/issues")
 set(PROJECT_URL "https://github.com/themetalleg/BlueEvolution")
 

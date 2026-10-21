@@ -135,11 +135,21 @@ ecv_draw (ECellView *ecell_view,
 	gint subcell_offset = 0;
 	gint i;
 	gint allotted_width = x2 - x1;
+	gint natural_width = 0;
+
+	for (i = 0; i < hbox_view->subcell_view_count; i++) {
+		if (hbox_view->def_size_cols[i] == 0)
+			natural_width += e_cell_max_width_by_row (
+				hbox_view->subcell_views[i], hbox_view->model_cols[i], view_col, row);
+	}
 
 	for (i = 0; i < hbox_view->subcell_view_count; i++) {
 		/* Now cause our subcells to draw their contents,
 		 * shifted by subcell_offset pixels */
-		gint width = allotted_width * hbox_view->def_size_cols[i] / 100;
+		gint width = hbox_view->def_size_cols[i] == 0 ?
+			e_cell_max_width_by_row (hbox_view->subcell_views[i], hbox_view->model_cols[i], view_col, row) :
+			MAX (0, allotted_width - natural_width) * hbox_view->def_size_cols[i] / 100;
+		width = MIN (width, MAX (0, allotted_width - subcell_offset));
 			/* e_cell_max_width_by_row (hbox_view->subcell_views[i], hbox_view->model_cols[i], view_col, row);
 		if (width < hbox_view->def_size_cols[i])
 			width = hbox_view->def_size_cols[i];
@@ -309,6 +319,14 @@ ECell *
 e_cell_hbox_new (void)
 {
 	return g_object_new (E_TYPE_CELL_HBOX, NULL);
+}
+
+void
+e_cell_hbox_append_natural (ECellHbox *hbox,
+                          ECell *subcell,
+                          gint model_col)
+{
+	e_cell_hbox_append (hbox, subcell, model_col, 0);
 }
 
 void

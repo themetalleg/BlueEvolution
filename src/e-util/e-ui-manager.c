@@ -1641,6 +1641,8 @@ e_ui_manager_create_toolbar_item (EUIManager *self,
 
 	e_ui_manager_add_css_classes (self, GTK_WIDGET (item), e_ui_element_item_get_css_classes (elem));
 	gtk_tool_item_set_is_important (GTK_TOOL_ITEM (item), e_ui_element_item_get_important (elem));
+	g_object_set_data (G_OBJECT (item), "EUIManager::use-secondary-label",
+		GINT_TO_POINTER (e_ui_element_item_get_use_secondary_label (elem)));
 	e_ui_manager_update_item_from_action (self, item, action);
 
 	return G_OBJECT (item);
@@ -2519,6 +2521,10 @@ e_ui_manager_update_item_from_action_impl (EUIManager *self,
 			}
 		}
 	} else if (GTK_IS_TOOL_BUTTON (item)) {
+		if (elem)
+			g_object_set_data (G_OBJECT (item), "EUIManager::use-secondary-label",
+				GINT_TO_POINTER (e_ui_element_item_get_use_secondary_label (elem)));
+
 		gtk_actionable_set_action_name (GTK_ACTIONABLE (item), action_name_full);
 		if (param_type && target)
 			gtk_actionable_set_action_target_value (GTK_ACTIONABLE (item), target);
@@ -2544,7 +2550,8 @@ e_ui_manager_update_item_from_action_impl (EUIManager *self,
 		}
 
 		e_ui_manager_create_named_binding (self, FALSE, "EUIManager::binding:label",
-			action, "label",
+			action, GPOINTER_TO_INT (g_object_get_data (G_OBJECT (item), "EUIManager::use-secondary-label")) &&
+				e_ui_action_get_secondary_label (action) ? "secondary-label" : "label",
 			item, "label");
 
 		e_ui_manager_create_named_binding (self, FALSE, "EUIManager::binding:tooltip",
@@ -2690,7 +2697,7 @@ e_ui_manager_create_item_from_menu_model (EUIManager *self,
 			gtk_tool_item_set_is_important (tool_item, TRUE);
 		}
 
-		e_ui_manager_update_item_from_action (self, tool_item, action);
+		e_ui_manager_update_item_from_action_impl (self, tool_item, action, elem, FALSE);
 		e_ui_action_util_assign_to_widget (action, GTK_WIDGET (tool_item));
 
 		item = G_OBJECT (tool_item);

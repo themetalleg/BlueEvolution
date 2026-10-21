@@ -232,6 +232,7 @@ format_full_headers (EMailFormatter *formatter,
 	gchar *header_sender = NULL, *header_from = NULL, *name;
 	gboolean mail_from_delegate = FALSE;
 	gboolean show_sender_photo;
+	gboolean show_subject_heading = FALSE;
 	gchar *hdr_charset;
 	gchar *evolution_imagesdir;
 	const gchar *direction;
@@ -360,6 +361,31 @@ format_full_headers (EMailFormatter *formatter,
 	g_free (header_sender);
 	g_free (header_from);
 
+	if (!is_rfc822_headers && !formatting_flag && !(mode & E_MAIL_FORMATTER_MODE_ALL_HEADERS)) {
+		gchar **visible_headers;
+
+		visible_headers = e_mail_part_headers_dup_default_headers (E_MAIL_PART_HEADERS (part));
+		show_subject_heading = visible_headers &&
+			g_strv_contains ((const gchar * const *) visible_headers, "Subject");
+		if (show_subject_heading) {
+			const gchar *raw_subject;
+
+			raw_subject = camel_medium_get_header (CAMEL_MEDIUM (mime_part), "Subject");
+			if (raw_subject) {
+				gchar *subject, *escaped_subject;
+
+				subject = camel_header_decode_string (raw_subject, charset);
+				escaped_subject = g_markup_escape_text (subject ? subject : raw_subject, -1);
+				g_string_append_printf (buffer,
+					"<tr><td><h1 class=\"blueevolution-message-subject\">%s</h1></td></tr>",
+					escaped_subject);
+				g_free (escaped_subject);
+				g_free (subject);
+			}
+		}
+		g_strfreev (visible_headers);
+	}
+
 	g_string_append (
 		buffer,
 		"<tr valign=\"top\"><td width=\"100%\">"
@@ -396,6 +422,8 @@ format_full_headers (EMailFormatter *formatter,
 			const gchar *header_value = NULL;
 
 			header_name = default_headers[ii];
+			if (show_subject_heading && g_ascii_strcasecmp (header_name, "Subject") == 0)
+				continue;
 
 			/* X-Evolution-Mailer is a pseudo-header and
 			 * requires special treatment to extract the
@@ -608,7 +636,7 @@ emfe_headers_format (EMailFormatterExtension *extension,
 			buffer,
 			"<td valign=\"top\" width=\"18\" style=\"padding-left: 0px\">"
 			"<button type=\"button\" class=\"header-collapse\" id=\"__evo-collapse-headers-img\">"
-			"<img src=\"gtk-stock://%s?size=%d\" width=\"%dpx\" height=\"%dpx\" class=\"-evo-color-scheme-light\"/>"
+			"<img src=\"gtk-stock://%s?size=%d&amp;color-scheme=light\" width=\"%dpx\" height=\"%dpx\" class=\"-evo-color-scheme-light\"/>"
 			"<img src=\"gtk-stock://%s?size=%d&amp;color-scheme=dark\" width=\"%dpx\" height=\"%dpx\" class=\"-evo-color-scheme-dark\"/>"
 			"</button>"
 			"</td>",

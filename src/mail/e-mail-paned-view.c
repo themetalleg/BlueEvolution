@@ -821,6 +821,8 @@ mail_paned_view_constructed (GObject *object)
 	container = widget;
 
 	widget = message_list_new (session);
+	gtk_style_context_add_class (
+		gtk_widget_get_style_context (widget), "blueevolution-message-list");
 	gtk_container_add (GTK_CONTAINER (container), widget);
 	self->priv->message_list = g_object_ref (widget);
 	gtk_widget_show (widget);
@@ -1058,11 +1060,11 @@ mail_paned_view_update_view_instance (EMailView *view)
 	orientable = GTK_ORIENTABLE (view);
 	orientation = gtk_orientable_get_orientation (orientable);
 	show_vertical_view =
-		!global_view_setting &&
 		(orientation == GTK_ORIENTATION_HORIZONTAL);
 
 	if (show_vertical_view) {
 		const gchar *user_directory;
+		const gchar *wide_view_id;
 		gchar *filename;
 
 		/* Force the view instance into vertical view. */
@@ -1072,15 +1074,17 @@ mail_paned_view_update_view_instance (EMailView *view)
 
 		user_directory = gal_view_collection_get_user_directory (
 			view_collection);
+		wide_view_id = global_view_setting ?
+			(outgoing_folder ? "global_view_sent_setting" : "global_view_setting") : view_id;
 
 		filename = g_strdup_printf (
-			"custom_wide_view-%s.xml", view_id);
+			"custom_wide_view-%s.xml", wide_view_id);
 		view_instance->custom_filename =
 			g_build_filename (user_directory, filename, NULL);
 		g_free (filename);
 
 		filename = g_strdup_printf (
-			"current_wide_view-%s.xml", view_id);
+			"current_wide_view-%s.xml", wide_view_id);
 		view_instance->current_view_filename =
 			g_build_filename (user_directory, filename, NULL);
 		g_free (filename);

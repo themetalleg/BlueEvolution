@@ -8,6 +8,7 @@
 #include "e-mail-shell-backend.h"
 
 #include <glib/gi18n.h>
+#include <glib/gstdio.h>
 
 #include "shell/e-shell.h"
 #include "shell/e-shell-content.h"
@@ -1198,6 +1199,57 @@ mail_shell_backend_constructed (GObject *object)
 }
 
 static void
+mail_shell_backend_seed_demo_messages (EMailSession *session)
+{
+	CamelFolder *inbox;
+	GBytes *demo_messages;
+	GError *error = NULL;
+	gconstpointer contents;
+	gsize length;
+	gchar *directory;
+	gchar *path;
+
+	if (g_strcmp0 (g_getenv ("BLUEEVOLUTION_DEMO_MODE"), "1") != 0)
+		return;
+
+	inbox = e_mail_session_get_local_folder (session, E_MAIL_LOCAL_FOLDER_INBOX);
+	if (!inbox || camel_folder_get_message_count (inbox) > 0)
+		return;
+
+	demo_messages = g_resources_lookup_data (
+		"/org.gnome.Evolution/blueevolution-demo.mbox",
+		G_RESOURCE_LOOKUP_FLAGS_NONE, &error);
+	if (!demo_messages) {
+		g_warning ("Failed to load BlueEvolution demo messages: %s", error->message);
+		g_clear_error (&error);
+		return;
+	}
+
+	contents = g_bytes_get_data (demo_messages, &length);
+	directory = g_build_filename (g_get_user_cache_dir (), "blueevolution-preview", NULL);
+	if (g_mkdir_with_parents (directory, 0700) != 0) {
+		g_warning ("Failed to create BlueEvolution preview cache directory");
+		g_free (directory);
+		g_bytes_unref (demo_messages);
+		return;
+	}
+
+	path = g_build_filename (directory, "demo-mail.mbox", NULL);
+	if (g_file_set_contents (path, contents, length, &error))
+		mail_importer_import_mbox_sync (session, path, NULL, NULL);
+	else {
+		g_warning ("Failed to write BlueEvolution demo messages: %s", error->message);
+		g_clear_error (&error);
+	}
+
+	g_remove (path);
+	g_rmdir (directory);
+	g_free (path);
+	g_free (directory);
+	g_bytes_unref (demo_messages);
+}
+
+static void
 mail_shell_backend_start (EShellBackend *shell_backend)
 {
 	EMailShellBackend *self = E_MAIL_SHELL_BACKEND (shell_backend);
@@ -1210,6 +1262,7 @@ mail_shell_backend_start (EShellBackend *shell_backend)
 	session = e_mail_backend_get_session (backend);
 	account_store = e_mail_ui_session_get_account_store (
 		E_MAIL_UI_SESSION (session));
+	mail_shell_backend_seed_demo_messages (session);
 
 	/* XXX Should we be calling this unconditionally? */
 	vfolder_load_storage (session);

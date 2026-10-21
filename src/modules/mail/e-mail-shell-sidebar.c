@@ -243,6 +243,8 @@ mail_shell_sidebar_constructed (GObject *object)
 		G_CALLBACK (e_shell_view_set_state_dirty), shell_view);
 
 	tree_view = GTK_TREE_VIEW (mail_shell_sidebar->priv->folder_tree);
+	gtk_style_context_add_class (
+		gtk_widget_get_style_context (GTK_WIDGET (tree_view)), "blueevolution-folder-tree");
 	selection = gtk_tree_view_get_selection (tree_view);
 
 	g_signal_connect_swapped (

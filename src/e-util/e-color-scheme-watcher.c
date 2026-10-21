@@ -4,6 +4,7 @@
  */
 
 #include "evolution-config.h"
+#include "e-misc-utils.h"
 
 /* This is partly based on:
  * https://gitlab.gnome.org/GNOME/Initiatives/-/wikis/Dark-Style-Preference
@@ -28,6 +29,7 @@ struct _EColorSchemeWatcher
 
 	GCancellable *cancellable;
 	GDBusProxy *settings_portal;
+	GSettings *appearance_settings;
 	gchar *last_theme_name;
 	EColorScheme color_scheme;
 	gboolean use_fdo_setting;
@@ -155,6 +157,14 @@ e_color_scheme_watcher_sync_theme (EColorSchemeWatcher *self)
 {
 	GtkSettings *gtk_settings = gtk_settings_get_default ();
 	gchar *theme_name = NULL;
+	gchar *mode = g_settings_get_string (self->appearance_settings, "appearance-mode");
+	EColorScheme color_scheme = self->color_scheme;
+
+	if (g_strcmp0 (mode, "light") == 0)
+		color_scheme = E_COLOR_SCHEME_PREFER_LIGHT;
+	else if (g_strcmp0 (mode, "dark") == 0)
+		color_scheme = E_COLOR_SCHEME_PREFER_DARK;
+	g_free (mode);
 
 	g_object_get (gtk_settings,
 		"gtk-theme-name", &theme_name,
@@ -163,7 +173,7 @@ e_color_scheme_watcher_sync_theme (EColorSchemeWatcher *self)
 	if (theme_name) {
 		gboolean update_theme = FALSE;
 
-		if (self->color_scheme == E_COLOR_SCHEME_PREFER_DARK) {
+		if (color_scheme == E_COLOR_SCHEME_PREFER_DARK) {
 			g_object_set (gtk_settings,
 				"gtk-application-prefer-dark-theme", TRUE,
 				NULL);
@@ -180,7 +190,7 @@ e_color_scheme_watcher_sync_theme (EColorSchemeWatcher *self)
 				update_theme = g_strcmp0 (theme_name, "HighContrastInverse") != 0 &&
 					       g_strcmp0 (theme_name, "Breeze-Dark") != 0;
 			}
-		} else if (self->color_scheme == E_COLOR_SCHEME_PREFER_LIGHT) {
+		} else if (color_scheme == E_COLOR_SCHEME_PREFER_LIGHT) {
 			g_object_set (gtk_settings,
 				"gtk-application-prefer-dark-theme", FALSE,
 				NULL);
@@ -211,7 +221,7 @@ e_color_scheme_watcher_sync_theme (EColorSchemeWatcher *self)
 				suffix_cut = TRUE;
 			}
 
-			if (self->color_scheme == E_COLOR_SCHEME_PREFER_DARK &&
+			if (color_scheme == E_COLOR_SCHEME_PREFER_DARK &&
 			    e_color_scheme_watcher_check_theme_exists (theme_name, "dark")) {
 				new_theme_name = g_strconcat (theme_name, "-dark", NULL);
 				/* Verify whether the newly constructed name can be used; otherwise the theme
@@ -237,6 +247,14 @@ e_color_scheme_watcher_sync_theme (EColorSchemeWatcher *self)
 
 		g_free (theme_name);
 	}
+}
+
+static void
+e_color_scheme_watcher_appearance_changed_cb (GSettings *settings,
+											 const gchar *key,
+											 EColorSchemeWatcher *self)
+{
+	e_color_scheme_watcher_sync_theme (self);
 }
 
 static void
@@ -458,6 +476,7 @@ e_color_scheme_watcher_dispose (GObject *object)
 	}
 
 	g_clear_object (&self->settings_portal);
+	g_clear_object (&self->appearance_settings);
 	g_clear_pointer (&self->last_theme_name, g_free);
 
 	G_OBJECT_CLASS (e_color_scheme_watcher_parent_class)->dispose (object);
@@ -477,6 +496,10 @@ e_color_scheme_watcher_init (EColorSchemeWatcher *self)
 {
 	self->color_scheme = E_COLOR_SCHEME_UNKNOWN;
 	self->cancellable = g_cancellable_new ();
+	self->appearance_settings = e_util_ref_settings ("io.github.themetalleg.BlueEvolution");
+	g_signal_connect_object (self->appearance_settings, "changed::appearance-mode",
+		G_CALLBACK (e_color_scheme_watcher_appearance_changed_cb), self, 0);
+	e_color_scheme_watcher_sync_theme (self);
 
 	g_dbus_proxy_new_for_bus (G_BUS_TYPE_SESSION,
 				  G_DBUS_PROXY_FLAGS_NONE,

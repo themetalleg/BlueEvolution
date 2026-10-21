@@ -23,6 +23,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Resolve release version
         id: release
         shell: bash
@@ -51,7 +55,7 @@ jobs:
       - name: Install build tools and GNOME runtime
         run: |
           sudo apt-get update
-          sudo apt-get install --yes flatpak flatpak-builder jq
+          sudo apt-get install --yes flatpak flatpak-builder jq libxml2-utils xvfb xauth
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           flatpak install --user --assumeyes flathub org.gnome.Sdk//49 org.gnome.Platform//49
 
@@ -80,7 +84,34 @@ jobs:
           BLUEEVOLUTION_VERSION: ${{ steps.release.outputs.version }}
           BUILD_ROOT: ${{ runner.temp }}/blueevolution-flatpak
           BUNDLE_PATH: ${{ runner.temp }}/BlueEvolution-${{ steps.release.outputs.version }}-x86_64.flatpak
-        run: packaging/build-flatpak.sh
+        run: |
+          node scripts/import-bootstrap-icons.mjs --check
+          packaging/build-flatpak.sh
+
+      - name: Verify bundle checksum and account-free regressions
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          cd "$RUNNER_TEMP"
+          sha256sum --check "BlueEvolution-${VERSION}-x86_64.flatpak.sha256"
+          mkdir -p "$RUNNER_TEMP/regression-profile"/{home,config,data,cache}
+          xvfb-run --auto-servernum flatpak-builder --run \
+            --socket=x11 --nosocket=wayland --unshare=network \
+            --filesystem="$RUNNER_TEMP/regression-profile" \
+            "$RUNNER_TEMP/blueevolution-flatpak/app" \
+            "$RUNNER_TEMP/blueevolution-flatpak/manifest.json" \
+            /usr/bin/env \
+            HOME="$RUNNER_TEMP/regression-profile/home" \
+            XDG_CONFIG_HOME="$RUNNER_TEMP/regression-profile/config" \
+            XDG_DATA_HOME="$RUNNER_TEMP/regression-profile/data" \
+            XDG_CACHE_HOME="$RUNNER_TEMP/regression-profile/cache" \
+            GDK_BACKEND=x11 GSETTINGS_BACKEND=memory NO_AT_BRIDGE=1 \
+            GSETTINGS_SCHEMA_DIR=/app/share/glib-2.0/schemas \
+            /bin/sh -eu -c '
+              for test in test-blueevolution-mail-list test-ui-action test-blueevolution-appearance; do
+                "/app/libexec/blueevolution/tests/$test"
+              done
+            '
 
       - name: Prepare release notes
         env:
@@ -111,6 +142,10 @@ jobs:
 
           GitHub provides the corresponding source archives with this release.
           EOF
+          if [[ "$VERSION" == "0.2.0-beta.1" ]]; then
+            printf '\n' >> "$RUNNER_TEMP/release-notes.md"
+            cat RELEASE_NOTES.md >> "$RUNNER_TEMP/release-notes.md"
+          fi
 
       - name: Create immutable draft release
         env:

@@ -9,6 +9,40 @@
 #include <e-util/e-util.h>
 
 static void
+test_toolbar_secondary_label (void)
+{
+	const EUIActionEntry entries[] = { { .name = "test-action", .label = "Detailed action" } };
+	EUIManager *manager = e_ui_manager_new (NULL);
+	EUIAction *action;
+	GObject *toolbar;
+	GtkToolItem *compact_item, *ordinary_item;
+	GError *error = NULL;
+
+	e_ui_manager_add_actions (manager, "test", NULL, entries, G_N_ELEMENTS (entries), NULL);
+	action = e_ui_manager_get_action (manager, "test-action");
+	e_ui_action_set_secondary_label (action, "Compact");
+	g_assert_true (e_ui_parser_merge_data (e_ui_manager_get_parser (manager),
+		"<eui><toolbar id='test-toolbar'>"
+		"<item action='test-action' use_secondary_label='true'/>"
+		"<item action='test-action'/>"
+		"</toolbar></eui>", -1, &error));
+	g_assert_no_error (error);
+	toolbar = e_ui_manager_create_item (manager, "test-toolbar");
+	g_object_ref_sink (toolbar);
+	compact_item = gtk_toolbar_get_nth_item (GTK_TOOLBAR (toolbar), 0);
+	ordinary_item = gtk_toolbar_get_nth_item (GTK_TOOLBAR (toolbar), 1);
+	g_assert_cmpstr (gtk_tool_button_get_label (GTK_TOOL_BUTTON (compact_item)), ==, "Compact");
+	g_assert_cmpstr (gtk_tool_button_get_label (GTK_TOOL_BUTTON (ordinary_item)), ==, "Detailed action");
+	e_ui_manager_update_item_from_action (manager, compact_item, action);
+	e_ui_action_set_label (action, "Updated action");
+	g_assert_cmpstr (gtk_tool_button_get_label (GTK_TOOL_BUTTON (compact_item)), ==, "Compact");
+	g_assert_cmpstr (gtk_tool_button_get_label (GTK_TOOL_BUTTON (ordinary_item)), ==, "Updated action");
+	gtk_widget_destroy (GTK_WIDGET (toolbar));
+	g_object_unref (toolbar);
+	g_object_unref (manager);
+}
+
+static void
 test_action_secondary_label (void)
 {
 	EUIAction *action;
@@ -287,6 +321,7 @@ main (gint argc,
 	gtk_init (&argc, &argv);
 
 	g_test_add_func ("/EUIAction/SecondaryLabel", test_action_secondary_label);
+	g_test_add_func ("/EUIManager/ToolbarSecondaryLabel", test_toolbar_secondary_label);
 	g_test_add_func ("/EUIAction/SecondaryLabelProperty", test_action_secondary_label_property);
 	g_test_add_func ("/EUIParser/UseSecondaryLabel", test_parser_use_secondary_label);
 	g_test_add_func ("/EUIParser/UseSecondaryLabelExport", test_parser_use_secondary_label_export);

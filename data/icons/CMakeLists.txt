@@ -878,3 +878,5 @@ set(noinst_icons
 
 add_icon_cache_files("${SHARE_INSTALL_PREFIX}" public_icons)
 add_icon_cache_files("${privdatadir}" private_icons stock_private_icons legacy_private_icons)
+
+add_subdirectory(bootstrap)

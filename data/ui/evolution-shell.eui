@@ -1,8 +1,5 @@
 <eui>
   <headerbar id='main-headerbar'>
-    <start>
-      <item action='EShellView::new-menu' label_priority='999999'/>
-    </start>
     <end>
       <item action='EShellView::menu-button' order='999999'/>
     </end>
@@ -102,6 +99,7 @@
     </submenu>
   </menu>
   <toolbar id='main-toolbar-with-headerbar' primary='true'>
+    <item action='EShellView::new-menu'/>
     <placeholder id='toolbar-actions'/>
   </toolbar>
   <toolbar id='main-toolbar-without-headerbar' primary='true'>

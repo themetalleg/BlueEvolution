@@ -64,6 +64,9 @@ struct _ECellHboxClass {
 
 GType		e_cell_hbox_get_type		(void) G_GNUC_CONST;
 ECell *		e_cell_hbox_new			(void);
+void		e_cell_hbox_append_natural	(ECellHbox *hbox,
+						 ECell *subcell,
+						 gint model_col);
 void		e_cell_hbox_append		(ECellHbox *vbox,
 						 ECell *subcell,
 						 gint model_col,

@@ -71,6 +71,7 @@ process_stock_request_idle_cb (gpointer user_data)
 	GtkIconSet *icon_set = NULL;
 	gssize size = GTK_ICON_SIZE_BUTTON;
 	gboolean dark_color_scheme = FALSE;
+	gboolean explicit_color_scheme = FALSE;
 	const gchar *icon_name;
 	gchar *icon_name_symbolic = NULL;
 	gchar *buffer = NULL, *mime_type = NULL;
@@ -102,6 +103,7 @@ process_stock_request_idle_cb (gpointer user_data)
 		if (value)
 			size = atoi (value);
 		value = g_hash_table_lookup (query, "color-scheme");
+		explicit_color_scheme = value != NULL;
 		dark_color_scheme = value && g_ascii_strcasecmp (value, "dark") == 0;
 
 		g_hash_table_destroy (query);
@@ -117,8 +119,15 @@ process_stock_request_idle_cb (gpointer user_data)
 
 	if (!gtk_style_context_lookup_color (context, "theme_fg_color", &theme_fg))
 		gdk_rgba_parse (&theme_fg, E_UTILS_DEFAULT_THEME_FG_COLOR);
+	if (explicit_color_scheme)
+		gdk_rgba_parse (&theme_fg, dark_color_scheme ? "#f4f4f4" : "#242424");
 
 	icon_name = g_uri_get_host (guri);
+	if (g_strcmp0 (icon_name, "x-evolution-pan-down") == 0)
+		icon_name = "pan-down-symbolic";
+	else if (g_strcmp0 (icon_name, "x-evolution-pan-end") == 0)
+		icon_name = gtk_widget_get_default_direction () == GTK_TEXT_DIR_RTL ?
+			"pan-start-symbolic" : "pan-end-symbolic";
 	if (e_icon_factory_get_prefer_symbolic_icons () && !g_str_has_suffix (icon_name, "-symbolic"))
 		icon_name_symbolic = g_strconcat (icon_name, "-symbolic", NULL);
 

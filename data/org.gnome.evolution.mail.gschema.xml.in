@@ -476,17 +476,17 @@
       <_summary>Whether message headers are collapsed in the user interface</_summary>
     </key>
     <key name="hpaned-size" type="i">
-      <default>450</default>
+      <default>1600000</default>
       <_summary>Width of the message-list pane</_summary>
       <_description>Width of the message-list pane.</_description>
     </key>
     <key name="hpaned-size-sub" type="i">
-      <default>450</default>
+      <default>1600000</default>
       <_summary>Width of the message-list pane</_summary>
       <_description>Width of the message-list pane.</_description>
     </key>
     <key name="layout" type="i">
-      <default>0</default>
+      <default>1</default>
       <_summary>Layout style</_summary>
       <_description>The layout style determines where to place the preview pane in relation to the message list.  “0” (Classic View) places the preview pane below the message list.  “1” (Vertical View) places the preview pane next to the message list.</_description>
     </key>

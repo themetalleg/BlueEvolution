@@ -7,7 +7,7 @@ build_root="${BUILD_ROOT:-$repo_root/build/flatpak}"
 build_dir="$build_root/app"
 state_dir="${FLATPAK_STATE_DIR:-$build_root/state}"
 repo_dir="$build_root/repo"
-version="${BLUEEVOLUTION_VERSION:-0.1.0-dev}"
+version="${BLUEEVOLUTION_VERSION:-0.2.0-beta.1}"
 bundle="${BUNDLE_PATH:-$build_root/BlueEvolution-${version}-x86_64.flatpak}"
 manifest="$build_root/manifest.json"
 
@@ -21,6 +21,14 @@ jq --arg source "$repo_root" --arg version "$version" '
   (.modules[] | select(.name == "evolution") | .sources[0].path) = $source |
   (.modules[] | select(.name == "evolution") | .["config-opts"]) += ["-DBLUEEVOLUTION_VERSION=" + $version]
 ' "$manifest_source" > "$manifest"
+
+builder_version=$(flatpak-builder --version | sed -E 's/.*[^0-9]([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+if [[ "$(printf '%s\n' "$builder_version" 1.4.8 | sort -V | head -n 1)" == "1.4.8" ]]; then
+	jq '
+	  (.modules[] | select(.name == "geocode-glib" or .name == "gnome-online-accounts" or .name == "libgweather4") | .["config-opts"]) |= map(select(. != "-Dlibdir=lib"))
+	' "$manifest" > "$manifest.tmp"
+	mv "$manifest.tmp" "$manifest"
+fi
 
 runtime=$(jq -r '.runtime' "$manifest")
 runtime_version=$(jq -r '.["runtime-version"]' "$manifest")

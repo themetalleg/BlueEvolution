@@ -24,6 +24,8 @@ e_shell_window_private_init (EShellWindow *shell_window)
 	priv->loaded_views = loaded_views;
 	priv->signal_handler_ids = signal_handler_ids;
 	priv->action_groups = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+	gtk_style_context_add_class (
+		gtk_widget_get_style_context (GTK_WIDGET (shell_window)), "blueevolution");
 
 	/* XXX This kind of violates the shell window being unaware
 	 *     of specific shell views, but we need a sane fallback. */

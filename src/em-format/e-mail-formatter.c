@@ -1147,7 +1147,7 @@ e_mail_formatter_get_sub_html_header (EMailFormatter *formatter)
 		" table th { font-weight: bold; }\n"
 		"</style>\n"
 		"</head>"
-		"<body class=\"-e-web-view-background-color -e-web-view-text-color\">";
+		"<body class=\"blueevolution-message-content -e-web-view-background-color -e-web-view-text-color\">";
 }
 
 gchar *
@@ -1166,7 +1166,7 @@ e_mail_formatter_get_html_header (EMailFormatter *formatter)
 		" table th { font-weight: bold; }\n"
 		"</style>\n"
 		"</head>"
-		"<body class=\"-e-mail-formatter-body-color "
+		"<body class=\"blueevolution-message-reader "
 		"-e-web-view-background-color -e-web-view-text-color\">");
 }
 

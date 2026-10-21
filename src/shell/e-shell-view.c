@@ -1517,6 +1517,8 @@ shell_view_ui_manager_create_item_cb (EUIManager *manager,
 			tool_item = e_menu_tool_button_new (C_("toolbar-button", "New"), manager);
 			e_menu_tool_button_set_fallback_action (E_MENU_TOOL_BUTTON (tool_item), fallback_action);
 			gtk_tool_item_set_is_important (tool_item, TRUE);
+			gtk_style_context_add_class (gtk_widget_get_style_context (GTK_WIDGET (tool_item)),
+				"blueevolution-new-mail");
 			gtk_menu_tool_button_set_menu (GTK_MENU_TOOL_BUTTON (tool_item), menu);
 			gtk_widget_set_visible (GTK_WIDGET (tool_item), TRUE);
 
@@ -2188,6 +2190,25 @@ shell_view_constructed (GObject *object)
 	if (e_util_get_use_header_bar ()) {
 		ui_item = e_ui_manager_create_item (shell_view->priv->ui_manager, "main-headerbar");
 		shell_view->priv->headerbar = g_object_ref_sink (GTK_WIDGET (ui_item));
+		if (GTK_IS_HEADER_BAR (shell_view->priv->headerbar) &&
+		    E_IS_SHELL_SEARCHBAR (shell_view->priv->searchbar)) {
+			GtkWidget *search_box;
+			GtkWidget *brand;
+
+			search_box = e_shell_searchbar_get_search_box (E_SHELL_SEARCHBAR (shell_view->priv->searchbar));
+			g_object_ref (search_box);
+			g_object_set_data_full (G_OBJECT (search_box), "blueevolution-searchbar-owner",
+				g_object_ref (shell_view->priv->searchbar), g_object_unref);
+			gtk_container_remove (GTK_CONTAINER (gtk_widget_get_parent (search_box)), search_box);
+			gtk_widget_set_size_request (search_box, SIMPLE_SEARCHBAR_WIDTH, -1);
+			gtk_header_bar_set_custom_title (GTK_HEADER_BAR (shell_view->priv->headerbar), search_box);
+			g_object_unref (search_box);
+
+			brand = gtk_label_new ("BlueEvolution");
+			gtk_style_context_add_class (gtk_widget_get_style_context (brand), "blueevolution-brand");
+			gtk_header_bar_pack_start (GTK_HEADER_BAR (shell_view->priv->headerbar), brand);
+			gtk_widget_show (brand);
+		}
 
 		e_ui_customizer_register (customizer, "main-headerbar", NULL);
 
@@ -2198,6 +2219,8 @@ shell_view_constructed (GObject *object)
 
 	ui_item = e_ui_manager_create_item (shell_view->priv->ui_manager, toolbar_id);
 	widget = GTK_WIDGET (ui_item);
+	if (GTK_IS_TOOLBAR (widget))
+		gtk_toolbar_set_style (GTK_TOOLBAR (widget), GTK_TOOLBAR_BOTH_HORIZ);
 	gtk_box_pack_start (GTK_BOX (shell_view), widget, FALSE, FALSE, 0);
 
 	e_ui_customizer_register (customizer, toolbar_id, NULL);

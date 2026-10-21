@@ -45,6 +45,8 @@ G_DEFINE_TYPE_WITH_CODE (EShellWindow, e_shell_window, GTK_TYPE_WINDOW,
 	G_IMPLEMENT_INTERFACE (E_TYPE_EXTENSIBLE, NULL))
 
 static const char *css =
+"@define-color theme_selected_bg_color mix(@theme_base_color, #0078d4, 0.18);\n"
+"@define-color theme_selected_fg_color @theme_text_color;\n"
 ".table-header {\
 	border-bottom: 1px solid @borders;\
 }\
@@ -69,6 +71,121 @@ toolbar {\
 }\
 #e-attachment-bar {\
 	border-top: 1px solid @borders;\
+}\
+window.blueevolution #evo-titlebar-box {\
+	background-color: #0078d4;\
+	color: #f4fbff;\
+}\
+window.blueevolution #evo-titlebar-box headerbar {\
+	background-image: none;\
+	background-color: #0078d4;\
+	color: #f4fbff;\
+	border: none;\
+	min-height: 48px;\
+}\
+window.blueevolution #evo-titlebar-box button {\
+	color: #f4fbff;\
+	background-image: none;\
+	background-color: transparent;\
+	box-shadow: none;\
+	border-color: transparent;\
+}\
+window.blueevolution #evo-titlebar-box button:hover {\
+	background-color: alpha(white, 0.15);\
+}\
+window.blueevolution #evo-titlebar-box button.titlebutton {\
+	min-width: 28px;\
+	min-height: 28px;\
+	padding: 4px;\
+	opacity: 1;\
+}\
+window.blueevolution #evo-titlebar-box button.titlebutton image {\
+	color: #f4fbff;\
+	opacity: 1;\
+	-gtk-icon-style: symbolic;\
+	-gtk-icon-shadow: none;\
+}\
+window.blueevolution #evo-titlebar-box .blueevolution-brand {\
+	font-size: 16px;\
+	font-weight: bold;\
+	margin: 0 16px;\
+}\
+window.blueevolution #evo-titlebar-box entry {\
+	background-color: #e6f2fc;\
+	color: #182735;\
+	border-color: transparent;\
+	box-shadow: none;\
+}\
+window.blueevolution #evo-titlebar-box entry image {\
+	color: #425b70;\
+}\
+window.blueevolution toolbar {\
+	padding: 8px 12px;\
+	background-color: @theme_base_color;\
+	border-bottom: 1px solid @borders;\
+}\
+window.blueevolution toolbar button {\
+	min-height: 28px;\
+	border-radius: 4px;\
+}\
+window.blueevolution toolbar .blueevolution-new-mail button {\
+	background-image: none;\
+	background-color: #0078d4;\
+	color: white;\
+	border-color: #0078d4;\
+	box-shadow: none;\
+}\
+window.blueevolution .blueevolution-navigation {\
+	background-color: mix(@theme_bg_color, #0078d4, 0.04);\
+}\
+window.blueevolution .blueevolution-navigation toolbutton button {\
+	border: none;\
+	border-radius: 4px;\
+	box-shadow: none;\
+	background-image: none;\
+	background-color: transparent;\
+	color: @theme_text_color;\
+}\
+window.blueevolution .blueevolution-navigation toolbutton button:checked {\
+	background-color: @theme_selected_bg_color;\
+	color: #0078d4;\
+	box-shadow: inset 3px 0 #0078d4;\
+}\
+window.blueevolution .sidebar {\
+	background-color: @theme_bg_color;\
+	border-right: 1px solid @borders;\
+}\
+window.blueevolution .sidebar .header-box {\
+	padding: 10px 12px;\
+}\
+window.blueevolution treeview.view.blueevolution-folder-tree {\
+	background-color: @theme_bg_color;\
+	color: @theme_text_color;\
+	-GtkTreeView-vertical-separator: 12;\
+	-GtkTreeView-horizontal-separator: 8;\
+}\
+window.blueevolution treeview.view:selected {\
+	background-color: @theme_selected_bg_color;\
+	color: @theme_selected_fg_color;\
+}\
+window.blueevolution .blueevolution-message-list {\
+	background-color: @theme_base_color;\
+	color: @theme_text_color;\
+	-ETree-vertical-spacing: 5;\
+}\
+window.blueevolution paned > separator {\
+	min-width: 1px;\
+	min-height: 1px;\
+	padding: 0;\
+	margin: 0;\
+	border: none;\
+	background-image: none;\
+	box-shadow: none;\
+	background-color: @borders;\
+}\
+window.blueevolution entry {\
+	min-height: 28px;\
+	border-radius: 4px;\
 }\
 ";
 

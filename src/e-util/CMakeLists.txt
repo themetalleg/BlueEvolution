@@ -857,8 +857,17 @@ add_private_programs_simple(
 add_test_programs(
 	test-markdown
 	test-ui-action
+	test-blueevolution-appearance
 	test-web-view-jsc
 )
+
+target_compile_definitions(test-blueevolution-appearance PRIVATE
+	-DEVOLUTION_DATADIR="${SHARE_INSTALL_PREFIX}"
+	-DEVOLUTION_UIDIR="${uidir}")
+set_tests_properties(test-ui-action test-blueevolution-appearance PROPERTIES
+	ENVIRONMENT "GSETTINGS_SCHEMA_DIR=${CMAKE_BINARY_DIR}/data;GSETTINGS_BACKEND=memory;NO_AT_BRIDGE=1")
+install(TARGETS test-ui-action test-blueevolution-appearance
+	DESTINATION ${LIBEXEC_INSTALL_DIR}/blueevolution/tests)
 
 add_private_program(test-html-editor-units
 	test-html-editor-units.c

@@ -138,12 +138,16 @@
     <placeholder id='toolbar-actions'/>
     <separator/>
     <placeholder id='mail-toolbar-common'>
-      <item action='mail-print'/>
-      <item action='mail-delete'/>
+      <item action='mail-delete' important='true' use_secondary_label='true'/>
+      <item action='mail-archive' important='true'/>
+      <item action='mail-move' important='true' use_secondary_label='true'/>
+      <separator/>
+      <item action='mail-reply-sender' important='true' use_secondary_label='true'/>
+      <item action='EMailReader::mail-reply-group' important='true' use_secondary_label='true'/>
+      <item action='EMailReader::mail-forward-as-group' important='true' use_secondary_label='true'/>
+      <separator/>
+      <item action='mail-mark-unread' important='true'/>
       <item action='mail-mark-junk'/>
-      <item action='mail-mark-notjunk'/>
-      <item action='mail-archive'/>
-      <item action='mail-load-images'/>
     </placeholder>
     <separator/>
     <placeholder id='mail-toolbar-navigation'>

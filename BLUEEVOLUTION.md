@@ -2,7 +2,7 @@
 
 BlueEvolution is an independent fork of [GNOME Evolution](https://gitlab.gnome.org/GNOME/evolution) with the goal of a modern, Outlook-inspired Linux interface. It is not affiliated with Microsoft or GNOME.
 
-Public repository: [themetalleg/BlueEvolution](https://github.com/themetalleg/BlueEvolution). The first release is a draft prerelease, not a stable release.
+Public repository: [themetalleg/BlueEvolution](https://github.com/themetalleg/BlueEvolution). The next candidate is `0.2.0-beta.1`; it remains a prerelease, not a stable release. See [RELEASE_NOTES.md](RELEASE_NOTES.md) for changes and known limitations.
 
 ## Current Status
 
@@ -14,9 +14,13 @@ This is an early development branch, not a finished product. The upstream mail, 
 - The main window, About dialog, desktop entry, application metadata, and icon use BlueEvolution branding. The About dialog retains upstream copyright and contributor attribution and shows the fork and Evolution versions separately.
 - The Flatpak application ID and EDS D-Bus service prefix are BlueEvolution-specific. Its application settings use the keyfile backend, and the upstream DConf migration mapping is not enabled.
 - A Flatpak build/export script, build CI workflow, draft release workflow, and scheduled upstream stable-release PR workflow are present.
-- HTML email bodies are not restyled.
+- An Outlook-inspired three-pane layout, blue search header, command strip and icon navigation are implemented.
+- The message list includes sender initials, date sections, measured date widths and muted previews. It remains experimental with large and threaded folders.
+- Bootstrap Icons 1.13.1 are vendored with their MIT license and mapped through an application-private theme; the desktop icon theme, application branding, photos and message images are preserved.
+- Reader backgrounds and standalone viewers follow the app's selected appearance. HTML rendering has changed and still needs broader real-world testing.
+- Account-free CMake regression targets cover date widths, calendar/DST boundaries, UI definitions, toolbar labels, theme precedence and Bootstrap icon lookup. CI and release builds execute these checks in an isolated profile.
 
-The Outlook-inspired message list and reading-pane redesign, an in-app GitHub update checker, signed update metadata, and a published release are not implemented. The native unbundled build still uses upstream data-service identity; do not install it over Evolution or connect it to live accounts.
+An in-app GitHub update checker, signed update metadata and a stable release are not implemented. Live-account workflows have not been re-certified for this beta. The native unbundled build still uses upstream data-service identity; do not install it over Evolution or connect it to live accounts.
 
 ## Upstream Baseline
 
@@ -44,9 +48,9 @@ flatpak install --user --assumeyes flathub org.gnome.Sdk//49 org.gnome.Platform/
 packaging/build-flatpak.sh
 ```
 
-The bundle and checksum are written under `build/flatpak/`. Install a bundle with `flatpak install --user --bundle build/flatpak/BlueEvolution-0.1.0-dev-x86_64.flatpak`; launch it with `flatpak run io.github.themetalleg.BlueEvolution`; remove it with `flatpak uninstall --user io.github.themetalleg.BlueEvolution`. A Flatpak install has its own application data directory and keyfile settings. The upstream Flatpak permissions intentionally continue to share the user's Secret Service/keyring, GPG home, and PKI files for existing authentication and signing integrations. Native non-Flatpak builds are not isolated and are not safe for side-by-side use yet.
+The bundle and checksum are written under `build/flatpak/`. Install a bundle with `flatpak install --user --bundle build/flatpak/BlueEvolution-0.2.0-beta.1-x86_64.flatpak`; launch it with `flatpak run io.github.themetalleg.BlueEvolution`; remove it with `flatpak uninstall --user io.github.themetalleg.BlueEvolution`. A Flatpak install has its own application data directory and keyfile settings. The upstream Flatpak permissions intentionally continue to share the user's Secret Service/keyring, GPG home, and PKI files for existing authentication and signing integrations. Native non-Flatpak builds are not isolated and are not safe for side-by-side use yet.
 
-In VS Code, use **Terminal > Run Task** and choose `BlueEvolution: Preview (follow system)`, `BlueEvolution: Preview (light)`, or `BlueEvolution: Preview (dark)` to launch the already-installed app. These preview tasks do not build; they run offline with a separate profile at `~/.cache/blueevolution-vscode-profile` and deny access to the host GPG/PKI files and Secret Service. Run `BlueEvolution: Build and install dev Flatpak` only when you intentionally want to rebuild and install the development bundle.
+In VS Code, use **Terminal > Run Task** and choose `BlueEvolution: Preview (follow system)`, `BlueEvolution: Preview (light)`, or `BlueEvolution: Preview (dark)` to launch the already-installed app. These preview tasks do not build; they run offline with a separate profile at `~/.cache/blueevolution-vscode-profile` and deny access to the host GPG/PKI files and Secret Service. The preview seeds five synthetic messages with reserved `.invalid` addresses into its local Inbox when empty; regular app launches do not seed demo mail. Run `BlueEvolution: Build and install dev Flatpak` only when you intentionally want to rebuild and install the development bundle.
 
 The release workflow builds a `.flatpak` bundle and SHA-256 file and creates a draft for tags named `blueevolution-vX.Y.Z`. To enable signing, create a dedicated CI-only GPG signing key in a separate GPG home, make it usable noninteractively, and export its ASCII-armored private key to a protected local file. Add it without displaying the value using:
 
@@ -71,5 +75,6 @@ This project retains Evolution's source history, per-file license headers, contr
 - Latest draft prerelease `blueevolution-v0.1.2-dev` is available in [GitHub Releases](https://github.com/themetalleg/BlueEvolution/releases/tag/untagged-d4a5a0f3f331140495a5). It contains a real x86_64 Flatpak and a SHA-256 integrity file; the downloaded bundle passed checksum verification. The assets are unsigned because no signing secret is configured.
 - Four earlier hosted builds exposed library-path mismatches for geocode-glib, GNOME Online Accounts, libgweather, and cmark. Those dependencies are now pinned to `/app/lib`; the 0.1.2 draft build completed successfully, and CI passed the bundle build plus isolated launcher smoke test on `main`. The upstream PR workflow requires repository Actions settings to allow `GITHUB_TOKEN` to create pull requests.
 - No in-app update checker or publisher-authenticated update metadata exists. Optional Flatpak commit signing is implemented but not configured.
-- The Outlook-inspired message-list and reading-pane redesign is not implemented.
-- No screenshots of the customized interface have been captured yet.
+- The redesigned message list and reader are implemented but not production-certified.
+- Customized Light/Dark, Calendar, Contacts and standalone-reader screenshots have been captured using only synthetic data. Review images remain in ignored `build/ui-review/`; the private/reference `Screenshots/` directory is never included in releases.
+- The current beta must pass CI on its committed source before a new draft is created. Existing `0.1.2-dev` assets do not contain the new interface.

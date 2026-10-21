@@ -724,6 +724,17 @@ e_mail_shell_view_private_constructed (EMailShellView *mail_shell_view)
 	g_signal_emit_by_name (selection, "changed");
 
 	e_ui_manager_thaw (ui_manager);
+	if (g_strcmp0 (g_getenv ("BLUEEVOLUTION_DEMO_MODE"), "1") == 0) {
+		CamelFolder *inbox;
+
+		inbox = e_mail_session_get_local_folder (session, E_MAIL_LOCAL_FOLDER_INBOX);
+		if (inbox) {
+			gchar *folder_uri = e_mail_folder_uri_from_folder (inbox);
+
+			em_folder_tree_set_selected (folder_tree, folder_uri, FALSE);
+			g_free (folder_uri);
+		}
+	}
 }
 
 void

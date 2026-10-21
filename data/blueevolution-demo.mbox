@@ -1,0 +1,77 @@
+From alex.chen@example.invalid Wed Oct 21 09:15:00 2026
+Return-Path: <alex.chen@example.invalid>
+From: Alex Chen <alex.chen@example.invalid>
+To: Morgan Lane <morgan.lane@example.invalid>
+Date: Wed, 21 Oct 2026 09:15:00 +0000
+Subject: BlueEvolution visual review
+Message-ID: <demo-visual-review-20261021@blueevolution.invalid>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Hi Morgan,
+
+The three-pane preview is ready for review. The folder rail, message list, and reading pane should all fit at the current window size.
+
+Thanks,
+Alex
+
+From priya.shah@example.invalid Wed Oct 21 08:40:00 2026
+Return-Path: <priya.shah@example.invalid>
+From: Priya Shah <priya.shah@example.invalid>
+To: Morgan Lane <morgan.lane@example.invalid>
+Date: Wed, 21 Oct 2026 08:40:00 +0000
+Subject: Re: Sidebar spacing and message rows
+Message-ID: <demo-sidebar-spacing-20261021@blueevolution.invalid>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+X-Status: F
+
+I checked the new spacing. The selected message is easy to scan, and the sender, subject, and preview read clearly together.
+
+I flagged the row-height question for the next visual pass.
+
+Priya
+
+From jordan.lee@example.invalid Tue Oct 20 16:25:00 2026
+Return-Path: <jordan.lee@example.invalid>
+From: Jordan Lee <jordan.lee@example.invalid>
+To: Morgan Lane <morgan.lane@example.invalid>
+Date: Tue, 20 Oct 2026 16:25:00 +0000
+Subject: Calendar review moved to Thursday
+Message-ID: <demo-calendar-review-20261020@blueevolution.invalid>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Status: R
+
+The calendar review is now Thursday at 10:30. I updated the shared agenda and added a short list of open questions.
+
+Jordan
+
+From samira.khan@example.invalid Tue Oct 20 13:05:00 2026
+Return-Path: <samira.khan@example.invalid>
+From: Samira Khan <samira.khan@example.invalid>
+To: Morgan Lane <morgan.lane@example.invalid>
+Date: Tue, 20 Oct 2026 13:05:00 +0000
+Subject: Draft folder structure
+Message-ID: <demo-folder-structure-20261020@blueevolution.invalid>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+I grouped the sample folders by purpose and kept the common destinations near the top. The draft is local to this preview profile.
+
+Samira
+
+From noah.kim@example.invalid Mon Oct 19 11:50:00 2026
+Return-Path: <noah.kim@example.invalid>
+From: Noah Kim <noah.kim@example.invalid>
+To: Morgan Lane <morgan.lane@example.invalid>
+Date: Mon, 19 Oct 2026 11:50:00 +0000
+Subject: Notes from the weekly sync
+Message-ID: <demo-weekly-sync-20261019@blueevolution.invalid>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Status: R
+
+The shell keeps existing mail, search, calendar, and contact behavior. Next I will compare the light and dark palettes and adjust any clipped labels or pane spacing.
+
+Noah
