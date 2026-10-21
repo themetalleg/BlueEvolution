@@ -2,6 +2,8 @@
 
 BlueEvolution is an independent fork of [GNOME Evolution](https://gitlab.gnome.org/GNOME/evolution) with the goal of a modern, Outlook-inspired Linux interface. It is not affiliated with Microsoft or GNOME.
 
+Public repository: [themetalleg/BlueEvolution](https://github.com/themetalleg/BlueEvolution). The first release is a draft prerelease, not a stable release.
+
 ## Current Status
 
 This is an early development branch, not a finished product. The upstream mail, calendar, contacts, task, authentication, and synchronization code is retained. Current BlueEvolution-specific changes include:
@@ -56,7 +58,8 @@ This project retains Evolution's source history, per-file license headers, contr
 
 - No public BlueEvolution GitHub repository or release exists yet.
 - No `.deb` package exists; the tested packaging route is Flatpak.
-- GitHub workflows are present locally but have not been run on GitHub. The upstream PR workflow requires repository Actions settings to allow `GITHUB_TOKEN` to create pull requests.
+- Draft prerelease `blueevolution-v0.1.0-dev` is available in [GitHub Releases](https://github.com/themetalleg/BlueEvolution/releases/tag/untagged-0d68cdcb56ca5df51b08). It contains a real x86_64 Flatpak and a SHA-256 integrity file, but is unsigned and must not be treated as publisher-authenticated.
+- The release workflow was manually started for `0.1.1-dev`; its run status is visible in GitHub Actions. The upstream PR workflow requires repository Actions settings to allow `GITHUB_TOKEN` to create pull requests.
 - No in-app update checker, signed assets, or publisher-authenticated update metadata exists.
 - The Outlook-inspired message-list and reading-pane redesign is not implemented.
 - No screenshots of the customized interface have been captured yet.
