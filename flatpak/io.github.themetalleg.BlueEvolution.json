@@ -422,6 +422,9 @@
       "name": "cmark",
       "buildsystem": "cmake-ninja",
       "builddir": true,
+      "config-opts": [
+        "-DCMAKE_INSTALL_LIBDIR=lib"
+      ],
       "cleanup": [
         "/bin",
         "/lib/cmake",
