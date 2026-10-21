@@ -37,6 +37,8 @@ Evolution's upstream [build instructions](README.md#dependencies) describe the C
 Install the Flatpak SDK/runtime and tools, then build a bundle:
 
 ```sh
+sudo apt update
+sudo apt install flatpak flatpak-builder jq
 flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 flatpak install --user --assumeyes flathub org.gnome.Sdk//49 org.gnome.Platform//49
 packaging/build-flatpak.sh
