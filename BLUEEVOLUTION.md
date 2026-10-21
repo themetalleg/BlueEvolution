@@ -46,6 +46,8 @@ packaging/build-flatpak.sh
 
 The bundle and checksum are written under `build/flatpak/`. Install a bundle with `flatpak install --user --bundle build/flatpak/BlueEvolution-0.1.0-dev-x86_64.flatpak`; launch it with `flatpak run io.github.themetalleg.BlueEvolution`; remove it with `flatpak uninstall --user io.github.themetalleg.BlueEvolution`. A Flatpak install has its own application data directory and keyfile settings. The upstream Flatpak permissions intentionally continue to share the user's Secret Service/keyring, GPG home, and PKI files for existing authentication and signing integrations. Native non-Flatpak builds are not isolated and are not safe for side-by-side use yet.
 
+In VS Code, use **Terminal > Run Task** and choose `BlueEvolution: Preview (follow system)`, `BlueEvolution: Preview (light)`, or `BlueEvolution: Preview (dark)` to launch the already-installed app. These preview tasks do not build; they run offline with a separate profile at `~/.cache/blueevolution-vscode-profile` and deny access to the host GPG/PKI files and Secret Service. Run `BlueEvolution: Build and install dev Flatpak` only when you intentionally want to rebuild and install the development bundle.
+
 The release workflow builds a `.flatpak` bundle and SHA-256 file and creates a draft for tags named `blueevolution-vX.Y.Z`. To enable signing, create a dedicated CI-only GPG signing key in a separate GPG home, make it usable noninteractively, and export its ASCII-armored private key to a protected local file. Add it without displaying the value using:
 
 ```sh

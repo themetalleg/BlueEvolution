@@ -1,0 +1,61 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "BlueEvolution: Build and install dev Flatpak",
+      "type": "process",
+      "command": "${workspaceFolder}/scripts/vscode-blueevolution.sh",
+      "args": ["install"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "BlueEvolution: Preview (follow system)",
+      "type": "process",
+      "command": "${workspaceFolder}/scripts/vscode-blueevolution.sh",
+      "args": ["launch", "system"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "BlueEvolution: Preview (light)",
+      "type": "process",
+      "command": "${workspaceFolder}/scripts/vscode-blueevolution.sh",
+      "args": ["launch", "light"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "BlueEvolution: Preview (dark)",
+      "type": "process",
+      "command": "${workspaceFolder}/scripts/vscode-blueevolution.sh",
+      "args": ["launch", "dark"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated"
+      }
+    }
+  ]
+}
