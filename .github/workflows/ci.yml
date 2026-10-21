@@ -1,0 +1,63 @@
+name: Build and verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flatpak-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes flatpak flatpak-builder jq libxml2-utils
+
+      - name: Install GNOME SDK
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user --assumeyes flathub org.gnome.Sdk//49 org.gnome.Platform//49
+
+      - name: Validate metadata and packaging identity
+        run: |
+          xmllint --noout \
+            data/io.github.themetalleg.BlueEvolution.gschema.xml.in \
+            data/org.gnome.Evolution.metainfo.xml.in.in \
+            data/icons/hicolor_apps_scalable_blueevolution.svg
+          jq -e '
+            .["app-id"] == "io.github.themetalleg.BlueEvolution" and
+            .command == "blueevolution" and
+            (.["finish-args"] | any(. == "--env=GSETTINGS_BACKEND=keyfile"))
+          ' flatpak/io.github.themetalleg.BlueEvolution.json
+
+      - name: Build without exporting AppStream metadata
+        run: |
+          flatpak-builder --user --disable-rofiles-fuse --build-only --force-clean \
+            --state-dir="$RUNNER_TEMP/flatpak-builder-state" \
+            "$RUNNER_TEMP/blueevolution-build" \
+            flatpak/io.github.themetalleg.BlueEvolution.json
+
+      - name: Verify executable in isolated profile
+        run: |
+          mkdir -p "$RUNNER_TEMP/blueevolution-home" "$RUNNER_TEMP/blueevolution-config" "$RUNNER_TEMP/blueevolution-data" "$RUNNER_TEMP/blueevolution-cache"
+          flatpak-builder --run \
+            --env=HOME="$RUNNER_TEMP/blueevolution-home" \
+            --env=XDG_CONFIG_HOME="$RUNNER_TEMP/blueevolution-config" \
+            --env=XDG_DATA_HOME="$RUNNER_TEMP/blueevolution-data" \
+            --env=XDG_CACHE_HOME="$RUNNER_TEMP/blueevolution-cache" \
+            --env=GSETTINGS_BACKEND=memory \
+            "$RUNNER_TEMP/blueevolution-build" \
+            flatpak/io.github.themetalleg.BlueEvolution.json \
+            /app/bin/blueevolution --help

@@ -1,0 +1,83 @@
+name: Check upstream Evolution release
+
+on:
+  schedule:
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: upstream-stable-update
+  cancel-in-progress: false
+
+jobs:
+  update-stable:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find latest stable Evolution release
+        id: release
+        shell: bash
+        run: |
+          release=$(curl --fail --silent --show-error \
+            'https://gitlab.gnome.org/api/v4/projects/GNOME%2Fevolution/releases?per_page=100' |
+            jq -r '[.[] | select(.tag_name | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) | select((.tag_name | split(".")[1] | tonumber) % 2 == 0)] | sort_by(.released_at // .created_at) | last? | .tag_name // empty')
+          if [[ ! "$release" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Could not resolve a stable Evolution release." >&2
+            exit 1
+          fi
+          echo "version=$release" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch and merge stable source
+        id: merge
+        env:
+          RELEASE: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          git remote add upstream https://gitlab.gnome.org/GNOME/evolution.git
+          git fetch --no-tags upstream "refs/tags/$RELEASE:refs/tags/upstream/$RELEASE"
+          if git merge-base --is-ancestor "refs/tags/upstream/$RELEASE" HEAD; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            merge --no-edit "refs/tags/upstream/$RELEASE"
+
+          evolution_sha=$(git rev-parse "refs/tags/upstream/$RELEASE^{commit}")
+          eds_sha=$(git ls-remote https://gitlab.gnome.org/GNOME/evolution-data-server.git "refs/tags/$RELEASE" | cut -f1)
+          ews_sha=$(git ls-remote https://gitlab.gnome.org/GNOME/evolution-ews.git "refs/tags/$RELEASE" | cut -f1)
+          if [[ -z "$eds_sha" || -z "$ews_sha" ]]; then
+            echo "Matching EDS and EWS $RELEASE tags are required; refusing an incomplete update." >&2
+            exit 1
+          fi
+
+          jq --arg tag "$RELEASE" '
+            (.modules[] | select(.name == "evolution-data-server") | .sources[0].tag) = $tag |
+            (.modules[] | select(.name == "evolution-ews") | .sources[0].tag) = $tag
+          ' flatpak/io.github.themetalleg.BlueEvolution.json > "$RUNNER_TEMP/BlueEvolution.flatpak.json"
+          mv "$RUNNER_TEMP/BlueEvolution.flatpak.json" flatpak/io.github.themetalleg.BlueEvolution.json
+          python3 scripts/update-upstream-metadata.py "$RELEASE" "$evolution_sha" "$eds_sha" "$ews_sha"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update stable release review PR
+        if: steps.merge.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ github.token }}
+          branch: automation/upstream-stable
+          delete-branch: false
+          title: "Update upstream Evolution to ${{ steps.release.outputs.version }}"
+          body: |
+            This review branch merges the latest stable GNOME Evolution release and pins the matching Evolution Data Server and EWS companion releases.
+
+            Please build and test BlueEvolution before merging. Conflicts or missing companion tags stop the scheduled job; no upstream changes are merged automatically.
+          commit-message: "Merge upstream Evolution ${{ steps.release.outputs.version }}"

@@ -1,0 +1,106 @@
+name: Build draft release
+
+on:
+  push:
+    tags:
+      - blueevolution-v*
+  workflow_dispatch:
+    inputs:
+      version:
+        description: BlueEvolution version, for example 0.1.0 or 0.2.0-rc.1
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  draft-release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release version
+        id: release
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            tag="$GITHUB_REF_NAME"
+            version="${tag#blueevolution-v}"
+          else
+            version="$INPUT_VERSION"
+            tag="blueevolution-v${version}"
+          fi
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid semantic version: $version" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ "$version" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install build tools and GNOME runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes flatpak flatpak-builder jq
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user --assumeyes flathub org.gnome.Sdk//49 org.gnome.Platform//49
+
+      - name: Build Flatpak and checksum
+        env:
+          BLUEEVOLUTION_VERSION: ${{ steps.release.outputs.version }}
+          BUILD_ROOT: ${{ runner.temp }}/blueevolution-flatpak
+          BUNDLE_PATH: ${{ runner.temp }}/BlueEvolution-${{ steps.release.outputs.version }}-x86_64.flatpak
+        run: packaging/build-flatpak.sh
+
+      - name: Prepare release notes
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          BUNDLE: ${{ runner.temp }}/BlueEvolution-${{ steps.release.outputs.version }}-x86_64.flatpak
+        run: |
+          cat > "$RUNNER_TEMP/release-notes.md" <<EOF
+          ## BlueEvolution ${VERSION}
+
+          **Platform:** Kubuntu and other x86_64 Linux desktops with Flatpak.
+          **Upstream baseline:** GNOME Evolution 3.62.1, Evolution Data Server 3.62.1, Evolution EWS 3.62.1.
+
+          ### Install
+
+          Install with: flatpak install --user --bundle $(basename "$BUNDLE")
+
+          The bundle uses the GNOME 49 runtime. Launch with: flatpak run io.github.themetalleg.BlueEvolution
+
+          ### Integrity and updates
+
+          The accompanying SHA-256 file detects accidental corruption; it is not a publisher signature. This draft is unsigned. Flatpak-managed updates are not yet published; install a newer release bundle manually. GitHub release notes and mail content are never executed by the app.
+
+          GitHub provides the corresponding source archives with this release.
+          EOF
+
+      - name: Create immutable draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+          TAG: ${{ steps.release.outputs.tag }}
+          PRERELEASE: ${{ steps.release.outputs.prerelease }}
+          BUNDLE: ${{ runner.temp }}/BlueEvolution-${{ steps.release.outputs.version }}-x86_64.flatpak
+        shell: bash
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; published versioned assets are immutable. Choose a new version." >&2
+            exit 1
+          fi
+          args=("$TAG" "$BUNDLE" "$BUNDLE.sha256" --draft --title "BlueEvolution $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" --target "$GITHUB_SHA")
+          if [[ "$PRERELEASE" == "true" ]]; then
+            args+=(--prerelease)
+          fi
+          gh release create "${args[@]}"
