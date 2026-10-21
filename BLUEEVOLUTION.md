@@ -44,7 +44,13 @@ packaging/build-flatpak.sh
 
 The bundle and checksum are written under `build/flatpak/`. Install a bundle with `flatpak install --user --bundle build/flatpak/BlueEvolution-0.1.0-dev-x86_64.flatpak`; launch it with `flatpak run io.github.themetalleg.BlueEvolution`; remove it with `flatpak uninstall --user io.github.themetalleg.BlueEvolution`. A Flatpak install has its own application data directory and keyfile settings. The upstream Flatpak permissions intentionally continue to share the user's Secret Service/keyring, GPG home, and PKI files for existing authentication and signing integrations. Native non-Flatpak builds are not isolated and are not safe for side-by-side use yet.
 
-The release workflow builds a `.flatpak` bundle and SHA-256 file and creates a draft for tags named `blueevolution-vX.Y.Z`. To enable signing, create a dedicated GPG release key and add its ASCII-armored private key as the GitHub Actions repository secret `FLATPAK_GPG_PRIVATE_KEY`. The key must be usable noninteractively; restrict repository Actions access and rotate/revoke it if exposed. The workflow signs the OSTree commit and embeds the public key in the bundle. Without this secret, drafts are unsigned; the SHA-256 file detects corruption only and is not publisher authentication. Users currently update by installing a newer bundle manually; no in-app GitHub release checker or unattended installation exists.
+The release workflow builds a `.flatpak` bundle and SHA-256 file and creates a draft for tags named `blueevolution-vX.Y.Z`. To enable signing, create a dedicated CI-only GPG signing key in a separate GPG home, make it usable noninteractively, and export its ASCII-armored private key to a protected local file. Add it without displaying the value using:
+
+```sh
+gh secret set FLATPAK_GPG_PRIVATE_KEY --repo themetalleg/BlueEvolution < release-signing-key.asc
+```
+
+Restrict repository Actions access to trusted maintainers, keep an offline backup, and revoke/rotate the key if exposed. The workflow signs the OSTree commit and embeds the public key in the bundle. Without this secret, drafts are unsigned; the SHA-256 file detects corruption only and is not publisher authentication. Users currently update by installing a newer bundle manually; no in-app GitHub release checker or unattended installation exists.
 
 The build ran in GNOME's Flatpak SDK with temporary `HOME`/XDG paths and in-memory settings. It did not connect to live mail accounts. The SDK's optional AppStream compose extension is not available from the configured Flathub remote, so package generation uses Flatpak's native build-finish/export commands instead of AppStream composition.
 
