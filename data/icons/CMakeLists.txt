@@ -17,6 +17,7 @@ set(public_icons
 	hicolor_apps_scalable_evolution.svg
 	hicolor_apps_scalable_evolution-symbolic.svg
 	hicolor_apps_scalable_blueevolution.svg
+	hicolor_apps_scalable_io.github.themetalleg.BlueEvolution.svg
 )
 
 # hicolor_status_16x16_wrapped.png was copied from Firefox
