@@ -67,7 +67,7 @@ This project retains Evolution's source history, per-file license headers, contr
 - No stable public release exists yet.
 - No `.deb` package exists; the tested packaging route is Flatpak.
 - Latest draft prerelease `blueevolution-v0.1.2-dev` is available in [GitHub Releases](https://github.com/themetalleg/BlueEvolution/releases/tag/untagged-d4a5a0f3f331140495a5). It contains a real x86_64 Flatpak and a SHA-256 integrity file; the downloaded bundle passed checksum verification. The assets are unsigned because no signing secret is configured.
-- Four earlier hosted builds exposed library-path mismatches for geocode-glib, GNOME Online Accounts, libgweather, and cmark. Those dependencies are now pinned to `/app/lib`, and the 0.1.2 draft build completed successfully. The separate CI launcher smoke test is still running. The upstream PR workflow requires repository Actions settings to allow `GITHUB_TOKEN` to create pull requests.
+- Four earlier hosted builds exposed library-path mismatches for geocode-glib, GNOME Online Accounts, libgweather, and cmark. Those dependencies are now pinned to `/app/lib`; the 0.1.2 draft build completed successfully, and CI passed the bundle build plus isolated launcher smoke test on `main`. The upstream PR workflow requires repository Actions settings to allow `GITHUB_TOKEN` to create pull requests.
 - No in-app update checker or publisher-authenticated update metadata exists. Optional Flatpak commit signing is implemented but not configured.
 - The Outlook-inspired message-list and reading-pane redesign is not implemented.
 - No screenshots of the customized interface have been captured yet.
