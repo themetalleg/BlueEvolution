@@ -359,7 +359,7 @@ static EImportImporter elm_importer = {
 EImportImporter *
 elm_importer_peek (void)
 {
-	elm_importer.name = _("Evolution Elm importer");
+	elm_importer.name = _("BlueEvolution Elm importer");
 	elm_importer.description = _("Import mail from Elm.");
 
 	return &elm_importer;

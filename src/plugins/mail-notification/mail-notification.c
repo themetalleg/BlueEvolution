@@ -610,11 +610,11 @@ new_notify_status (EMEventTargetFolder *t)
 	}
 
 	if (e_util_is_running_flatpak ())
-		icon_name = "org.gnome.Evolution";
+		icon_name = "io.github.themetalleg.BlueEvolution";
 	else
-		icon_name = "evolution";
+		icon_name = "blueevolution";
 
-	summary = _("New email in Evolution");
+	summary = _("New email in BlueEvolution");
 	escaped_text = g_markup_escape_text (text->str, -1);
 
 	if (notify) {

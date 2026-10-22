@@ -2347,7 +2347,7 @@ ecep_recurrence_constructed (GObject *object)
 	gtk_box_pack_start (GTK_BOX (container), widget, FALSE, FALSE, 0);
 	page_recurrence->priv->recr_ending_special_box = widget;
 
-	widget = gtk_label_new (_("This appointment contains recurrences that Evolution cannot edit."));
+	widget = gtk_label_new (_("This appointment contains recurrences that BlueEvolution cannot edit."));
 	g_object_set (G_OBJECT (widget),
 		"hexpand", FALSE,
 		"halign", GTK_ALIGN_START,

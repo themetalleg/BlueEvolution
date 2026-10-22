@@ -29,7 +29,7 @@
 #define w(x)
 #define d(x)
 
-#define USER_AGENT ("Evolution " VERSION VERSION_SUBSTRING " " VERSION_COMMENT)
+#define USER_AGENT ("BlueEvolution " VERSION VERSION_SUBSTRING " " VERSION_COMMENT)
 
 /* used for both just filtering a folder + uid's, and for filtering a whole folder */
 /* used both for fetching mail, and for filtering mail */

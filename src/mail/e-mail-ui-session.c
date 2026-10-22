@@ -173,7 +173,7 @@ session_play_sound_cb (const gchar *filename)
 		if (!cactx) {
 			ca_context_create (&cactx);
 			ca_context_change_props (cactx,
-				CA_PROP_APPLICATION_NAME, "Evolution",
+				CA_PROP_APPLICATION_NAME, "BlueEvolution",
 				NULL);
 		}
 

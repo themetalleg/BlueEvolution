@@ -14,7 +14,7 @@
 #include <libemail-engine/mail-tools.h>
 
 /* User-Agent header value */
-#define USER_AGENT ("Evolution " VERSION VERSION_SUBSTRING " " VERSION_COMMENT)
+#define USER_AGENT ("BlueEvolution " VERSION VERSION_SUBSTRING " " VERSION_COMMENT)
 
 /* FIXME: Temporary - remove this after we move filter/ to eds */
 #define E_FILTER_SOURCE_OUTGOING "outgoing"

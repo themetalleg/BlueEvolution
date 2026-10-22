@@ -119,14 +119,14 @@ shell_window_create_shortcuts_dialog (EShellWindow *self)
                 custom (NC_("shortcut window", "Select Memos component"), "<Control>5"),
 		item ("EShellWindow::new-shortcut", NC_("shortcut window", "Create a new item in current component")),
 		custom (NC_("shortcut window", "Cycle focus between panes"), "F6"),
-                item ("contents", NC_("shortcut window", "Open the Evolution user guide")),
+				item ("contents", NC_("shortcut window", "Open the BlueEvolution user guide")),
                 item ("shortcuts", NC_("shortcut window", "Keyboard shortcuts")),
                 item ("search-options", NC_("shortcut window", "Focus search bar")),
                 item ("search-clear", NC_("shortcut window", "Clear search bar")),
                 item ("preferences", NC_("shortcut window", "Preferences")),
                 item ("new-window", NC_("shortcut window", "Open new window")),
                 item ("close-window", NC_("shortcut window", "Close window")),
-                item ("quit", NC_("shortcut window", "Quit Evolution")),
+				item ("quit", NC_("shortcut window", "Quit BlueEvolution")),
 
 		group (NC_("shortcut window", "Mail")),
                 item ("new-menu-mail-message-new", NC_("shortcut window", "Create a new message")),
@@ -782,7 +782,7 @@ e_shell_window_actions_constructed (EShellWindow *shell_window)
 	static const EUIActionEntry new_source_entries[] = {
 
 		{ "new-collection-account",
-		  "evolution",
+		  "blueevolution",
 		  NC_("New", "Collect_ion Account"),
 		  NULL,
 		  N_("Create a new collection account"),
@@ -795,14 +795,14 @@ e_shell_window_actions_constructed (EShellWindow *shell_window)
 		  "help-about",
 		  N_("_About"),
 		  NULL,
-		  N_("Show information about Evolution"),
+		  N_("Show information about BlueEvolution"),
 		  action_about_cb, NULL, NULL, NULL },
 
 		{ "accounts",
 		  NULL,
 		  N_("_Accounts"),
 		  NULL,
-		  N_("Configure Evolution Accounts"),
+		  N_("Configure BlueEvolution Accounts"),
 		  action_accounts_cb, NULL, NULL, NULL },
 
 		{ "close",
@@ -830,7 +830,7 @@ e_shell_window_actions_constructed (EShellWindow *shell_window)
 		  "help-browser",
 		  N_("_Contents"),
 		  "F1",
-		  N_("Open the Evolution User Guide"),
+		  N_("Open the BlueEvolution User Guide"),
 		  action_contents_cb, NULL, NULL, NULL },
 
 		{ "copy-clipboard",
@@ -886,7 +886,7 @@ e_shell_window_actions_constructed (EShellWindow *shell_window)
 		  "preferences-system",
 		  N_("_Preferences"),
 		  "<Control><Shift>s",
-		  N_("Configure Evolution"),
+		  N_("Configure BlueEvolution"),
 		  action_preferences_cb, NULL, NULL, NULL },
 
 		{ "quit",
@@ -928,14 +928,14 @@ e_shell_window_actions_constructed (EShellWindow *shell_window)
 		  NULL,
 		  N_("_Work Offline"),
 		  NULL,
-		  N_("Put Evolution into offline mode"),
+		  N_("Put BlueEvolution into offline mode"),
 		  action_work_offline_cb, NULL, NULL, NULL },
 
 		{ "work-online",
 		  NULL,
 		  N_("_Work Online"),
 		  NULL,
-		  N_("Put Evolution into online mode"),
+		  N_("Put BlueEvolution into online mode"),
 		  action_work_online_cb, NULL, NULL, NULL },
 
 		{ "EShellWindow::new-shortcut",

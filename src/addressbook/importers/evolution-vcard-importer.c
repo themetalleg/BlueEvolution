@@ -469,7 +469,7 @@ EImportImporter *
 evolution_vcard_importer_peek (void)
 {
 	vcard_importer.name = _("vCard (.vcf, .gcrd)");
-	vcard_importer.description = _("Evolution vCard Importer");
+	vcard_importer.description = _("BlueEvolution vCard Importer");
 
 	return &vcard_importer;
 }

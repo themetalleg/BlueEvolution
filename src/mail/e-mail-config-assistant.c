@@ -687,7 +687,7 @@ mail_config_assistant_constructed (GObject *object)
 	/* Chain up to parent's constructed() method. */
 	G_OBJECT_CLASS (e_mail_config_assistant_parent_class)->constructed (object);
 
-	title = _("Evolution Account Assistant");
+	title = _("BlueEvolution Account Assistant");
 	gtk_window_set_title (GTK_WINDOW (assistant), title);
 	gtk_window_set_position (GTK_WINDOW (assistant), GTK_WIN_POS_CENTER);
 	gtk_window_set_default_size (GTK_WINDOW (assistant), 640, 480);

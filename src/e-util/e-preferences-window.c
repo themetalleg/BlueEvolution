@@ -321,7 +321,7 @@ e_preferences_window_init (EPreferencesWindow *window)
 		gtk_widget_show (widget);
 	}
 
-	gtk_window_set_title (GTK_WINDOW (window), _("Evolution Preferences"));
+	gtk_window_set_title (GTK_WINDOW (window), _("BlueEvolution Preferences"));
 	gtk_window_set_resizable (GTK_WINDOW (window), TRUE);
 
 	g_signal_connect (

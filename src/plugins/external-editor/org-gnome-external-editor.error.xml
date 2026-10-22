@@ -8,7 +8,7 @@
 
 	<error id="no-temp-file" type="error">
 		<_primary>Cannot create Temporary File</_primary>
-		<_secondary>Evolution is unable to create a temporary file to save your mail. Retry later.</_secondary>
+		<_secondary>BlueEvolution is unable to create a temporary file to save your mail. Retry later.</_secondary>
 	</error>
 
 	<error id="editor-still-running" type="error">

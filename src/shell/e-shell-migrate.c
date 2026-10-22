@@ -395,7 +395,7 @@ shell_migrate_mail_folders_show_dialog_cb (gpointer user_data)
 		"resizable", FALSE,
 		"modal", TRUE, /* to not have "minimize" button */
 		"type-hint", GDK_WINDOW_TYPE_HINT_DIALOG, /* to not have "minimize" button */
-		"title", _("Evolution"),
+		"title", _("BlueEvolution"),
 		NULL);
 
 	box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 4);

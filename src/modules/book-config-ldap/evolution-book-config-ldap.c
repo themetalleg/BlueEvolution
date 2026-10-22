@@ -742,7 +742,7 @@ book_config_ldap_insert_widgets (ESourceConfigBackend *backend,
 	context->auth_combo = g_object_ref (widget);
 	gtk_widget_show (widget);
 
-	gtk_widget_set_tooltip_text (widget, _("This is the method Evolution will use to authenticate you."));
+		gtk_widget_set_tooltip_text (widget, _("This is the method BlueEvolution will use to authenticate you."));
 
 	widget = gtk_entry_new ();
 	book_config_ldap_insert_notebook_widget (

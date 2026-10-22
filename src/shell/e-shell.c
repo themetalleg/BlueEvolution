@@ -2027,7 +2027,7 @@ static GOptionEntry app_options[] = {
 	{ "component", 'c', 0, G_OPTION_ARG_STRING, &requested_view,
 	/* Translators: Do NOT translate the five component
 	 * names, they MUST remain in English! */
-	  N_("Start Evolution showing the specified component. "
+	  N_("Start BlueEvolution showing the specified component. "
 	     "Available options are “mail”, “calendar”, “contacts”, "
 	     "“tasks”, and “memos”"), "COMPONENT" },
 	{ "geometry", 'g', 0, G_OPTION_ARG_STRING, &geometry,
@@ -2040,7 +2040,7 @@ static GOptionEntry app_options[] = {
 	  N_("Ignore network availability"), NULL },
 #ifndef G_OS_WIN32
 	{ "force-shutdown", '\0', 0, G_OPTION_ARG_NONE, &force_shutdown,
-	  N_("Forcibly shut down Evolution and background Evolution-Data-Server processes"), NULL },
+	  N_("Forcibly shut down BlueEvolution and background Evolution Data Server processes"), NULL },
 #endif
 	{ "disable-eplugin", '\0', 0, G_OPTION_ARG_NONE, &disable_eplugin,
 	  N_("Disable loading of any plugins."), NULL },
@@ -2053,7 +2053,7 @@ static GOptionEntry app_options[] = {
 	{ "view", '\0', 0, G_OPTION_ARG_NONE, &view_uris,
 	  N_("View URIs or filenames given as rest of arguments."), NULL },
 	{ "quit", 'q', 0, G_OPTION_ARG_NONE, &quit,
-	  N_("Request a running Evolution process to quit"), NULL },
+	  N_("Request a running BlueEvolution process to quit"), NULL },
 	{ "version", 'v', G_OPTION_FLAG_HIDDEN | G_OPTION_FLAG_NO_ARG,
 	  G_OPTION_ARG_CALLBACK, option_version_cb, NULL, NULL },
 	{ G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_STRING_ARRAY,

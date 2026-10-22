@@ -32,7 +32,7 @@ file_monitor_changed_cb (GFileMonitor *monitor,
 	if (event_type != G_FILE_MONITOR_EVENT_DELETED)
 		return;
 
-	g_print ("Evolution process exited normally\n");
+	g_print ("BlueEvolution process exited normally\n");
 
 	g_main_loop_quit (main_loop);
 }
@@ -40,7 +40,7 @@ file_monitor_changed_cb (GFileMonitor *monitor,
 static gboolean
 evolution_not_responding_cb (gpointer user_data)
 {
-	g_print ("No response from Evolution -- killing the process\n");
+	g_print ("No response from BlueEvolution -- killing the process\n");
 
 	/* Kill the process. */
 	kill ((pid_t) evolution_pid, SIGTERM);

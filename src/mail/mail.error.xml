@@ -127,7 +127,7 @@ The reported error was “{0}”.</_secondary>
 
   <error id="exit-unsent-question" type="warning" default="GTK_RESPONSE_NO">
     <_primary>You have unsent messages, do you wish to quit anyway?</_primary>
-    <_secondary xml:space="preserve">If you quit, these messages will not be sent until Evolution is started again.</_secondary>
+    <_secondary xml:space="preserve">If you quit, these messages will not be sent until BlueEvolution is started again.</_secondary>
     <button stock="gtk-cancel" response="GTK_RESPONSE_NO"/>
     <button stock="gtk-quit" response="GTK_RESPONSE_YES"/>
   </error>
@@ -189,7 +189,7 @@ The reported error was “{0}”.</_secondary>
 
   <error id="no-delete-special-folder" type="error">
     <_primary>Cannot delete system folder “{0}”.</_primary>
-    <_secondary xml:space="preserve">System folders are required for Evolution to function correctly and cannot be renamed, moved, or deleted.</_secondary>
+    <_secondary xml:space="preserve">System folders are required for BlueEvolution to function correctly and cannot be renamed, moved, or deleted.</_secondary>
   </error>
 
   <error id="no-expunge-folder" type="warning">
@@ -204,7 +204,7 @@ The reported error was “{0}”.</_secondary>
 
   <error id="no-rename-special-folder" type="error">
     <_primary>Cannot rename or move system folder “{0}”.</_primary>
-    <_secondary xml:space="preserve">System folders are required for Evolution to function correctly and cannot be renamed, moved, or deleted.</_secondary>
+    <_secondary xml:space="preserve">System folders are required for BlueEvolution to function correctly and cannot be renamed, moved, or deleted.</_secondary>
   </error>
 
   <error id="ask-delete-folder" type="question" default="GTK_RESPONSE_CANCEL">
@@ -216,7 +216,7 @@ The reported error was “{0}”.</_secondary>
 
   <error id="ask-unsubscribe-folder" type="question" default="GTK_RESPONSE_NO">
     <_primary>Really unsubscribe folder “{0}”?</_primary>
-    <_secondary xml:space="preserve">If you unsubscribe the folder, it might not be visible in the Evolution, while still being available on the server. You can re-subscribe in Folder→Subscriptions... menu.</_secondary>
+    <_secondary xml:space="preserve">If you unsubscribe the folder, it might not be visible in BlueEvolution, while still being available on the server. You can re-subscribe in the Folder→Subscriptions... menu.</_secondary>
     <button _label="Do _Not Unsubscribe" response="GTK_RESPONSE_NO"/>
     <button _label="_Unsubscribe" response="GTK_RESPONSE_YES"/>
   </error>
@@ -363,11 +363,11 @@ You can choose to ignore this folder, overwrite or append its contents, or quit.
   </error>
   
   <error id="ask-migrate-store" type="question" default="GTK_RESPONSE_YES">
-    <_primary>Evolution’s local mail format has changed.</_primary>
-    <_secondary xml:space="preserve">Evolution’s local mail format has changed from mbox to Maildir. Your local mail must be migrated to the new format before Evolution can proceed. Do you want to migrate now?
+    <_primary>BlueEvolution’s local mail format has changed.</_primary>
+    <_secondary xml:space="preserve">BlueEvolution’s local mail format has changed from mbox to Maildir. Your local mail must be migrated to the new format before BlueEvolution can proceed. Do you want to migrate now?
 
 An mbox account will be created to preserve the old mbox folders. You can delete the account after ensuring the data is safely migrated. Please make sure there is enough disk space if you choose to migrate now.</_secondary>
-    <button _label="_Exit Evolution" response="GTK_RESPONSE_CANCEL"/>
+    <button _label="_Exit BlueEvolution" response="GTK_RESPONSE_CANCEL"/>
     <button _label="_Migrate Now" response="GTK_RESPONSE_OK"/>
   </error>
 
@@ -416,7 +416,7 @@ An mbox account will be created to preserve the old mbox folders. You can delete
   </error>
 
   <error id="browser-close-on-reply" type="question" default="GTK_RESPONSE_NO">
-    <_secondary>Should Evolution close this window when replying or forwarding?</_secondary>
+    <_secondary>Should BlueEvolution close this window when replying or forwarding?</_secondary>
     <button _label="_Yes, Always" response="GTK_RESPONSE_YES"/>
     <button _label="_No, Never" response="GTK_RESPONSE_NO"/>
   </error>

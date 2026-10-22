@@ -16,7 +16,7 @@
 #include "e-mail-utils.h"
 
 /* User-Agent header value */
-#define USER_AGENT ("Evolution " VERSION VERSION_SUBSTRING " " VERSION_COMMENT)
+#define USER_AGENT ("BlueEvolution " VERSION VERSION_SUBSTRING " " VERSION_COMMENT)
 
 typedef struct _AsyncContext AsyncContext;
 typedef struct _BuildAttachmentResult BuildAttachmentResult;

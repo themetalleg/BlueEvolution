@@ -7,7 +7,7 @@ install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/blueevolution
 	DESTINATION ${BIN_INSTALL_DIR}
 )
 
-option(WITH_WMCLASS_OVERRIDE "Override WMClass in the .desktop file" "")
+set(WITH_WMCLASS_OVERRIDE "io.github.themetalleg.BlueEvolution" CACHE STRING "Override WMClass in the .desktop file")
 
 if("${WITH_WMCLASS_OVERRIDE}" STREQUAL "" OR "${WITH_WMCLASS_OVERRIDE}" STREQUAL "OFF")
 	set(WMCLASS_OVERRIDE "")

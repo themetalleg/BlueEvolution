@@ -1115,7 +1115,7 @@ e_mail_browser_init (EMailBrowser *browser)
 {
 	browser->priv = e_mail_browser_get_instance_private (browser);
 
-	gtk_window_set_title (GTK_WINDOW (browser), _("Evolution"));
+	gtk_window_set_title (GTK_WINDOW (browser), _("BlueEvolution"));
 	gtk_window_set_default_size (GTK_WINDOW (browser), 600, 400);
 
 	e_restore_window (

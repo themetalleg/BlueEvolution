@@ -544,7 +544,7 @@ accounts_window_fill_children (EAccountsWindow *accounts_window,
 
 		if (e_source_has_extension (source, E_SOURCE_EXTENSION_MAIL_ACCOUNT)) {
 			subroot_display_name = _("Mail Accounts");
-			subroot_icon_name = "evolution-mail";
+			subroot_icon_name = "mail-unread-symbolic";
 			subroot_sort_hint = MAIL_ACCOUNTS_SORT_HINT;
 			subroot_set = &mails_iter_set;
 			subroot = &mails_iter;
@@ -1688,7 +1688,7 @@ accounts_window_constructed (GObject *object)
 	G_OBJECT_CLASS (e_accounts_window_parent_class)->constructed (object);
 
 	gtk_window_set_default_size (GTK_WINDOW (accounts_window), 480, 410);
-	gtk_window_set_title (GTK_WINDOW (accounts_window), _("Evolution Accounts"));
+	gtk_window_set_title (GTK_WINDOW (accounts_window), _("BlueEvolution Accounts"));
 	gtk_window_set_type_hint (GTK_WINDOW (accounts_window), GDK_WINDOW_TYPE_HINT_DIALOG);
 	gtk_container_set_border_width (GTK_CONTAINER (accounts_window), 12);
 

@@ -12,13 +12,13 @@
 #include "e-misc-utils.h"
 
 #define ONLINE_TOOLTIP \
-	_("Evolution is currently online.  Click this button to work offline.")
+	_("BlueEvolution is currently online.  Click this button to work offline.")
 
 #define OFFLINE_TOOLTIP \
-	_("Evolution is currently offline.  Click this button to work online.")
+	_("BlueEvolution is currently offline.  Click this button to work online.")
 
 #define NETWORK_UNAVAILABLE_TOOLTIP \
-	_("Evolution is currently offline because the network is unavailable.")
+	_("BlueEvolution is currently offline because the network is unavailable.")
 
 struct _EOnlineButtonPrivate {
 	GtkWidget *image;

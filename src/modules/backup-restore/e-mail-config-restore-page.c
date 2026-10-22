@@ -158,7 +158,7 @@ mail_config_restore_page_constructed (GObject *object)
 
 	main_box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 24);
 
-	text = _("You can restore Evolution from a backup file.\n\n"
+	text = _("You can restore BlueEvolution from a backup file.\n\n"
 		 "This will restore all your personal data, settings "
 		 "mail filters, etc.");
 	widget = gtk_label_new (text);

@@ -415,7 +415,7 @@ e_composer_actions_init (EMsgComposer *composer)
 		  "preferences-system",
 		  N_("_Preferences"),
 		  NULL,
-		  N_("Configure Evolution"),
+		  N_("Configure BlueEvolution"),
 		  action_preferences_cb, NULL, NULL, NULL },
 
 		{ "save",

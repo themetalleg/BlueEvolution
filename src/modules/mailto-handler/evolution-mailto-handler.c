@@ -17,7 +17,7 @@
 	((obj), E_TYPE_MAILTO_HANDLER, EMailtoHandler))
 
 #define MAILTO_COMMAND \
-	"evolution --component=mail"
+	"blueevolution --component=mail"
 
 #define MAILTO_HANDLER "x-scheme-handler/mailto"
 
@@ -75,7 +75,8 @@ mailto_handler_is_evolution (GAppInfo *app_info)
 
 	/* Check the basename of the first token. */
 	basename = g_path_get_basename (argv[0]);
-	is_evolution = g_str_has_prefix (basename, "evolution");
+	is_evolution = g_str_has_prefix (basename, "evolution") ||
+		g_str_has_prefix (basename, "blueevolution");
 	g_free (basename);
 
 	g_strfreev (argv);
@@ -122,7 +123,7 @@ mailto_handler_prompt (EMailtoHandler *extension)
 
 	container = widget;
 
-	text = _("Do you want to make Evolution your default email client?");
+	text = _("Do you want to make BlueEvolution your default email client?");
 	markup = g_markup_printf_escaped ("<b>%s</b>", text);
 	widget = gtk_label_new (NULL);
 	gtk_label_set_markup (GTK_LABEL (widget), markup);
@@ -183,16 +184,16 @@ mailto_handler_check (EMailtoHandler *extension)
 	if (mailto_handler_is_evolution (app_info))
 		goto exit;
 
-	/* Does the user want Evolution to handle them? */
+	/* Does the user want BlueEvolution to handle mailto links? */
 	if (!mailto_handler_prompt (extension))
 		goto exit;
 
 	g_clear_object (&app_info);
 
-	/* Configure Evolution to be the "mailto" URI handler. */
+	/* Configure BlueEvolution to be the "mailto" URI handler. */
 	app_info = g_app_info_create_from_commandline (
 		MAILTO_COMMAND,
-		_("Evolution"),
+		_("BlueEvolution"),
 		G_APP_INFO_CREATE_SUPPORTS_URIS,
 		&error);
 

@@ -459,7 +459,7 @@ static EImportImporter pine_importer = {
 EImportImporter *
 pine_importer_peek (void)
 {
-	pine_importer.name = _("Evolution Pine importer");
+	pine_importer.name = _("BlueEvolution Pine importer");
 	pine_importer.description = _("Import mail from Pine.");
 
 	return &pine_importer;

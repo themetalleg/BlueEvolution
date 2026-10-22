@@ -805,7 +805,7 @@ EImportImporter *
 evolution_ldif_importer_peek (void)
 {
 	ldif_importer.name = _("LDAP Data Interchange Format (.ldif)");
-	ldif_importer.description = _("Evolution LDIF importer");
+	ldif_importer.description = _("BlueEvolution LDIF importer");
 
 	return &ldif_importer;
 }

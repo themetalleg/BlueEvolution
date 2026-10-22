@@ -135,7 +135,7 @@ e_mail_config_welcome_page_class_init (EMailConfigWelcomePageClass *class)
 	properties[PROP_TEXT] =
 		g_param_spec_string (
 			"text", NULL, NULL,
-			_("Welcome to the Evolution Mail Configuration "
+			_("Welcome to the BlueEvolution Mail Configuration "
 			"Assistant.\n\nClick “Next” to begin."),
 			G_PARAM_READWRITE |
 			G_PARAM_CONSTRUCT |

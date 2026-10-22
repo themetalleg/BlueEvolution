@@ -10,6 +10,11 @@ on:
         description: BlueEvolution version, for example 0.1.0 or 0.2.0-rc.1
         required: true
         type: string
+      replace_draft:
+        description: Replace assets and notes only if the existing release is still a draft
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -50,6 +55,20 @@ jobs:
             echo "prerelease=true" >> "$GITHUB_OUTPUT"
           else
             echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check draft replacement eligibility
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          REPLACE_DRAFT: ${{ inputs.replace_draft }}
+        shell: bash
+        run: |
+          if is_draft=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null); then
+            if [[ "$REPLACE_DRAFT" != "true" || "$is_draft" != "true" ]]; then
+              echo "Release $TAG already exists; only explicitly requested draft replacements are allowed." >&2
+              exit 1
+            fi
           fi
 
       - name: Install build tools and GNOME runtime
@@ -147,18 +166,25 @@ jobs:
             cat RELEASE_NOTES.md >> "$RUNNER_TEMP/release-notes.md"
           fi
 
-      - name: Create immutable draft release
+      - name: Create or replace draft release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.release.outputs.version }}
           TAG: ${{ steps.release.outputs.tag }}
           PRERELEASE: ${{ steps.release.outputs.prerelease }}
+          REPLACE_DRAFT: ${{ inputs.replace_draft }}
           BUNDLE: ${{ runner.temp }}/BlueEvolution-${{ steps.release.outputs.version }}-x86_64.flatpak
         shell: bash
         run: |
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists; published versioned assets are immutable. Choose a new version." >&2
-            exit 1
+          if is_draft=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null); then
+            if [[ "$REPLACE_DRAFT" != "true" || "$is_draft" != "true" ]]; then
+              echo "Release $TAG cannot be replaced; published versioned assets are immutable." >&2
+              exit 1
+            fi
+            gh release upload "$TAG" "$BUNDLE" "$BUNDLE.sha256" --clobber
+            gh release edit "$TAG" --draft --prerelease="$PRERELEASE" \
+              --title "BlueEvolution $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" --target "$GITHUB_SHA"
+            exit 0
           fi
           args=("$TAG" "$BUNDLE" "$BUNDLE.sha256" --draft --title "BlueEvolution $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" --target "$GITHUB_SHA")
           if [[ "$PRERELEASE" == "true" ]]; then

@@ -293,7 +293,7 @@ action_settings_backup_cb (EUIAction *action,
 
 	file = e_shell_run_save_dialog (
 		e_shell_window_get_shell (e_shell_view_get_shell_window (shell_view)),
-		_("Select name of the Evolution backup file"),
+		_("Select name of the BlueEvolution backup file"),
 		suggest, has_xz ? "*.tar.xz;*.tar.gz" : "*.tar.gz",
 		set_local_only, has_xz ? suggest : NULL);
 
@@ -354,7 +354,7 @@ action_settings_backup_cb (EUIAction *action,
 
 		mask = dialog_prompt_user (
 			parent_window,
-			_("_Restart Evolution after backup"),
+			_("_Restart BlueEvolution after backup"),
 			"org.gnome.backup-restore:backup-confirm", NULL);
 		if (mask & BR_OK) {
 			path = g_file_get_path (file);
@@ -389,7 +389,7 @@ validate_backup_file_data_free (gpointer ptr)
 
 			mask = dialog_prompt_user (
 				vbf->shell_window ? GTK_WINDOW (vbf->shell_window) : NULL,
-				_("Re_start Evolution after restore"),
+				_("Re_start BlueEvolution after restore"),
 				"org.gnome.backup-restore:restore-confirm", NULL);
 			if (mask & BR_OK)
 				restore (vbf->path, mask & BR_START);
@@ -439,7 +439,7 @@ action_settings_restore_cb (EUIAction *action,
 
 	file = e_shell_run_open_dialog (
 		e_shell_window_get_shell (e_shell_view_get_shell_window (shell_view)),
-		_("Select name of the Evolution backup file to restore"),
+		_("Select name of the BlueEvolution backup file to restore"),
 		set_local_only, NULL);
 
 	if (file == NULL)
@@ -586,16 +586,16 @@ evolution_backup_restore_menu_items_constructed (GObject *object)
 
 		{ "settings-backup",
 		  NULL,
-		  N_("_Back up Evolution Data…"),
+		  N_("_Back up BlueEvolution Data…"),
 		  NULL,
-		  N_("Back up Evolution data and settings to an archive file"),
+		  N_("Back up BlueEvolution data and settings to an archive file"),
 		  action_settings_backup_cb, NULL, NULL },
 
 		{ "settings-restore",
 		  NULL,
-		  N_("R_estore Evolution Data…"),
+		  N_("R_estore BlueEvolution Data…"),
 		  NULL,
-		  N_("Restore Evolution data and settings from an archive file"),
+		  N_("Restore BlueEvolution data and settings from an archive file"),
 		  action_settings_restore_cb, NULL, NULL }
 	};
 

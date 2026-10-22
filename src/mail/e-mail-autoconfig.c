@@ -369,7 +369,7 @@ mail_autoconfig_lookup_pacc (EMailAutoconfig *autoconfig,
 	soup_session = soup_session_new_with_options (
 		"proxy-resolver", G_PROXY_RESOLVER (proxy_source),
 		"timeout", 15,
-		"user-agent", "Evolution/" VERSION VERSION_SUBSTRING " " VERSION_COMMENT,
+				"user-agent", "BlueEvolution/" VERSION VERSION_SUBSTRING " " VERSION_COMMENT,
 		NULL);
 
 	g_object_unref (proxy_source);
@@ -845,7 +845,7 @@ mail_autoconfig_lookup (EMailAutoconfig *autoconfig,
 	soup_session = soup_session_new_with_options (
 		"proxy-resolver", G_PROXY_RESOLVER (proxy_source),
 		"timeout", 15,
-		"user-agent", "Evolution/" VERSION VERSION_SUBSTRING " " VERSION_COMMENT,
+				"user-agent", "BlueEvolution/" VERSION VERSION_SUBSTRING " " VERSION_COMMENT,
 		NULL);
 
 	g_object_unref (proxy_source);

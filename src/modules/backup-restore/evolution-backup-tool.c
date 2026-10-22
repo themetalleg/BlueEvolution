@@ -66,13 +66,13 @@ static gchar *txt = NULL;
 
 static GOptionEntry options[] = {
 	{ "backup", '\0', 0, G_OPTION_ARG_NONE, &backup_op,
-	  N_("Back up Evolution directory"), NULL },
+	  N_("Back up BlueEvolution directory"), NULL },
 	{ "restore", '\0', 0, G_OPTION_ARG_NONE, &restore_op,
-	  N_("Restore Evolution directory"), NULL },
+	  N_("Restore BlueEvolution directory"), NULL },
 	{ "check", '\0', 0, G_OPTION_ARG_NONE, &check_op,
-	  N_("Check Evolution Back up"), NULL },
+	  N_("Check BlueEvolution Back up"), NULL },
 	{ "restart", '\0', 0, G_OPTION_ARG_NONE, &restart_arg,
-	  N_("Restart Evolution"), NULL },
+	  N_("Restart BlueEvolution"), NULL },
 	{ "gui", '\0', 0, G_OPTION_ARG_NONE, &gui_arg,
 	  N_("With Graphical User Interface"), NULL },
 	{ G_OPTION_REMAINING, '\0', 0,
@@ -549,7 +549,7 @@ backup (const gchar *filename,
 			return;
 	}
 
-	txt = _("Shutting down Evolution");
+	txt = _("Shutting down BlueEvolution");
 	/* FIXME Will the versioned setting always work? */
 	run_cmd (EVOLUTION " --quit");
 
@@ -558,7 +558,7 @@ backup (const gchar *filename,
 	if (g_cancellable_is_cancelled (cancellable))
 		return;
 
-	txt = _("Backing Evolution accounts and settings");
+	txt = _("Backing BlueEvolution accounts and settings");
 	if (!backup_settings (EVOLUTION_DIR GSETTINGS_DUMP_FILE, &error)) {
 		g_warning ("Failed to backup settings: %s", error ? error->message : "Unknown error");
 		g_clear_error (&error);
@@ -573,7 +573,7 @@ backup (const gchar *filename,
 	if (g_cancellable_is_cancelled (cancellable))
 		return;
 
-	txt = _("Backing Evolution data (Mails, Contacts, Calendar, Tasks, Memos)");
+	txt = _("Backing BlueEvolution data (Mails, Contacts, Calendar, Tasks, Memos)");
 
 	quotedfname = g_shell_quote (filename);
 
@@ -602,7 +602,7 @@ backup (const gchar *filename,
 		if (g_cancellable_is_cancelled (cancellable))
 			return;
 
-		txt = _("Restarting Evolution");
+		txt = _("Restarting BlueEvolution");
 		run_evolution_no_wait ();
 	}
 
@@ -811,13 +811,13 @@ restore (const gchar *filename,
 		return;
 
 	/* FIXME Will the versioned setting always work? */
-	txt = _("Shutting down Evolution");
+	txt = _("Shutting down BlueEvolution");
 	run_cmd (EVOLUTION " --quit");
 
 	if (g_cancellable_is_cancelled (cancellable))
 		return;
 
-	txt = _("Back up current Evolution data");
+	txt = _("Back up current BlueEvolution data");
 	run_cmd ("mv $DATADIR $DATADIR_old");
 	run_cmd ("mv $CONFIGDIR $CONFIGDIR_old");
 
@@ -919,7 +919,7 @@ restore (const gchar *filename,
 	if (g_cancellable_is_cancelled (cancellable))
 		return;
 
-	txt = _("Loading Evolution settings");
+	txt = _("Loading BlueEvolution settings");
 
 	if (is_new_format) {
 		/* new format has it in DATADIR... */
@@ -1034,7 +1034,7 @@ end:
 		if (g_cancellable_is_cancelled (cancellable))
 			return;
 
-		txt = _("Restarting Evolution");
+		txt = _("Restarting BlueEvolution");
 
 		/* wait 5 seconds before restarting evolution, thus any
 		 * changes being done are updated in source registry too */
@@ -1243,7 +1243,8 @@ main (gint argc,
 	textdomain (GETTEXT_PACKAGE);
 
 	/* to pair the tool with the main app in the desktop environment (like in the GNOME shell) */
-	g_set_prgname ("org.gnome.Evolution");
+	g_set_prgname ("io.github.themetalleg.BlueEvolution");
+	g_set_application_name ("BlueEvolution");
 
 	gtk_init_with_args (
 		&argc, &argv, NULL, options, GETTEXT_PACKAGE, &error);
@@ -1261,12 +1262,12 @@ main (gint argc,
 	if (opt_remaining != NULL) {
 		for (ii = 0; ii < g_strv_length (opt_remaining); ii++) {
 			if (backup_op) {
-				title = _("Evolution Back Up");
+				title = _("BlueEvolution Back Up");
 				oper = _("Backing up to the file %s");
 				bk_file = g_strdup ((gchar *) opt_remaining[ii]);
 				file = bk_file;
 			} else if (restore_op) {
-				title = _("Evolution Restore");
+				title = _("BlueEvolution Restore");
 				oper = _("Restoring from the file %s");
 				res_file = g_strdup ((gchar *) opt_remaining[ii]);
 				file = res_file;
@@ -1287,7 +1288,7 @@ main (gint argc,
 		gchar *str = NULL;
 		gchar *markup;
 
-		gtk_window_set_default_icon_name ("evolution");
+		gtk_window_set_default_icon_name ("blueevolution");
 
 		/* Backup / Restore only can have GUI.
 		 * We should restrict the rest. */
@@ -1335,11 +1336,11 @@ main (gint argc,
 			NULL);
 
 		if (backup_op) {
-			txt1 = _("Backing up Evolution Data");
-			txt2 = _("Please wait while Evolution is backing up your data.");
+			txt1 = _("Backing up BlueEvolution Data");
+			txt2 = _("Please wait while BlueEvolution is backing up your data.");
 		} else if (restore_op) {
-			txt1 = _("Restoring Evolution Data");
-			txt2 = _("Please wait while Evolution is restoring your data.");
+			txt1 = _("Restoring BlueEvolution Data");
+			txt2 = _("Please wait while BlueEvolution is restoring your data.");
 		} else {
 			g_return_val_if_reached (EXIT_FAILURE);
 		}

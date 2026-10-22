@@ -56,22 +56,22 @@
 
  <error id="address-book-backend-died" type="error">
   <_primary>The address book backend servicing “{0}” has quit unexpectedly.</_primary>
-  <_secondary>Some of your contacts may not be available until Evolution is restarted.</_secondary>
+  <_secondary>Some of your contacts may not be available until BlueEvolution is restarted.</_secondary>
  </error>
 
  <error id="calendar-backend-died" type="error">
   <_primary>The calendar backend servicing “{0}” has quit unexpectedly.</_primary>
-  <_secondary>Some of your appointments may not be available until Evolution is restarted.</_secondary>
+  <_secondary>Some of your appointments may not be available until BlueEvolution is restarted.</_secondary>
  </error>
 
  <error id="memo-list-backend-died" type="error">
   <_primary>The memo list backend servicing “{0}” has quit unexpectedly.</_primary>
-  <_secondary>Some of your memos may not be available until Evolution is restarted.</_secondary>
+  <_secondary>Some of your memos may not be available until BlueEvolution is restarted.</_secondary>
  </error>
 
  <error id="task-list-backend-died" type="error">
   <_primary>The task list backend servicing “{0}” has quit unexpectedly.</_primary>
-  <_secondary>Some of your tasks may not be available until Evolution is restarted.</_secondary>
+  <_secondary>Some of your tasks may not be available until BlueEvolution is restarted.</_secondary>
  </error>
 
  <error id="address-book-backend-error" type="warning">

@@ -1,5 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-  <rect x="5" y="5" width="118" height="118" rx="29" fill="#15586a"/>
-  <path d="M42 28v72m0-72h27c13 0 21 7 21 18S82 64 69 64H42m0 0h30c14 0 23 7 23 19s-9 17-23 17H42" fill="none" stroke="#f4fbfa" stroke-linecap="round" stroke-linejoin="round" stroke-width="9"/>
-  <path d="M74 86c8-7 15-7 22 0s14 7 22 0" fill="none" stroke="#72d6bd" stroke-linecap="round" stroke-width="7"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <title>BlueEvolution</title>
+  <desc>A white folded envelope with an E-shaped opening on a blue rounded square.</desc>
+  <rect width="512" height="512" rx="112" fill="#1464E8"/>
+  <path d="M104 160C104 146.745 114.745 136 128 136H384C397.255 136 408 146.745 408 160V352C408 365.255 397.255 376 384 376H128C114.745 376 104 365.255 104 352V160Z" fill="white"/>
+  <path d="M108 157L242 254C250.354 260.048 261.646 260.048 270 254L404 157" stroke="#1464E8" stroke-width="20" stroke-linejoin="round"/>
+  <path d="M104 298H216M104 340H184" stroke="#1464E8" stroke-width="18" stroke-linecap="round"/>
 </svg>

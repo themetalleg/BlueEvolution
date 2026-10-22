@@ -737,7 +737,7 @@ EImportImporter *
 ical_importer_peek (void)
 {
 	ical_importer.name = _("iCalendar files (.ics)");
-	ical_importer.description = _("Evolution iCalendar importer");
+	ical_importer.description = _("BlueEvolution iCalendar importer");
 
 	return &ical_importer;
 }
@@ -906,7 +906,7 @@ EImportImporter *
 vcal_importer_peek (void)
 {
 	vcal_importer.name = _("vCalendar files (.vcs)");
-	vcal_importer.description = _("Evolution vCalendar importer");
+	vcal_importer.description = _("BlueEvolution vCalendar importer");
 
 	return &vcal_importer;
 }
@@ -1224,7 +1224,7 @@ EImportImporter *
 gnome_calendar_importer_peek (void)
 {
 	gnome_calendar_importer.name = _("GNOME Calendar");
-	gnome_calendar_importer.description = _("Evolution Calendar intelligent importer");
+	gnome_calendar_importer.description = _("BlueEvolution Calendar intelligent importer");
 
 	return &gnome_calendar_importer;
 }

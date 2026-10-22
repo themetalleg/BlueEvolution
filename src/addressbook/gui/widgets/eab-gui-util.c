@@ -102,9 +102,9 @@ eab_load_error_dialog (GtkWidget *parent,
 
 		can_detail_error = FALSE;
 		label_string =
-			_("This version of Evolution does not have LDAP support "
-			  "compiled in to it.  To use LDAP in Evolution "
-			  "an LDAP-enabled Evolution package must be installed.");
+			_("This version of BlueEvolution does not have LDAP support "
+			  "compiled in to it.  To use LDAP in BlueEvolution "
+			  "an LDAP-enabled BlueEvolution package must be installed.");
 
 	}
 #endif
@@ -161,7 +161,7 @@ eab_search_result_dialog (EAlertSink *alert_sink,
 		switch (error->code) {
 		case E_CLIENT_ERROR_SEARCH_SIZE_LIMIT_EXCEEDED:
 			str = _("More cards matched this query than either the server is \n"
-				"configured to return or Evolution is configured to display.\n"
+				"configured to return or BlueEvolution is configured to display.\n"
 				"Please make your search more specific or raise the result limit in\n"
 				"the directory server preferences for this address book.");
 			str = g_strdup (str);

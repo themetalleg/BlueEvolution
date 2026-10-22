@@ -210,7 +210,7 @@ cal_config_local_insert_widgets (ESourceConfigBackend *backend,
 			G_BINDING_SYNC_CREATE);
 
 		widget = gtk_check_button_new_with_label (
-			_("Allow Evolution to update the file"));
+			_("Allow BlueEvolution to update the file"));
 		e_source_config_insert_widget (
 			config, scratch_source, NULL, widget);
 		context->writable_checkbox = g_object_ref (widget);

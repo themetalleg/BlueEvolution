@@ -151,8 +151,8 @@ startup_assistant_constructed (GObject *object)
 
 		e_mail_config_welcome_page_set_text (
 			E_MAIL_CONFIG_WELCOME_PAGE (nth_page),
-			_("Welcome to Evolution.\n\nThe next few screens will "
-			"allow Evolution to connect to your email accounts, "
+			_("Welcome to BlueEvolution.\n\nThe next few screens will "
+			"allow BlueEvolution to connect to your email accounts, "
 			"and to import files from other applications."));
 
 		main_box = e_mail_config_welcome_page_get_main_box (E_MAIL_CONFIG_WELCOME_PAGE (nth_page));

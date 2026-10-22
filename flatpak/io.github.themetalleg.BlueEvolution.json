@@ -493,7 +493,7 @@
         "-DWITH_BOGOFILTER=/app/bin/bogofilter",
         "-DWITH_GLADE_CATALOG=OFF",
         "-DWITH_HELP=OFF",
-        "-DWITH_WMCLASS_OVERRIDE=evolution.bin",
+        "-DWITH_WMCLASS_OVERRIDE=io.github.themetalleg.BlueEvolution",
         "-DOVERRIDE_APPLICATION_ID=io.github.themetalleg.BlueEvolution"
       ],
       "cleanup": [

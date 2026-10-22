@@ -1213,9 +1213,9 @@ e_rss_export_to_file (GtkWindow *parent,
 	e_xml_document_start_element (xml, NULL, "head");
 	e_xml_document_start_text_element (xml, NULL, "title");
 	if (strlen (VERSION_COMMENT) > 0)
-		e_xml_document_write_string (xml, "Evolution RSS Feeds (" VERSION VERSION_SUBSTRING " " VERSION_COMMENT ")");
+		e_xml_document_write_string (xml, "BlueEvolution RSS Feeds (" VERSION VERSION_SUBSTRING " " VERSION_COMMENT ")");
 	else
-		e_xml_document_write_string (xml, "Evolution RSS Feeds (" VERSION VERSION_SUBSTRING ")");
+		e_xml_document_write_string (xml, "BlueEvolution RSS Feeds (" VERSION VERSION_SUBSTRING ")");
 	e_xml_document_end_element (xml); /* title */
 	e_xml_document_start_text_element (xml, NULL, "dateCreated");
 	e_xml_document_write_time (xml, time (NULL));

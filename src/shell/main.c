@@ -55,7 +55,7 @@
 #ifdef OVERRIDE_APPLICATION_ID
 #define APPLICATION_ID OVERRIDE_APPLICATION_ID
 #else
-#define APPLICATION_ID "org.gnome.Evolution"
+#define APPLICATION_ID "io.github.themetalleg.BlueEvolution"
 #endif
 
 /* STABLE_VERSION is only defined for development versions. */
@@ -88,7 +88,7 @@ show_development_warning (void)
 
 	warning_dialog = gtk_dialog_new ();
 	gtk_window_set_title (
-		GTK_WINDOW (warning_dialog), "Evolution " VERSION);
+		GTK_WINDOW (warning_dialog), "BlueEvolution " VERSION);
 	gtk_window_set_modal (
 		GTK_WINDOW (warning_dialog), TRUE);
 	gtk_dialog_add_button (
@@ -109,16 +109,16 @@ show_development_warning (void)
 		/* xgettext:no-c-format */
 		/* Preview/Alpha/Beta version warning message */
 		_("Hi.  Thanks for taking the time to download this preview release\n"
-		"of the Evolution groupware suite.\n"
+		"of the BlueEvolution groupware suite.\n"
 		"\n"
-		"This version of Evolution is not yet complete. It is getting close,\n"
+		"This version of BlueEvolution is not yet complete. It is getting close,\n"
 		"but some features are either unfinished or do not work properly.\n"
 		"\n"
-		"If you want a stable version of Evolution, we urge you to uninstall\n"
+		"If you want a stable version of BlueEvolution, we urge you to uninstall\n"
 		"this version, and install version %s instead.\n"
 		"\n"
 		"If you find bugs, please report them at\n"
-		"https://gitlab.gnome.org/GNOME/evolution/issues/.\n"
+		"https://github.com/themetalleg/BlueEvolution/issues.\n"
 		"This product comes with no warranty and is not intended for\n"
 		"individuals prone to violent fits of anger.\n"
 		"\n"
@@ -134,7 +134,7 @@ show_development_warning (void)
 
 	gtk_box_pack_start (GTK_BOX (vbox), label, TRUE, TRUE, 0);
 
-	label = gtk_label_new (_("Thanks\nThe Evolution Team\n"));
+	label = gtk_label_new (_("Thanks\nThe BlueEvolution Team\n"));
 	gtk_label_set_justify (GTK_LABEL (label), GTK_JUSTIFY_RIGHT);
 	gtk_label_set_xalign (GTK_LABEL (label), 1);
 
@@ -269,7 +269,8 @@ main (gint argc,
 	}
 
 	/* To pair the app with the desktop file */
-	g_set_prgname ("org.gnome.Evolution");
+	g_set_prgname (APPLICATION_ID);
+	g_set_application_name ("BlueEvolution");
 
 	/* Pre-cache list of supported locales */
 	e_util_enum_supported_locales ();

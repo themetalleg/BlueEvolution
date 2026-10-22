@@ -401,7 +401,7 @@ e_shell_sidebar_init (EShellSidebar *shell_sidebar)
 	container = widget;
 
 	/* Pick a bogus icon name just to get the storage type set. */
-	icon_name = "evolution";
+	icon_name = "blueevolution";
 	e_shell_sidebar_set_icon_name (shell_sidebar, icon_name);
 	widget = gtk_image_new_from_icon_name (icon_name, GTK_ICON_SIZE_MENU);
 	shell_sidebar->priv->image_widget = widget;

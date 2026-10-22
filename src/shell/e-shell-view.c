@@ -2193,7 +2193,7 @@ shell_view_constructed (GObject *object)
 		if (GTK_IS_HEADER_BAR (shell_view->priv->headerbar) &&
 		    E_IS_SHELL_SEARCHBAR (shell_view->priv->searchbar)) {
 			GtkWidget *search_box;
-			GtkWidget *brand;
+			GtkWidget *brand, *brand_box;
 
 			search_box = e_shell_searchbar_get_search_box (E_SHELL_SEARCHBAR (shell_view->priv->searchbar));
 			g_object_ref (search_box);
@@ -2204,10 +2204,15 @@ shell_view_constructed (GObject *object)
 			gtk_header_bar_set_custom_title (GTK_HEADER_BAR (shell_view->priv->headerbar), search_box);
 			g_object_unref (search_box);
 
+			brand_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 8);
+			gtk_style_context_add_class (gtk_widget_get_style_context (brand_box), "blueevolution-brand");
+			brand = gtk_image_new_from_icon_name ("blueevolution", GTK_ICON_SIZE_MENU);
+			gtk_image_set_pixel_size (GTK_IMAGE (brand), 24);
+			gtk_box_pack_start (GTK_BOX (brand_box), brand, FALSE, FALSE, 0);
 			brand = gtk_label_new ("BlueEvolution");
-			gtk_style_context_add_class (gtk_widget_get_style_context (brand), "blueevolution-brand");
-			gtk_header_bar_pack_start (GTK_HEADER_BAR (shell_view->priv->headerbar), brand);
-			gtk_widget_show (brand);
+			gtk_box_pack_start (GTK_BOX (brand_box), brand, FALSE, FALSE, 0);
+			gtk_header_bar_pack_start (GTK_HEADER_BAR (shell_view->priv->headerbar), brand_box);
+			gtk_widget_show_all (brand_box);
 		}
 
 		e_ui_customizer_register (customizer, "main-headerbar", NULL);

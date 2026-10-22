@@ -353,7 +353,7 @@ e_display_help (GtkWindow *parent,
 		parent, GTK_DIALOG_DESTROY_WITH_PARENT,
 		GTK_MESSAGE_ERROR, GTK_BUTTONS_OK,
 		"<big><b>%s</b></big>",
-		_("Could not display help for Evolution."));
+		_("Could not display help for BlueEvolution."));
 
 	gtk_message_dialog_format_secondary_text (
 		GTK_MESSAGE_DIALOG (dialog), "%s", error->message);
@@ -3595,7 +3595,7 @@ e_util_query_ldap_root_dse_sync (const gchar *host,
 
 #else /* HAVE_LDAP */
 	g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-		_("Evolution had not been compiled with LDAP support"));
+		_("BlueEvolution had not been compiled with LDAP support"));
 
 	return FALSE;
 #endif

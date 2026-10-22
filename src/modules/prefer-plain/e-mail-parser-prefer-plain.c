@@ -121,12 +121,12 @@ static struct {
 } epp_options[] = {
 	{ "normal",
 	  N_("Show HTML if present"),
-	  N_("Let Evolution choose the best part to show.") },
+	  N_("Let BlueEvolution choose the best part to show.") },
 
 	{ "prefer_plain",
 	  N_("Show plain text if present"),
 	  N_("Show plain text part, if present, otherwise "
-	     "let Evolution choose the best part to show.") },
+	     "let BlueEvolution choose the best part to show.") },
 
 	{ "prefer_source",
 	  N_("Show plain text if present, or HTML source"),

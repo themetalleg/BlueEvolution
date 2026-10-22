@@ -619,7 +619,7 @@ source_viewer_constructed (GObject *object)
 	attr = pango_attr_weight_new (PANGO_WEIGHT_BOLD);
 	pango_attr_list_insert (bold, attr);
 
-	title = _("Evolution Source Viewer");
+	title = _("BlueEvolution Source Viewer");
 	gtk_window_set_title (GTK_WINDOW (viewer), title);
 	gtk_window_set_default_size (GTK_WINDOW (viewer), 800, 600);
 

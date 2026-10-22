@@ -332,7 +332,7 @@ static EImportImporter kmail_importer = {
 EImportImporter *
 kmail_importer_peek (void)
 {
-	kmail_importer.name = _("Evolution KMail importer");
+	kmail_importer.name = _("BlueEvolution KMail importer");
 	kmail_importer.description = _("Import mail and contacts from KMail.");
 
 	return &kmail_importer;

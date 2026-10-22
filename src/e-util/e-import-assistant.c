@@ -262,7 +262,7 @@ import_assistant_file_page_init (EImportAssistant *import_assistant)
 
 	container = page;
 
-	text = _("Choose the file that you want to import into Evolution, "
+	text = _("Choose the file that you want to import into BlueEvolution, "
 		 "and select what type of file it is from the list.");
 
 	widget = gtk_label_new (text);
@@ -552,7 +552,7 @@ prepare_intelligent_page (GtkAssistant *assistant,
 		GtkWidget *widget;
 		const gchar *text;
 
-		text = _("Evolution checked for settings to import from "
+		text = _("BlueEvolution checked for settings to import from "
 			 "the following applications: Pine, Netscape, Elm, "
 			 "iCalendar, KMail. No importable settings found. If you "
 			 "would like to try again, please click the "
@@ -1334,7 +1334,7 @@ import_assistant_construct (EImportAssistant *import_assistant)
 		e_import_new ("org.gnome.evolution.shell.importer");
 
 	gtk_window_set_position (GTK_WINDOW (assistant), GTK_WIN_POS_CENTER);
-	gtk_window_set_title (GTK_WINDOW (assistant), _("Evolution Import Assistant"));
+	gtk_window_set_title (GTK_WINDOW (assistant), _("BlueEvolution Import Assistant"));
 	gtk_window_set_default_size (GTK_WINDOW (assistant), 500, 330);
 
 	e_extensible_load_extensions (E_EXTENSIBLE (import_assistant));
@@ -1366,15 +1366,15 @@ import_assistant_construct (EImportAssistant *import_assistant)
 			"margin-top", 12,
 			"margin-bottom", 12,
 			"label", _(
-				"Welcome to the Evolution Import Assistant.\n"
+				"Welcome to the BlueEvolution Import Assistant.\n"
 				"With this assistant you will be guided through the "
-				"process of importing external files into Evolution."),
+				"process of importing external files into BlueEvolution."),
 			"visible", TRUE,
 			NULL);
 
 		gtk_assistant_append_page (assistant, page);
 		gtk_assistant_set_page_title (
-			assistant, page, _("Evolution Import Assistant"));
+			assistant, page, _("BlueEvolution Import Assistant"));
 		gtk_assistant_set_page_type (
 			assistant, page, GTK_ASSISTANT_PAGE_INTRO);
 		gtk_assistant_set_page_complete (assistant, page, TRUE);
