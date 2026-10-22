@@ -1495,6 +1495,22 @@ for_node_and_subtree_if_collapsed (MessageList *message_list,
 		e_tree_model_node_traverse (tree_model, node, func, data);
 }
 
+static void
+for_node_and_latest_thread (MessageList *message_list,
+                            GNode *node,
+                            CamelMessageInfo *mi,
+                            ETreePathFunc func,
+                            gpointer data)
+{
+	if (message_list->priv->thread_latest && node != NULL &&
+	    node->parent == message_list->priv->tree_model_root && node->children != NULL) {
+		func (NULL, (ETreePath) mi, data);
+		e_tree_model_node_traverse (E_TREE_MODEL (message_list), node, func, data);
+	} else {
+		for_node_and_subtree_if_collapsed (message_list, node, mi, func, data);
+	}
+}
+
 static gboolean
 unread_foreach (ETreeModel *etm,
                 ETreePath path,
@@ -1850,7 +1866,7 @@ ml_tree_value_at_ex (ETreeModel *etm,
 		ld.sent = TRUE;
 		ld.latest = 0;
 
-		for_node_and_subtree_if_collapsed (message_list, node, msg_info, latest_foreach, &ld);
+		for_node_and_latest_thread (message_list, node, msg_info, latest_foreach, &ld);
 
 		res = g_new0 (gint64, 1);
 		*res = (gint64) ld.latest;
@@ -1864,7 +1880,7 @@ ml_tree_value_at_ex (ETreeModel *etm,
 		ld.sent = FALSE;
 		ld.latest = 0;
 
-		for_node_and_subtree_if_collapsed (message_list, node, msg_info, latest_foreach, &ld);
+		for_node_and_latest_thread (message_list, node, msg_info, latest_foreach, &ld);
 
 		res = g_new0 (gint64, 1);
 		*res = (gint64) ld.latest;

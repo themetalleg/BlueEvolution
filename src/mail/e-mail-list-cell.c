@@ -190,6 +190,12 @@ mail_list_timestamp (ECellView *view,
 	return timestamp;
 }
 
+static gboolean
+mail_list_is_top_level_row (GNode *node)
+{
+	return node != NULL && node->parent != NULL && G_NODE_IS_ROOT (node->parent);
+}
+
 static gint
 mail_list_heading (ECellView *view,
                    gint row)
@@ -202,6 +208,9 @@ mail_list_heading (ECellView *view,
 	EMailListCell *cell = (EMailListCell *) view->ecell;
 
 	if (row < 0 || !E_IS_TREE_TABLE_ADAPTER (view->e_table_model))
+		return -1;
+	if (!mail_list_is_top_level_row (e_tree_table_adapter_node_at_row (
+		E_TREE_TABLE_ADAPTER (view->e_table_model), row)))
 		return -1;
 	sort_info = e_tree_table_adapter_get_sort_info (E_TREE_TABLE_ADAPTER (view->e_table_model));
 	if (!e_table_sort_info_sorting_get_count (sort_info))

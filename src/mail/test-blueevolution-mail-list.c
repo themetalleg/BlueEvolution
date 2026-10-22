@@ -93,6 +93,20 @@ test_widths (void)
 }
 
 static void
+test_date_headings_only_for_top_level_rows (void)
+{
+	GNode *tree = g_node_new (NULL);
+	GNode *thread = g_node_new (NULL);
+	GNode *reply = g_node_new (NULL);
+
+	g_node_append (tree, thread);
+	g_node_append (thread, reply);
+	g_assert_true (mail_list_is_top_level_row (thread));
+	g_assert_false (mail_list_is_top_level_row (reply));
+	g_node_destroy (tree);
+}
+
+static void
 check_group (GTimeZone *zone, GDateTime *now, gint year, gint month, gint day, gint expected)
 {
 	GDateTime *date = g_date_time_new (zone, year, month, day, 12, 0, 0);
@@ -156,6 +170,7 @@ main (int argument_count, char **argument_values)
 	tzset ();
 	g_test_init (&argument_count, &argument_values, NULL);
 	g_test_add_func ("/blueevolution/mail/date-width", test_widths);
+	g_test_add_func ("/blueevolution/mail/date-headings-top-level", test_date_headings_only_for_top_level_rows);
 	g_test_add_func ("/blueevolution/mail/date-sections", test_dates);
 	return g_test_run ();
 }

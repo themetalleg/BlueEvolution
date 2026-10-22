@@ -362,17 +362,9 @@ e_shell_window_switch_to_view (EShellWindow *shell_window,
 void
 e_shell_window_update_icon (EShellWindow *shell_window)
 {
-	EShellView *shell_view;
-	EUIAction *action;
-	const gchar *view_name;
-
 	g_return_if_fail (E_IS_SHELL_WINDOW (shell_window));
 
-	view_name = e_shell_window_get_active_view (shell_window);
-	shell_view = e_shell_window_get_shell_view (shell_window, view_name);
-
-	action = e_shell_view_get_switcher_action (shell_view);
-	gtk_window_set_icon_name (GTK_WINDOW (shell_window), e_ui_action_get_icon_name (action));
+	gtk_window_set_icon_name (GTK_WINDOW (shell_window), "blueevolution");
 }
 
 void
