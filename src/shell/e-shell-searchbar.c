@@ -857,19 +857,9 @@ e_shell_searchbar_init (EShellSearchbar *searchbar)
 
 	box = GTK_BOX (widget);
 
-	/* Translators: The "Show:" label precedes a combo box that
-	 * allows the user to filter the current view.  Examples of
-	 * items that appear in the combo box are "Unread Messages",
-	 * "Important Messages", or "Active Appointments". */
-	widget = gtk_label_new_with_mnemonic (_("Sho_w:"));
-	gtk_box_pack_start (box, widget, FALSE, FALSE, 0);
-	gtk_widget_show (widget);
-
-	label = GTK_LABEL (widget);
-
 	widget = e_action_combo_box_new ();
+	gtk_widget_set_tooltip_text (widget, _("Filter messages"));
 	e_action_combo_box_set_ellipsize_enabled (E_ACTION_COMBO_BOX (widget), TRUE);
-	gtk_label_set_mnemonic_widget (label, widget);
 	gtk_box_pack_start (box, widget, FALSE, FALSE, 0);
 	searchbar->priv->filter_combo_box = widget;
 	gtk_widget_show (widget);

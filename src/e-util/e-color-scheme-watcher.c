@@ -166,6 +166,17 @@ e_color_scheme_watcher_sync_theme (EColorSchemeWatcher *self)
 		color_scheme = E_COLOR_SCHEME_PREFER_DARK;
 	g_free (mode);
 
+	if (color_scheme == E_COLOR_SCHEME_PREFER_DARK)
+		g_object_set (gtk_settings,
+			"gtk-application-prefer-dark-theme", TRUE,
+			NULL);
+	else if (color_scheme == E_COLOR_SCHEME_PREFER_LIGHT)
+		g_object_set (gtk_settings,
+			"gtk-application-prefer-dark-theme", FALSE,
+			NULL);
+	else
+		gtk_settings_reset_property (gtk_settings, "gtk-application-prefer-dark-theme");
+
 	g_object_get (gtk_settings,
 		"gtk-theme-name", &theme_name,
 		NULL);
@@ -174,10 +185,6 @@ e_color_scheme_watcher_sync_theme (EColorSchemeWatcher *self)
 		gboolean update_theme = FALSE;
 
 		if (color_scheme == E_COLOR_SCHEME_PREFER_DARK) {
-			g_object_set (gtk_settings,
-				"gtk-application-prefer-dark-theme", TRUE,
-				NULL);
-
 			if (g_strcmp0 (theme_name, "HighContrast") == 0) {
 				g_object_set (gtk_settings,
 					"gtk-theme-name", "HighContrastInverse",
@@ -191,10 +198,6 @@ e_color_scheme_watcher_sync_theme (EColorSchemeWatcher *self)
 					       g_strcmp0 (theme_name, "Breeze-Dark") != 0;
 			}
 		} else if (color_scheme == E_COLOR_SCHEME_PREFER_LIGHT) {
-			g_object_set (gtk_settings,
-				"gtk-application-prefer-dark-theme", FALSE,
-				NULL);
-
 			if (g_strcmp0 (theme_name, "HighContrastInverse") == 0) {
 				g_object_set (gtk_settings,
 					"gtk-theme-name", "HighContrast",
@@ -209,7 +212,6 @@ e_color_scheme_watcher_sync_theme (EColorSchemeWatcher *self)
 			}
 		} else {
 			gtk_settings_reset_property (gtk_settings, "gtk-theme-name");
-			gtk_settings_reset_property (gtk_settings, "gtk-application-prefer-dark-theme");
 		}
 
 		if (update_theme) {

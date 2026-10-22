@@ -86,7 +86,7 @@ mail_list_compact_date (gint64 timestamp,
                         GDateTime *now)
 {
 	GDateTime *date;
-	gchar *result, *time_text, *weekday;
+	gchar *result, *time_text, *weekday, *date_text;
 	gint days;
 
 	date = timestamp ? g_date_time_new_from_unix_local (timestamp) : NULL;
@@ -108,7 +108,11 @@ mail_list_compact_date (gint64 timestamp,
 		}
 		g_free (time_text);
 	} else {
-		result = e_datetime_format_format ("mail", "timeline", DTFormatKindShortDate, timestamp);
+		weekday = g_date_time_format (date, "%a");
+		date_text = g_date_time_format (date, "%x");
+		result = g_strdup_printf ("%s, %s", weekday, date_text);
+		g_free (weekday);
+		g_free (date_text);
 	}
 	g_date_time_unref (date);
 	return result;

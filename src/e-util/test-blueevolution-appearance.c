@@ -40,6 +40,29 @@ test_appearance_precedence (void)
 }
 
 static void
+test_appearance_preference_without_theme_name (void)
+{
+	EColorSchemeWatcher watcher = { 0 };
+	GtkSettings *gtk_settings = gtk_settings_get_default ();
+	gchar *theme_name = NULL;
+
+	g_object_get (gtk_settings, "gtk-theme-name", &theme_name, NULL);
+	g_object_set (gtk_settings, "gtk-theme-name", NULL, NULL);
+	watcher.appearance_settings = g_settings_new ("io.github.themetalleg.BlueEvolution");
+	watcher.color_scheme = E_COLOR_SCHEME_UNKNOWN;
+	g_settings_set_string (watcher.appearance_settings, "appearance-mode", "dark");
+	e_color_scheme_watcher_sync_theme (&watcher);
+	check_dark_preference (TRUE);
+	g_settings_set_string (watcher.appearance_settings, "appearance-mode", "light");
+	e_color_scheme_watcher_sync_theme (&watcher);
+	check_dark_preference (FALSE);
+
+	g_object_set (gtk_settings, "gtk-theme-name", theme_name, NULL);
+	g_free (theme_name);
+	g_object_unref (watcher.appearance_settings);
+}
+
+static void
 test_ui_definitions (void)
 {
 	const gchar *names[] = { "evolution-shell.eui", "evolution-mail.eui", "evolution-mail-reader.eui" };
@@ -103,6 +126,7 @@ main (gint argc, gchar **argv)
 	gtk_init (&argc, &argv);
 	g_test_init (&argc, &argv, NULL);
 	g_test_add_func ("/blueevolution/appearance/preference-precedence", test_appearance_precedence);
+	g_test_add_func ("/blueevolution/appearance/preference-without-theme-name", test_appearance_preference_without_theme_name);
 	g_test_add_func ("/blueevolution/ui/definitions", test_ui_definitions);
 	g_test_add_func ("/blueevolution/icons/bootstrap-aliases", test_bootstrap_aliases);
 	return g_test_run ();

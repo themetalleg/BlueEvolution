@@ -352,6 +352,7 @@ src/mail/e-mail-label-dialog.c
 src/mail/e-mail-label-list-store.c
 src/mail/e-mail-label-manager.c
 src/mail/e-mail-label-tree-view.c
+src/mail/e-mail-list-cell.c
 src/mail/e-mail-migrate.c
 src/mail/e-mail-notes.c
 src/mail/e-mail-print-config-headers.c

@@ -526,7 +526,7 @@
       <_description>Whether or not to fall back on threading by subjects when the messages do not contain In-Reply-To or References headers.</_description>
     </key>
     <key name="thread-expand" type="b">
-      <default>true</default>
+      <default>false</default>
       <_summary>Default value for thread expand state</_summary>
       <_description>This setting specifies whether the threads should be in expanded or collapsed state by default. Evolution requires a restart.</_description>
     </key>

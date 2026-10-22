@@ -31215,13 +31215,37 @@ msgstr "E-Mail-Ordner werden migriert. Bitte warten …"
 msgid "Some of the mail accounts failed to migrate."
 msgstr "Einige E-Mail-Konten konnten nicht migriert werden."
 
-#. Translators: The "Show:" label precedes a combo box that
-#. * allows the user to filter the current view.  Examples of
-#. * items that appear in the combo box are "Unread Messages",
-#. * "Important Messages", or "Active Appointments".
-#: ../src/shell/e-shell-searchbar.c:901
-msgid "Sho_w:"
-msgstr "An_zeigen:"
+#: ../src/shell/e-shell-searchbar.c
+msgid "Filter messages"
+msgstr "Nachrichten filtern"
+
+#: ../src/mail/e-mail-list-cell.c
+msgid "Upcoming"
+msgstr "Demnächst"
+
+#: ../src/mail/e-mail-list-cell.c
+msgid "This Week"
+msgstr "Diese Woche"
+
+#: ../src/mail/e-mail-list-cell.c
+msgid "Last Week"
+msgstr "Letzte Woche"
+
+#: ../src/mail/e-mail-list-cell.c
+msgid "Earlier This Month"
+msgstr "Früher in diesem Monat"
+
+#: ../src/mail/e-mail-list-cell.c
+msgid "Last Month"
+msgstr "Letzten Monat"
+
+#: ../src/mail/e-mail-list-cell.c
+msgid "Older"
+msgstr "Älter"
+
+#: ../src/mail/e-mail-list-cell.c
+msgid "Unknown date"
+msgstr "Unbekanntes Datum"
 
 #. Translators: This is part of the quick search interface.
 #. * example: Search: [_______________] in [ Current Folder ]

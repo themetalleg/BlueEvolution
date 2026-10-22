@@ -107,6 +107,39 @@ test_date_headings_only_for_top_level_rows (void)
 }
 
 static void
+test_older_dates_use_abbreviated_weekday (void)
+{
+	GTimeZone *zone = g_time_zone_new_identifier ("Europe/Zurich");
+	GDateTime *now = g_date_time_new (zone, 2026, 10, 21, 15, 0, 0);
+	GDateTime *date = g_date_time_new (zone, 2026, 10, 14, 15, 0, 0);
+	gchar *weekday = g_date_time_format (date, "%a");
+	gchar *short_date = g_date_time_format (date, "%x");
+	gchar *expected = g_strdup_printf ("%s, %s", weekday, short_date);
+	gchar *actual = mail_list_compact_date (g_date_time_to_unix (date), now);
+
+	g_assert_cmpstr (actual, ==, expected);
+	g_free (actual);
+	g_free (expected);
+	g_free (short_date);
+	g_free (weekday);
+	g_date_time_unref (date);
+	g_date_time_unref (now);
+	g_time_zone_unref (zone);
+}
+
+static void
+test_thread_expand_default_closed (void)
+{
+	GSettings *settings = e_util_ref_settings ("org.gnome.evolution.mail");
+	GVariant *default_value = g_settings_get_default_value (settings, "thread-expand");
+
+	g_assert_nonnull (default_value);
+	g_assert_false (g_variant_get_boolean (default_value));
+	g_variant_unref (default_value);
+	g_object_unref (settings);
+}
+
+static void
 check_group (GTimeZone *zone, GDateTime *now, gint year, gint month, gint day, gint expected)
 {
 	GDateTime *date = g_date_time_new (zone, year, month, day, 12, 0, 0);
@@ -171,6 +204,8 @@ main (int argument_count, char **argument_values)
 	g_test_init (&argument_count, &argument_values, NULL);
 	g_test_add_func ("/blueevolution/mail/date-width", test_widths);
 	g_test_add_func ("/blueevolution/mail/date-headings-top-level", test_date_headings_only_for_top_level_rows);
+	g_test_add_func ("/blueevolution/mail/older-date-weekday-abbreviated", test_older_dates_use_abbreviated_weekday);
+	g_test_add_func ("/blueevolution/mail/thread-expand-default-closed", test_thread_expand_default_closed);
 	g_test_add_func ("/blueevolution/mail/date-sections", test_dates);
 	return g_test_run ();
 }
