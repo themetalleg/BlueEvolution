@@ -6,8 +6,8 @@ for GNOME Evolution. Back up existing mail data and use a separate test account.
 ## Changes
 
 - Consistent BlueEvolution application and taskbar identity, including backup/restore.
-- New BlueEvolution logo in the launcher, application header and About dialog.
-- The window frame, application header and taskbar now use the provided BlueEvolution SVG.
+- New BlueEvolution logo in the launcher, window frame and About dialog.
+- The provided BlueEvolution SVG is used for the window frame and taskbar; the header shows the product name once.
 - Expanded conversations display the latest-message date used to sort them, with date headings on conversations rather than replies.
 - Outlook-inspired three-pane mail layout, blue search header and command strip.
 - Bootstrap Icons 1.13.1 throughout the application, with its MIT license included.
