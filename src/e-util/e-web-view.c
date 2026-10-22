@@ -764,6 +764,14 @@ e_web_view_update_styles (EWebView *web_view,
 
 	fg_brightness = e_utils_get_color_brightness (&color);
 
+	if (bg_brightness < fg_brightness)
+		e_web_view_jsc_add_rule_into_style_sheet (webkit_web_view,
+			iframe_id,
+			"-e-web-view-style-sheet",
+			"body:not([color]):not([text]):not([style*='color'])",
+			style,
+			web_view->priv->cancellable);
+
 	g_free (color_value);
 	g_free (style);
 
