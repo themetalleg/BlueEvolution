@@ -160,11 +160,16 @@ e_color_scheme_watcher_sync_theme (EColorSchemeWatcher *self)
 	gchar *mode = g_settings_get_string (self->appearance_settings, "appearance-mode");
 	EColorScheme color_scheme = self->color_scheme;
 
-	if (g_strcmp0 (mode, "light") == 0)
-		color_scheme = E_COLOR_SCHEME_PREFER_LIGHT;
-	else if (g_strcmp0 (mode, "dark") == 0)
-		color_scheme = E_COLOR_SCHEME_PREFER_DARK;
+	if (g_strcmp0 (mode, "light") == 0 || g_strcmp0 (mode, "dark") == 0) {
+		g_object_set (gtk_settings,
+			"gtk-theme-name", "Adwaita",
+			"gtk-application-prefer-dark-theme", g_strcmp0 (mode, "dark") == 0,
+			NULL);
+		g_free (mode);
+		return;
+	}
 	g_free (mode);
+	gtk_settings_reset_property (gtk_settings, "gtk-theme-name");
 
 	if (color_scheme == E_COLOR_SCHEME_PREFER_DARK)
 		g_object_set (gtk_settings,

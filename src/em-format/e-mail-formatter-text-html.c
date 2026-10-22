@@ -338,11 +338,8 @@ emfe_text_html_format (EMailFormatterExtension *extension,
 			"formatter_charset", G_TYPE_STRING, charset,
 			NULL);
 
-		/* HTML messages expect white background and black color for text.
-		 * If Evolution uses a dark theme, then the dark background with
-		 * a black text is hard to read, thus force white background color.
-		 * The HTML content can still overwrite both colors.
-		*/
+		/* Let the embedded message inherit the active color scheme. Its own
+		 * explicit colors remain untouched by the web-view defaults. */
 		str = g_strdup_printf (
 			"<div class=\"part-container-nostyle\">"
 			"<iframe width=\"100%%\" height=\"10\" "
@@ -356,7 +353,7 @@ emfe_text_html_format (EMailFormatterExtension *extension,
 			e_mail_part_get_id (part),
 			e_mail_part_get_id (part),
 			e_mail_part_get_frame_security_style (part),
-			g_settings_get_boolean (settings, "preview-unset-html-colors") ? "x-e-unset-colors=\"1\"" : "style=\"background-color: #f7f7f7; color-scheme: light\"");
+			g_settings_get_boolean (settings, "preview-unset-html-colors") ? "x-e-unset-colors=\"1\"" : "");
 
 		g_output_stream_write_all (
 			stream, str, strlen (str),

@@ -90,6 +90,55 @@ test_ui_definitions (void)
 }
 
 static void
+test_appearance_rendered_palette (void)
+{
+	EColorSchemeWatcher watcher = { 0 };
+	GtkSettings *settings = gtk_settings_get_default ();
+	GtkWidget *window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+	GtkWidget *entry = gtk_entry_new ();
+	const gchar *modes[] = { "light", "dark", "light" };
+	gboolean animations;
+	guint index;
+
+	g_object_get (settings, "gtk-enable-animations", &animations, NULL);
+	g_object_set (settings, "gtk-theme-name", "Breeze", "gtk-enable-animations", FALSE, NULL);
+	watcher.appearance_settings = g_settings_new ("io.github.themetalleg.BlueEvolution");
+	gtk_container_add (GTK_CONTAINER (window), entry);
+	gtk_widget_show_all (window);
+	for (index = 0; index < G_N_ELEMENTS (modes); index++) {
+		cairo_surface_t *surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, 120, 40);
+		cairo_t *context = cairo_create (surface);
+		guint32 pixel;
+		guint red, green, blue;
+
+		g_settings_set_string (watcher.appearance_settings, "appearance-mode", modes[index]);
+		e_color_scheme_watcher_sync_theme (&watcher);
+		while (g_main_context_iteration (NULL, FALSE));
+		gtk_render_background (gtk_widget_get_style_context (entry), context, 0, 0, 120, 40);
+		cairo_surface_flush (surface);
+		memcpy (&pixel, cairo_image_surface_get_data (surface) + 20 * cairo_image_surface_get_stride (surface) + 60 * 4, sizeof (pixel));
+		red = (pixel >> 16) & 255;
+		green = (pixel >> 8) & 255;
+		blue = pixel & 255;
+		g_assert_cmpuint (pixel >> 24, ==, 255);
+		if (g_str_equal (modes[index], "dark")) {
+			g_assert_cmpuint (red, <, 90);
+			g_assert_cmpuint (green, <, 90);
+			g_assert_cmpuint (blue, <, 90);
+		} else {
+			g_assert_cmpuint (red, >, 180);
+			g_assert_cmpuint (green, >, 180);
+			g_assert_cmpuint (blue, >, 180);
+		}
+		cairo_destroy (context);
+		cairo_surface_destroy (surface);
+	}
+	gtk_widget_destroy (window);
+	g_object_set (settings, "gtk-enable-animations", animations, NULL);
+	g_object_unref (watcher.appearance_settings);
+}
+
+static void
 test_bootstrap_aliases (void)
 {
 	GtkIconTheme *theme = gtk_icon_theme_new ();
@@ -127,6 +176,7 @@ main (gint argc, gchar **argv)
 	g_test_init (&argc, &argv, NULL);
 	g_test_add_func ("/blueevolution/appearance/preference-precedence", test_appearance_precedence);
 	g_test_add_func ("/blueevolution/appearance/preference-without-theme-name", test_appearance_preference_without_theme_name);
+	g_test_add_func ("/blueevolution/appearance/rendered-palette", test_appearance_rendered_palette);
 	g_test_add_func ("/blueevolution/ui/definitions", test_ui_definitions);
 	g_test_add_func ("/blueevolution/icons/bootstrap-aliases", test_bootstrap_aliases);
 	return g_test_run ();

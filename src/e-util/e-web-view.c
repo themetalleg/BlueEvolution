@@ -758,7 +758,7 @@ e_web_view_update_styles (EWebView *web_view,
 	e_web_view_jsc_add_rule_into_style_sheet (webkit_web_view,
 		iframe_id,
 		"-e-web-view-style-sheet",
-		".-e-web-view-text-color",
+		".-e-web-view-text-color, :where(body:not([color]):not([text]))",
 		style,
 		web_view->priv->cancellable);
 

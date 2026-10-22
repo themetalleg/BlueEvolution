@@ -15,9 +15,10 @@ for GNOME Evolution. Back up existing mail data and use a separate test account.
 - Measured date widths that remain visible as the message-list pane narrows.
 - App-specific System, Light and Dark modes, including standalone message viewers.
 - Theme-safe reader backgrounds, disclosure chevrons and window-control icons.
+- HTML email text without an explicit color follows the selected theme; authored colors are preserved.
 - Offline VS Code previews with a private profile and five synthetic emails.
 - Permanent regression coverage for date allocation, calendar/DST boundaries,
-  toolbar labels, UI definitions, theme precedence and Bootstrap icon resolution.
+  toolbar labels, UI definitions, rendered theme precedence and Bootstrap icon resolution.
 
 ## Known Limitations
 
