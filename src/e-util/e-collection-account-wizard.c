@@ -856,7 +856,7 @@ collection_account_wizard_fill_results (ECollectionAccountWizard *wizard)
 		const gchar *icon_name;
 		GSList *results; /* EConfigLookupResult * */
 	} results_info[] = {
-		{ E_CONFIG_LOOKUP_RESULT_COLLECTION, 	N_("Collection"),	"evolution",		NULL },
+		{ E_CONFIG_LOOKUP_RESULT_COLLECTION, 	N_("Collection"),	"blueevolution",		NULL },
 		{ E_CONFIG_LOOKUP_RESULT_MAIL_RECEIVE,	N_("Mail Receive"),	"evolution-mail",	NULL },
 		{ E_CONFIG_LOOKUP_RESULT_MAIL_SEND,	N_("Mail Send"),	"mail-send",		NULL },
 		{ E_CONFIG_LOOKUP_RESULT_ADDRESS_BOOK,	N_("Address Book"),	"x-office-address-book",NULL },

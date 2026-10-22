@@ -270,7 +270,7 @@ accounts_window_editors_edit_unmanaged_collection (EAccountsWindow *accounts_win
 
 	container = gtk_dialog_get_content_area (GTK_DIALOG (dialog));
 
-	gtk_window_set_icon_name (GTK_WINDOW (dialog), "evolution");
+	gtk_window_set_icon_name (GTK_WINDOW (dialog), "blueevolution");
 
 	widget = e_alert_bar_new ();
 	gtk_box_pack_start (GTK_BOX (container), widget, FALSE, FALSE, 0);

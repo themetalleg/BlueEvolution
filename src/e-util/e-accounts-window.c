@@ -1486,7 +1486,7 @@ accounts_window_show_add_popup (EAccountsWindow *accounts_window,
 		const gchar *text;
 		const gchar *icon_name;
 	} items[] = {
-		{ "collection",	N_("Collection _Account"),	"evolution" },
+		{ "collection",	N_("Collection _Account"),	"blueevolution" },
 		{ "mail",	N_("_Mail Account"),		"evolution-mail" },
 		{ "book",	N_("Address _Book"),		"x-office-address-book" },
 		{ "calendar",	N_("_Calendar"),		"x-office-calendar" },
