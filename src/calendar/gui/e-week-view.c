@@ -1107,6 +1107,25 @@ week_view_update_style_settings (EWeekView *week_view)
 }
 
 static void
+week_view_load_icons (EWeekView *week_view)
+{
+	struct { GdkPixbuf **pixbuf; const gchar *name; } icons[] = {
+		{ &week_view->reminder_icon, "stock_bell" },
+		{ &week_view->recurrence_icon, "view-refresh" },
+		{ &week_view->detached_recurrence_icon, "view-pin" },
+		{ &week_view->timezone_icon, "stock_timezone" },
+		{ &week_view->meeting_icon, "stock_people" },
+		{ &week_view->attach_icon, "mail-attachment-symbolic" }
+	};
+	guint index;
+
+	for (index = 0; index < G_N_ELEMENTS (icons); index++) {
+		g_clear_object (icons[index].pixbuf);
+		*icons[index].pixbuf = e_icon_factory_get_icon (icons[index].name, GTK_ICON_SIZE_MENU);
+	}
+}
+
+static void
 week_view_realize (GtkWidget *widget)
 {
 	EWeekView *week_view;
@@ -1119,12 +1138,7 @@ week_view_realize (GtkWidget *widget)
 	week_view_update_style_settings (week_view);
 
 	/* Create the pixmaps. */
-	week_view->reminder_icon = e_icon_factory_get_icon ("stock_bell", GTK_ICON_SIZE_MENU);
-	week_view->recurrence_icon = e_icon_factory_get_icon ("view-refresh", GTK_ICON_SIZE_MENU);
-	week_view->detached_recurrence_icon = e_icon_factory_get_icon ("view-pin", GTK_ICON_SIZE_MENU);
-	week_view->timezone_icon = e_icon_factory_get_icon ("stock_timezone", GTK_ICON_SIZE_MENU);
-	week_view->attach_icon = e_icon_factory_get_icon ("mail-attachment", GTK_ICON_SIZE_MENU);
-	week_view->meeting_icon = e_icon_factory_get_icon ("stock_people", GTK_ICON_SIZE_MENU);
+	week_view_load_icons (week_view);
 }
 
 static void
@@ -1152,6 +1166,8 @@ week_view_style_updated (GtkWidget *widget)
 		(*GTK_WIDGET_CLASS (e_week_view_parent_class)->style_updated) (widget);
 
 	week_view_update_style_settings (E_WEEK_VIEW (widget));
+	if (gtk_widget_get_realized (widget))
+		week_view_load_icons (E_WEEK_VIEW (widget));
 }
 
 static gboolean

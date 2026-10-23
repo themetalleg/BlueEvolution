@@ -324,7 +324,7 @@ target_include_directories(test-blueevolution-mail-list PRIVATE
 	${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/src ${CMAKE_SOURCE_DIR}/src
 	${EVOLUTION_DATA_SERVER_INCLUDE_DIRS} ${GNOME_PLATFORM_INCLUDE_DIRS})
 target_link_libraries(test-blueevolution-mail-list
-	evolution-util ${EVOLUTION_DATA_SERVER_LDFLAGS} ${GNOME_PLATFORM_LDFLAGS})
+	evolution-mail evolution-util ${EVOLUTION_DATA_SERVER_LDFLAGS} ${GNOME_PLATFORM_LDFLAGS})
 add_check_test(test-blueevolution-mail-list)
 set_tests_properties(test-blueevolution-mail-list PROPERTIES
 	ENVIRONMENT "GSETTINGS_SCHEMA_DIR=${CMAKE_BINARY_DIR}/data;GSETTINGS_BACKEND=memory;TZ=Europe/Zurich")

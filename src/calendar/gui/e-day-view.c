@@ -1607,6 +1607,25 @@ day_view_update_style_settings (EDayView *day_view)
 }
 
 static void
+day_view_load_icons (EDayView *day_view)
+{
+	struct { GdkPixbuf **pixbuf; const gchar *name; } icons[] = {
+		{ &day_view->reminder_icon, "stock_bell" },
+		{ &day_view->recurrence_icon, "view-refresh" },
+		{ &day_view->detached_recurrence_icon, "view-pin" },
+		{ &day_view->timezone_icon, "stock_timezone" },
+		{ &day_view->meeting_icon, "stock_people" },
+		{ &day_view->attach_icon, "mail-attachment-symbolic" }
+	};
+	guint index;
+
+	for (index = 0; index < G_N_ELEMENTS (icons); index++) {
+		g_clear_object (icons[index].pixbuf);
+		*icons[index].pixbuf = e_icon_factory_get_icon (icons[index].name, GTK_ICON_SIZE_MENU);
+	}
+}
+
+static void
 day_view_realize (GtkWidget *widget)
 {
 	EDayView *day_view;
@@ -1619,12 +1638,7 @@ day_view_realize (GtkWidget *widget)
 	day_view_update_style_settings (day_view);
 
 	/* Create the pixmaps. */
-	day_view->reminder_icon = e_icon_factory_get_icon ("stock_bell", GTK_ICON_SIZE_MENU);
-	day_view->recurrence_icon = e_icon_factory_get_icon ("view-refresh", GTK_ICON_SIZE_MENU);
-	day_view->detached_recurrence_icon = e_icon_factory_get_icon ("view-pin", GTK_ICON_SIZE_MENU);
-	day_view->timezone_icon = e_icon_factory_get_icon ("stock_timezone", GTK_ICON_SIZE_MENU);
-	day_view->meeting_icon = e_icon_factory_get_icon ("stock_people", GTK_ICON_SIZE_MENU);
-	day_view->attach_icon = e_icon_factory_get_icon ("mail-attachment", GTK_ICON_SIZE_MENU);
+	day_view_load_icons (day_view);
 
 	/* Set the canvas item colors. */
 	gnome_canvas_item_set (
@@ -1695,6 +1709,8 @@ day_view_style_updated (GtkWidget *widget)
 		(*GTK_WIDGET_CLASS (e_day_view_parent_class)->style_updated) (widget);
 
 	day_view_update_style_settings (E_DAY_VIEW (widget));
+	if (gtk_widget_get_realized (widget))
+		day_view_load_icons (E_DAY_VIEW (widget));
 }
 
 static gboolean

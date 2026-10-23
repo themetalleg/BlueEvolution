@@ -869,22 +869,14 @@ e_shell_searchbar_init (EShellSearchbar *searchbar)
 	box = GTK_BOX (searchbar);
 
 	widget = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 3);
-	gtk_widget_set_margin_start (widget, 12);
 	gtk_box_pack_start (box, widget, TRUE, TRUE, 0);
 	gtk_widget_show (widget);
 
 	box = GTK_BOX (widget);
 
-	/* Translators: This is part of the quick search interface.
-	 * example: Search: [_______________] in [ Current Folder ] */
-	widget = gtk_label_new_with_mnemonic (_("Sear_ch:"));
-	gtk_box_pack_start (box, widget, FALSE, FALSE, 0);
-	gtk_widget_show (widget);
-
-	label = GTK_LABEL (widget);
-
 	widget = gtk_entry_new ();
-	gtk_label_set_mnemonic_widget (label, widget);
+	atk_object_set_name (gtk_widget_get_accessible (widget), _("Search"));
+	gtk_widget_set_hexpand (widget, TRUE);
 	gtk_box_pack_start (box, widget, TRUE, TRUE, 0);
 	searchbar->priv->search_entry = widget;
 	gtk_widget_show (widget);

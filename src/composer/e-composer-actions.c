@@ -391,7 +391,7 @@ e_composer_actions_init (EMsgComposer *composer)
 	static const EUIActionEntry entries[] = {
 
 		{ "attach",
-		  "mail-attachment",
+		  "mail-attachment-symbolic",
 		  N_("_Attachment…"),
 		  "<Control>m",
 		  N_("Attach a file"),

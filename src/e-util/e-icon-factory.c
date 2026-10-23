@@ -88,6 +88,41 @@ e_icon_factory_get_icon_filename (const gchar *icon_name,
  *
  * Returns: the rendered icon
  **/
+static GdkPixbuf *
+icon_factory_load_icon (GtkIconTheme *icon_theme,
+                       const gchar *icon_name,
+                       gint size,
+                       GtkIconLookupFlags flags,
+                       GError **error)
+{
+	GtkIconInfo *info;
+	GdkPixbuf *pixbuf;
+
+	info = gtk_icon_theme_lookup_icon (icon_theme, icon_name, size, flags);
+	if (!info) {
+		g_set_error (error, GTK_ICON_THEME_ERROR, GTK_ICON_THEME_NOT_FOUND,
+			"Icon '%s' not found", icon_name);
+		return NULL;
+	}
+	if (gtk_icon_info_is_symbolic (info)) {
+		GtkStyleContext *context = gtk_style_context_new ();
+		GtkWidgetPath *path = gtk_widget_path_new ();
+		GdkRGBA foreground;
+
+		gtk_widget_path_append_type (path, GTK_TYPE_WINDOW);
+		gtk_style_context_set_path (context, path);
+		if (!gtk_style_context_lookup_color (context, "theme_fg_color", &foreground))
+			gtk_style_context_get_color (context, GTK_STATE_FLAG_NORMAL, &foreground);
+		pixbuf = gtk_icon_info_load_symbolic (info, &foreground, NULL, NULL, NULL, NULL, error);
+		gtk_widget_path_unref (path);
+		g_object_unref (context);
+	} else {
+		pixbuf = gtk_icon_info_load_icon (info, error);
+	}
+	g_object_unref (info);
+	return pixbuf;
+}
+
 GdkPixbuf *
 e_icon_factory_get_icon (const gchar *icon_name,
                          GtkIconSize icon_size)
@@ -104,11 +139,11 @@ e_icon_factory_get_icon (const gchar *icon_name,
 	if (!gtk_icon_size_lookup (icon_size, &width, &height))
 		width = height = 16;
 
-	pixbuf = gtk_icon_theme_load_icon (
+	pixbuf = icon_factory_load_icon (
 		icon_theme, icon_name, height, GTK_ICON_LOOKUP_FORCE_SIZE |
 		(prefer_symbolic_icons ? GTK_ICON_LOOKUP_FORCE_SYMBOLIC : GTK_ICON_LOOKUP_FORCE_REGULAR), &error);
 	if (!pixbuf) {
-		pixbuf = gtk_icon_theme_load_icon (icon_theme, icon_name, height, GTK_ICON_LOOKUP_FORCE_SIZE, NULL);
+		pixbuf = icon_factory_load_icon (icon_theme, icon_name, height, GTK_ICON_LOOKUP_FORCE_SIZE, NULL);
 		if (pixbuf)
 			g_clear_error (&error);
 	}
@@ -118,7 +153,7 @@ e_icon_factory_get_icon (const gchar *icon_name,
 		g_clear_error (&error);
 
 		/* Fallback to missing image */
-		pixbuf = gtk_icon_theme_load_icon (
+		pixbuf = icon_factory_load_icon (
 			icon_theme, "image-missing",
 			height, GTK_ICON_LOOKUP_FORCE_SIZE, &error);
 

@@ -139,6 +139,88 @@ test_appearance_rendered_palette (void)
 }
 
 static void
+check_icon_brightness (GdkPixbuf *pixbuf,
+                       gboolean light)
+{
+	guint pixels = 0, brightness = 0;
+	gint pixel_x, pixel_y;
+
+	g_assert_nonnull (pixbuf);
+	for (pixel_y = 0; pixel_y < gdk_pixbuf_get_height (pixbuf); pixel_y++) {
+		for (pixel_x = 0; pixel_x < gdk_pixbuf_get_width (pixbuf); pixel_x++) {
+			const guchar *pixel = gdk_pixbuf_read_pixels (pixbuf) +
+				pixel_y * gdk_pixbuf_get_rowstride (pixbuf) + pixel_x * gdk_pixbuf_get_n_channels (pixbuf);
+
+			if (!gdk_pixbuf_get_has_alpha (pixbuf) || pixel[3] > 200) {
+				brightness += pixel[0];
+				pixels++;
+			}
+		}
+	}
+	g_assert_cmpuint (pixels, >, 5);
+	if (light)
+		g_assert_cmpuint (brightness / pixels, >, 180);
+	else
+		g_assert_cmpuint (brightness / pixels, <, 100);
+}
+
+static void
+test_icon_factory_palette (void)
+{
+	GtkSettings *settings = gtk_settings_get_default ();
+	gboolean original_dark;
+	gboolean prefer_symbolic = e_icon_factory_get_prefer_symbolic_icons ();
+	gchar *original_theme;
+	guint index;
+
+	g_object_get (settings, "gtk-theme-name", &original_theme, "gtk-application-prefer-dark-theme", &original_dark, NULL);
+	e_icon_factory_set_prefer_symbolic_icons (TRUE);
+	for (index = 0; index < 3; index++) {
+		GdkPixbuf *pixbuf;
+
+		g_object_set (settings, "gtk-theme-name", "Adwaita", "gtk-application-prefer-dark-theme", index == 1, NULL);
+		while (g_main_context_iteration (NULL, FALSE));
+		pixbuf = e_icon_factory_get_icon ("mail-attachment-symbolic", GTK_ICON_SIZE_MENU);
+		check_icon_brightness (pixbuf, index == 1);
+		g_object_unref (pixbuf);
+	}
+	e_icon_factory_set_prefer_symbolic_icons (prefer_symbolic);
+	g_object_set (settings, "gtk-theme-name", original_theme, "gtk-application-prefer-dark-theme", original_dark, NULL);
+	g_free (original_theme);
+}
+
+static void
+test_table_heading_palette (void)
+{
+	GtkWidget *widget = gtk_label_new (NULL);
+	GtkCssProvider *provider = gtk_css_provider_new ();
+	ETableCol *column = g_object_new (E_TYPE_TABLE_COL, NULL);
+	gboolean prefer_symbolic = e_icon_factory_get_prefer_symbolic_icons ();
+	const gchar *palettes[] = { "* { color: #202020; }", "* { color: #eeeeee; }", "* { color: #202020; }" };
+	guint index;
+
+	g_object_ref_sink (widget);
+	e_icon_factory_set_prefer_symbolic_icons (TRUE);
+	column->icon_name = g_strdup ("mail-attachment");
+	gtk_style_context_add_provider (gtk_widget_get_style_context (widget), GTK_STYLE_PROVIDER (provider), GTK_STYLE_PROVIDER_PRIORITY_USER);
+	for (index = 0; index < G_N_ELEMENTS (palettes); index++) {
+		GdkPixbuf *pixbuf;
+
+		gtk_css_provider_load_from_data (provider, palettes[index], -1, NULL);
+		e_table_col_ensure_surface (column, widget);
+		g_assert_nonnull (column->surface);
+		pixbuf = gdk_pixbuf_get_from_surface (column->surface, 0, 0, column->surface_width, column->surface_height);
+		check_icon_brightness (pixbuf, index == 1);
+		g_object_unref (pixbuf);
+	}
+	g_object_unref (column);
+	e_icon_factory_set_prefer_symbolic_icons (prefer_symbolic);
+	g_object_unref (provider);
+	gtk_widget_destroy (widget);
+	g_object_unref (widget);
+}
+
+static void
 test_bootstrap_aliases (void)
 {
 	GtkIconTheme *theme = gtk_icon_theme_new ();
@@ -179,5 +261,7 @@ main (gint argc, gchar **argv)
 	g_test_add_func ("/blueevolution/appearance/rendered-palette", test_appearance_rendered_palette);
 	g_test_add_func ("/blueevolution/ui/definitions", test_ui_definitions);
 	g_test_add_func ("/blueevolution/icons/bootstrap-aliases", test_bootstrap_aliases);
+	g_test_add_func ("/blueevolution/icons/factory-palette", test_icon_factory_palette);
+	g_test_add_func ("/blueevolution/icons/table-heading-palette", test_table_heading_palette);
 	return g_test_run ();
 }

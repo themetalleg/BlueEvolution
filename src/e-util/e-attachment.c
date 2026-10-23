@@ -22,7 +22,7 @@
 #include "e-misc-utils.h"
 
 /* Fallback Icon */
-#define DEFAULT_ICON_NAME	"mail-attachment"
+#define DEFAULT_ICON_NAME	"mail-attachment-symbolic"
 
 /* Emblems */
 #define EMBLEM_CANCELLED	"process-stop"
@@ -443,7 +443,9 @@ attachment_update_icon_column_idle_cb (gpointer weak_ref)
 	file_info = e_attachment_ref_file_info (attachment);
 
 	if (file_info != NULL && g_file_info_has_attribute (file_info, G_FILE_ATTRIBUTE_STANDARD_ICON)) {
-		icon = g_file_info_get_icon (file_info);
+		icon = g_file_info_get_symbolic_icon (file_info);
+		if (!icon)
+			icon = g_file_info_get_icon (file_info);
 		/* add the reference here, thus the create_system_thumbnail() can unref the *icon. */
 		if (icon)
 			g_object_ref (icon);

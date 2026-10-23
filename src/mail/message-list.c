@@ -334,7 +334,7 @@ static const gchar *score_icons[] = {
 
 static const gchar *attachment_icons[] = {
 	NULL,  /* empty icon */
-	"mail-attachment",
+	"mail-attachment-symbolic",
 	"stock_people",
 	"evolution-memos",
 	"mail-mark-junk"
@@ -2253,8 +2253,8 @@ static ECell *
 create_composite_cell (GSettings *mail_settings,
 		       gint col)
 {
-	ECell *cell_vbox, *cell_hbox, *cell_date, *cell_from, *top_cell_tree, *bottom_cell_tree, *cell_attach;
-	ECell *cell_subject, *cell_preview, *preview_cell_tree;
+	ECell *cell_vbox, *cell_hbox, *cell_date, *cell_from, *cell_attach;
+	ECell *cell_subject, *cell_preview;
 	ECell *list_cell;
 	gboolean show_email;
 	gboolean show_subject_above_sender;
@@ -2306,18 +2306,10 @@ create_composite_cell (GSettings *mail_settings,
 	e_cell_hbox_append_natural (E_CELL_HBOX (cell_hbox), cell_attach, COL_ATTACHMENT);
 	e_cell_hbox_append_natural (E_CELL_HBOX (cell_hbox), cell_date, COL_SENT);
 
-	top_cell_tree = e_cell_tree_new (TRUE, FALSE, show_subject_above_sender ? cell_subject : cell_from);
-
-	bottom_cell_tree = e_cell_tree_new (TRUE, TRUE, cell_hbox);
-
-	preview_cell_tree = e_cell_tree_new (TRUE, TRUE, cell_preview);
-	e_cell_vbox_append (E_CELL_VBOX (cell_vbox), top_cell_tree, show_subject_above_sender ? COL_SUBJECT : col);
-	e_cell_vbox_append (E_CELL_VBOX (cell_vbox), bottom_cell_tree, show_subject_above_sender ? col : COL_SUBJECT);
-	e_cell_vbox_append (E_CELL_VBOX (cell_vbox), preview_cell_tree, COL_BODY_PREVIEW);
-
-	g_object_unref (top_cell_tree);
-	g_object_unref (bottom_cell_tree);
-	g_object_unref (preview_cell_tree);
+	e_cell_vbox_append (E_CELL_VBOX (cell_vbox), show_subject_above_sender ? cell_subject : cell_from,
+		show_subject_above_sender ? COL_SUBJECT : col);
+	e_cell_vbox_append (E_CELL_VBOX (cell_vbox), cell_hbox, show_subject_above_sender ? col : COL_SUBJECT);
+	e_cell_vbox_append (E_CELL_VBOX (cell_vbox), cell_preview, COL_BODY_PREVIEW);
 	g_object_unref (cell_hbox);
 	g_object_unref (cell_from);
 	g_object_unref (cell_subject);
@@ -2325,7 +2317,7 @@ create_composite_cell (GSettings *mail_settings,
 	g_object_unref (cell_attach);
 	g_object_unref (cell_date);
 
-	list_cell = e_mail_list_cell_new (cell_vbox, col, COL_SENT);
+	list_cell = e_mail_list_cell_new (cell_vbox, col, COL_SENT, COL_UNREAD);
 	g_object_unref (cell_vbox);
 	g_object_set_data (G_OBJECT (list_cell), "cell_date", cell_date);
 	g_object_set_data (G_OBJECT (list_cell), "cell_from", cell_from);
@@ -2358,7 +2350,7 @@ message_list_create_extras (GSettings *mail_settings)
 	extras = e_table_extras_new ();
 	e_table_extras_add_icon_name (extras, "status", "mail-unread");
 	e_table_extras_add_icon_name (extras, "score", "stock_score-higher");
-	e_table_extras_add_icon_name (extras, "attachment", "mail-attachment");
+	e_table_extras_add_icon_name (extras, "attachment", "mail-attachment-symbolic");
 	e_table_extras_add_icon_name (extras, "flagged", "emblem-important");
 	e_table_extras_add_icon_name (extras, "followup", "stock_mail-flag-for-followup");
 

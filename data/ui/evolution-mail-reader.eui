@@ -142,9 +142,9 @@
       <item action='mail-archive' important='true'/>
       <item action='mail-move' important='true' use_secondary_label='true'/>
       <separator/>
-      <item action='mail-reply-sender' important='true' use_secondary_label='true'/>
-      <item action='EMailReader::mail-reply-group' important='true' use_secondary_label='true'/>
-      <item action='EMailReader::mail-forward-as-group' important='true' use_secondary_label='true'/>
+      <item action='mail-reply-sender' important='false'/>
+      <item action='EMailReader::mail-reply-group' important='false'/>
+      <item action='EMailReader::mail-forward-as-group' important='false'/>
       <separator/>
       <item action='mail-mark-unread' important='true'/>
       <item action='mail-mark-junk'/>
@@ -159,9 +159,9 @@
     <placeholder id='toolbar-actions'/>
     <separator/>
     <placeholder id='mail-toolbar-common'>
-      <item action='mail-reply-sender' important='true'/>
-      <item action='EMailReader::mail-reply-group' important='true'/>
-      <item action='EMailReader::mail-forward-as-group' important='true'/>
+      <item action='mail-reply-sender' important='false'/>
+      <item action='EMailReader::mail-reply-group' important='false'/>
+      <item action='EMailReader::mail-forward-as-group' important='false'/>
       <separator/>
       <item action='mail-print'/>
       <item action='mail-delete'/>

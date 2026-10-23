@@ -2158,7 +2158,7 @@ e_mail_shell_view_update_search_filter (EMailShellView *mail_shell_view)
 		  NULL, MAIL_FILTER_MESSAGES_NOT_JUNK },
 
 		{ "mail-filter-messages-with-attachments",
-		  "mail-attachment",
+		  "mail-attachment-symbolic",
 		  N_("Messages with Attachments"),
 		  NULL,
 		  NULL,

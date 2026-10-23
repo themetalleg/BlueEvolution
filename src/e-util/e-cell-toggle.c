@@ -14,6 +14,7 @@
 #include "gal-a11y-e-cell-registry.h"
 
 #include "e-cell-toggle.h"
+#include "e-icon-factory.h"
 #include "e-table-item.h"
 
 struct _ECellTogglePrivate {
@@ -24,6 +25,7 @@ struct _ECellTogglePrivate {
 	GdkPixbuf *empty;
 	GPtrArray *surfaces; /* SurfaceData * */
 	gint surface_scale;
+	GdkRGBA surface_foreground;
 	gint height;
 
 	gint bg_color_column;
@@ -67,6 +69,8 @@ cell_toggle_ensure_icons (ECellToggle *cell_toggle,
 {
 	ETableItem *eti;
 	GtkIconTheme *icon_theme;
+	GtkStyleContext *style_context = NULL;
+	GdkRGBA foreground = { 0, 0, 0, 1 };
 	gint width, height, scale = 1;
 	gint max_height = 0;
 	guint ii;
@@ -74,14 +78,14 @@ cell_toggle_ensure_icons (ECellToggle *cell_toggle,
 
 	eti = E_TABLE_ITEM (ecell_view->e_table_item_view);
 	if (eti) {
-		GtkStyleContext *style_context;
-
 		style_context = gtk_widget_get_style_context (GTK_WIDGET (GNOME_CANVAS_ITEM (eti)->canvas));
 		scale = gtk_style_context_get_scale (style_context);
+		gtk_style_context_get_color (style_context, gtk_style_context_get_state (style_context), &foreground);
 	}
 
 	if (cell_toggle->priv->surfaces->len > 0 &&
-	    cell_toggle->priv->surface_scale == scale)
+	    cell_toggle->priv->surface_scale == scale &&
+	    gdk_rgba_equal (&cell_toggle->priv->surface_foreground, &foreground))
 		return;
 
 	g_ptr_array_set_size (cell_toggle->priv->surfaces, 0);
@@ -95,9 +99,19 @@ cell_toggle_ensure_icons (ECellToggle *cell_toggle,
 		SurfaceData *sd;
 		gint unscaled_height;
 
-		if (icon_name != NULL)
-			pixbuf = gtk_icon_theme_load_icon_for_scale (
-				icon_theme, icon_name, height, scale, GTK_ICON_LOOKUP_FORCE_SIZE, &error);
+		if (icon_name != NULL) {
+			GtkIconInfo *info = gtk_icon_theme_lookup_icon_for_scale (
+				icon_theme, icon_name, height, scale, GTK_ICON_LOOKUP_FORCE_SIZE |
+				(e_icon_factory_get_prefer_symbolic_icons () ? GTK_ICON_LOOKUP_FORCE_SYMBOLIC : 0));
+
+			if (info != NULL) {
+				if (style_context != NULL && gtk_icon_info_is_symbolic (info))
+					pixbuf = gtk_icon_info_load_symbolic_for_context (info, style_context, NULL, &error);
+				else
+					pixbuf = gtk_icon_info_load_icon (info, &error);
+				g_object_unref (info);
+			}
+		}
 
 		if (error != NULL) {
 			g_warning ("%s", error->message);
@@ -125,6 +139,7 @@ cell_toggle_ensure_icons (ECellToggle *cell_toggle,
 
 	cell_toggle->priv->height = max_height;
 	cell_toggle->priv->surface_scale = scale;
+	cell_toggle->priv->surface_foreground = foreground;
 }
 
 static void

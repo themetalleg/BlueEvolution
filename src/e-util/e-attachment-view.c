@@ -6,6 +6,7 @@
 #include "evolution-config.h"
 
 #include "e-attachment-view.h"
+#include "e-icon-factory.h"
 
 #include <glib/gi18n.h>
 #include <gdk/gdkkeysyms.h>
@@ -1889,13 +1890,18 @@ e_attachment_view_drag_begin (EAttachmentView *view,
 
 		icon_info = gtk_icon_theme_lookup_by_gicon (
 			icon_theme, icon, MIN (width, height),
-			GTK_ICON_LOOKUP_USE_BUILTIN);
+			GTK_ICON_LOOKUP_USE_BUILTIN |
+			(e_icon_factory_get_prefer_symbolic_icons () ? GTK_ICON_LOOKUP_FORCE_SYMBOLIC : 0));
 
 		if (icon_info != NULL) {
 			GdkPixbuf *pixbuf;
 			GError *error = NULL;
 
-			pixbuf = gtk_icon_info_load_icon (icon_info, &error);
+			if (gtk_icon_info_is_symbolic (icon_info))
+				pixbuf = gtk_icon_info_load_symbolic_for_context (
+					icon_info, gtk_widget_get_style_context (GTK_WIDGET (view)), NULL, &error);
+			else
+				pixbuf = gtk_icon_info_load_icon (icon_info, &error);
 
 			if (pixbuf != NULL) {
 				gtk_drag_set_icon_pixbuf (

@@ -5,7 +5,7 @@
 
 G_BEGIN_DECLS
 
-ECell *e_mail_list_cell_new (ECell *content, gint sender_column, gint date_column);
+ECell *e_mail_list_cell_new (ECell *content, gint sender_column, gint date_column, gint unread_column);
 ECell *e_mail_list_date_cell_new (void);
 ECell *e_mail_list_preview_cell_new (void);
 

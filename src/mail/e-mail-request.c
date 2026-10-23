@@ -54,6 +54,7 @@ e_mail_request_can_process_uri (EContentRequest *request,
 static void
 save_gicon_to_stream (GIcon *icon,
 		      gint size,
+		      const GdkRGBA *foreground,
 		      GOutputStream *output_stream,
 		      gchar **out_mime_type)
 {
@@ -63,11 +64,15 @@ save_gicon_to_stream (GIcon *icon,
 	if (size < 16)
 		size = 16;
 
-	icon_info = gtk_icon_theme_lookup_by_gicon (gtk_icon_theme_get_default (), icon, size, GTK_ICON_LOOKUP_FORCE_SIZE);
+	icon_info = gtk_icon_theme_lookup_by_gicon (gtk_icon_theme_get_default (), icon, size,
+		GTK_ICON_LOOKUP_FORCE_SIZE | GTK_ICON_LOOKUP_FORCE_SYMBOLIC);
 	if (!icon_info)
 		return;
 
-	pixbuf = gtk_icon_info_load_icon (icon_info, NULL);
+	if (gtk_icon_info_is_symbolic (icon_info))
+		pixbuf = gtk_icon_info_load_symbolic (icon_info, foreground, NULL, NULL, NULL, NULL, NULL);
+	else
+		pixbuf = gtk_icon_info_load_icon (icon_info, NULL);
 	if (pixbuf) {
 		if (gdk_pixbuf_save_to_stream (
 			pixbuf, output_stream,
@@ -205,7 +210,9 @@ mail_request_process_mail_sync (EContentRequest *request,
 							if (scale_factor < 1)
 								scale_factor = 1;
 
-							save_gicon_to_stream (icon, atoi (size) * scale_factor, output_stream, &use_mime_type);
+							save_gicon_to_stream (icon, atoi (size) * scale_factor,
+								e_mail_formatter_get_color (formatter, E_MAIL_FORMATTER_COLOR_TEXT),
+								output_stream, &use_mime_type);
 
 							g_object_unref (icon);
 						}

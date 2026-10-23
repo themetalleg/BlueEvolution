@@ -943,7 +943,7 @@ etdp_get_comp_colors (EToDoPane *to_do_pane,
 		g_clear_object (&prop);
 	}
 
-	if (!bgcolor)
+	if (!bgcolor && e_cal_component_get_vtype (comp) != E_CAL_COMPONENT_EVENT)
 		bgcolor = g_hash_table_lookup (to_do_pane->priv->client_colors, e_client_get_source (E_CLIENT (client)));
 
 	if (e_cal_component_get_vtype (comp) == E_CAL_COMPONENT_TODO &&

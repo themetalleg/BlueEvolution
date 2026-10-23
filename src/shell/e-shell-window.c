@@ -171,7 +171,7 @@ window.blueevolution treeview.view:selected {\
 window.blueevolution .blueevolution-message-list {\
 	background-color: @theme_base_color;\
 	color: @theme_text_color;\
-	-ETree-vertical-spacing: 5;\
+	-ETree-vertical-spacing: 1;\
 }\
 window.blueevolution paned > separator {\
 	min-width: 1px;\

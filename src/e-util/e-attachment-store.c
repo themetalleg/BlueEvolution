@@ -652,7 +652,7 @@ e_attachment_store_run_load_dialog (EAttachmentStore *store,
 	if (dialog) {
 		gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_ACCEPT);
 
-		gtk_window_set_icon_name (GTK_WINDOW (dialog), "mail-attachment");
+		gtk_window_set_icon_name (GTK_WINDOW (dialog), "mail-attachment-symbolic");
 
 		preview = GTK_IMAGE (gtk_image_new ());
 		gtk_file_chooser_set_preview_widget (file_chooser, GTK_WIDGET (preview));
@@ -829,7 +829,7 @@ e_attachment_store_run_save_dialog (EAttachmentStore *store,
 
 	if (dialog) {
 		gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_ACCEPT);
-		gtk_window_set_icon_name (GTK_WINDOW (dialog), "mail-attachment");
+		gtk_window_set_icon_name (GTK_WINDOW (dialog), "mail-attachment-symbolic");
 
 #ifdef HAVE_AUTOAR
 		extra_box_widget = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);

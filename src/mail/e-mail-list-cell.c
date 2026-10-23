@@ -10,6 +10,7 @@ typedef struct {
 	ECell *content;
 	gint sender_column;
 	gint date_column;
+	gint unread_column;
 } EMailListCell;
 
 typedef ECellClass EMailListCellClass;
@@ -236,6 +237,49 @@ mail_list_canvas (ECellView *view)
 	return GTK_WIDGET (GNOME_CANVAS_ITEM (view->e_table_item_view)->canvas);
 }
 
+static GdkRGBA
+mail_list_unread_background (const GdkRGBA *background)
+{
+	GdkRGBA color = *background;
+	gboolean dark = background->red + background->green + background->blue < 1.5;
+	gdouble amount = dark ? 0.08 : 0.035;
+	gdouble target = dark ? 1.0 : 0.0;
+
+	color.red = color.red * (1.0 - amount) + target * amount;
+	color.green = color.green * (1.0 - amount) + target * amount;
+	color.blue = color.blue * (1.0 - amount) + target * amount;
+	return color;
+}
+
+static ETreePath
+mail_list_expandable_node (ECellView *view,
+                           gint row)
+{
+	ETreeTableAdapter *adapter;
+	ETreeModel *model;
+	ETreePath node;
+
+	if (row < 0 || !E_IS_TREE_TABLE_ADAPTER (view->e_table_model))
+		return NULL;
+	adapter = E_TREE_TABLE_ADAPTER (view->e_table_model);
+	model = e_tree_table_adapter_get_source_model (adapter);
+	node = e_tree_table_adapter_node_at_row (adapter, row);
+	return node != NULL && e_tree_model_node_is_expandable (model, node) ? node : NULL;
+}
+
+static void
+mail_list_expander_bounds (gint width,
+                           gint height,
+                           gint heading_height,
+                           gboolean rtl,
+                           GdkRectangle *bounds)
+{
+	bounds->x = rtl ? width - 36 : 12;
+	bounds->y = heading_height + (height - heading_height) / 2 + 8;
+	bounds->width = 24;
+	bounds->height = 24;
+}
+
 static ECellView *
 mail_list_new_view (ECell *ecell,
                     ETableModel *model,
@@ -281,8 +325,8 @@ mail_list_height (ECellView *view,
                   gint view_column,
                   gint row)
 {
-	return e_cell_height (((EMailListCellView *) view)->content, model_column, view_column, row) +
-		16 + (mail_list_heading (view, row) >= 0 ? 32 : 0);
+	return MAX (64, e_cell_height (((EMailListCellView *) view)->content, model_column, view_column, row) +
+		24) + (mail_list_heading (view, row) >= 0 ? 32 : 0);
 }
 
 static void
@@ -318,13 +362,26 @@ mail_list_draw (ECellView *view,
 	gint heading_height = heading >= 0 ? 32 : 0;
 	gint text_width, text_height, initial_length;
 	gint avatar_x = rtl ? x2 - 24 : x1 + 24;
-	gint avatar_y = y1 + heading_height + (y2 - y1 - heading_height) / 2;
+	ETreePath thread_node = mail_list_expandable_node (view, row);
+	gint avatar_y = y1 + heading_height + (y2 - y1 - heading_height) / 2 - (thread_node != NULL ? 12 : 0);
 
 	cairo_save (context);
 	cairo_rectangle (context, x1, y1, MAX (0, x2 - x1), MAX (0, y2 - y1));
 	cairo_clip (context);
 	e_utils_get_theme_color (canvas, "theme_text_color,theme_fg_color", "#202020", &foreground);
 	e_utils_get_theme_color (canvas, "theme_base_color", "#ffffff", &background);
+	if (!(flags & E_CELL_SELECTED)) {
+		gpointer unread = e_table_model_value_at (view->e_table_model, cell->unread_column, row);
+
+		if (GPOINTER_TO_INT (unread)) {
+			GdkRGBA unread_color = mail_list_unread_background (&background);
+
+			gdk_cairo_set_source_rgba (context, &unread_color);
+			cairo_rectangle (context, x1, y1 + heading_height, x2 - x1, y2 - y1 - heading_height);
+			cairo_fill (context);
+		}
+		e_table_model_free_value (view->e_table_model, cell->unread_column, unread);
+	}
 	if (heading >= 0) {
 		gdk_cairo_set_source_rgba (context, &background);
 		cairo_rectangle (context, x1, y1, x2 - x1, heading_height);
@@ -373,9 +430,26 @@ mail_list_draw (ECellView *view,
 	g_free (initial_text);
 	e_table_model_free_value (view->e_table_model, cell->sender_column, sender);
 
+	if (thread_node != NULL) {
+		GtkStyleContext *style_context = gtk_widget_get_style_context (canvas);
+		GdkRectangle bounds;
+		GtkStateFlags state = gtk_widget_get_state_flags (canvas);
+
+		mail_list_expander_bounds (x2 - x1, y2 - y1, heading_height, rtl, &bounds);
+		if (e_tree_table_adapter_node_is_expanded (E_TREE_TABLE_ADAPTER (view->e_table_model), thread_node))
+			state |= GTK_STATE_FLAG_CHECKED;
+		if (flags & E_CELL_SELECTED)
+			state |= GTK_STATE_FLAG_SELECTED;
+		gtk_style_context_save (style_context);
+		gtk_style_context_add_class (style_context, GTK_STYLE_CLASS_EXPANDER);
+		gtk_style_context_set_state (style_context, state);
+		gtk_render_expander (style_context, context, x1 + bounds.x + 4, y1 + bounds.y + 4, 16, 16);
+		gtk_style_context_restore (style_context);
+	}
+
 	e_cell_draw (((EMailListCellView *) view)->content, context, model_column, view_column, row,
-		flags, x1 + (rtl ? 12 : 48), y1 + heading_height + 8,
-		x2 - (rtl ? 48 : 12), y2 - 8);
+		flags, x1 + (rtl ? 12 : 48), y1 + heading_height + 12,
+		x2 - (rtl ? 48 : 12), y2 - 12);
 	foreground.alpha = 0.16;
 	gdk_cairo_set_source_rgba (context, &foreground);
 	cairo_set_line_width (context, 1);
@@ -402,16 +476,39 @@ mail_list_event (ECellView *view,
 
 	if (!gdk_event_get_coords (event, &event_x, &event_y))
 		return e_cell_event (list_view->content, event, model_column, view_column, row, flags, actions);
+	if (event->type == GDK_BUTTON_PRESS && event->button.button == GDK_BUTTON_PRIMARY) {
+		ETreePath node = mail_list_expandable_node (view, row);
+
+		if (node != NULL) {
+			GdkRectangle bounds;
+			gint width = 0;
+			gint height = e_cell_height (view, model_column, view_column, row);
+			gint geometry_row = row;
+			gint geometry_column = view_column;
+
+			e_table_item_get_cell_geometry (view->e_table_item_view, &geometry_row, &geometry_column, NULL, NULL, &width, NULL);
+			mail_list_expander_bounds (width, height, heading_height,
+				gtk_widget_get_direction (mail_list_canvas (view)) == GTK_TEXT_DIR_RTL, &bounds);
+			if (event_x >= bounds.x && event_x < bounds.x + bounds.width &&
+			    event_y >= bounds.y && event_y < bounds.y + bounds.height) {
+				ETreeTableAdapter *adapter = E_TREE_TABLE_ADAPTER (view->e_table_model);
+				gboolean expanded = e_tree_table_adapter_node_is_expanded (adapter, node);
+
+				e_tree_table_adapter_node_set_expanded (adapter, node, !expanded);
+				return TRUE;
+			}
+		}
+	}
 	if (event_y < heading_height || event_x < inset)
 		return 0;
 	translated = gdk_event_copy (event);
 	if (event->type == GDK_MOTION_NOTIFY) {
 		translated->motion.x -= inset;
-		translated->motion.y -= heading_height + 8;
+		translated->motion.y -= heading_height + 12;
 	} else if (event->type == GDK_BUTTON_PRESS || event->type == GDK_BUTTON_RELEASE ||
 	           event->type == GDK_2BUTTON_PRESS || event->type == GDK_3BUTTON_PRESS) {
 		translated->button.x -= inset;
-		translated->button.y -= heading_height + 8;
+		translated->button.y -= heading_height + 12;
 	}
 	result = e_cell_event (list_view->content, translated, model_column, view_column, row, flags, actions);
 	gdk_event_free (translated);
@@ -455,12 +552,14 @@ e_mail_list_cell_init (EMailListCell *cell)
 ECell *
 e_mail_list_cell_new (ECell *content,
                       gint sender_column,
-                      gint date_column)
+					  gint date_column,
+					  gint unread_column)
 {
 	EMailListCell *cell = g_object_new (e_mail_list_cell_get_type (), NULL);
 
 	cell->content = g_object_ref (content);
 	cell->sender_column = sender_column;
 	cell->date_column = date_column;
+	cell->unread_column = unread_column;
 	return E_CELL (cell);
 }

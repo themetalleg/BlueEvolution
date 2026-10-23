@@ -813,7 +813,7 @@ ecep_attachments_setup_ui (ECompEditorPageAttachments *page_attachments)
 
 	static const EUIActionEntry editable_entries[] = {
 		{ "attachments-attach",
-		  "mail-attachment",
+		  "mail-attachment-symbolic",
 		  N_("_Attachment…"),
 		  "<Control>m",
 		  N_("Attach a file"),
@@ -822,7 +822,7 @@ ecep_attachments_setup_ui (ECompEditorPageAttachments *page_attachments)
 
 	static const EUIActionEntry options_entries[] = {
 		{ "page-attachments",
-		  "mail-attachment",
+		  "mail-attachment-symbolic",
 		  N_("_Attachments"),
 		  NULL,
 		  N_("Show attachments"),
@@ -1006,7 +1006,7 @@ ecep_attachments_constructed (GObject *object)
 	gtk_widget_show (widget);
 
 	widget = gtk_image_new_from_icon_name (
-		"mail-attachment", GTK_ICON_SIZE_MENU);
+		"mail-attachment-symbolic", GTK_ICON_SIZE_MENU);
 	gtk_box_pack_start (GTK_BOX (container), widget, FALSE, FALSE, 0);
 	page_attachments->priv->status_icon = widget;
 	gtk_widget_show (widget);

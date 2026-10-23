@@ -9,6 +9,7 @@
 #include <glib/gi18n.h>
 
 #include "e-table-col.h"
+#include "e-icon-factory.h"
 
 G_DEFINE_TYPE (ETableCol, e_table_col, G_TYPE_OBJECT)
 
@@ -16,11 +17,11 @@ void
 e_table_col_ensure_surface (ETableCol *etc,
 			    GtkWidget *widget)
 {
-	/* FIXME This ignores theme changes. */
-
 	GtkStyleContext *style_context;
 	GtkIconTheme *icon_theme;
-	GdkPixbuf *pixbuf;
+	GtkIconInfo *icon_info;
+	GdkPixbuf *pixbuf = NULL;
+	GdkRGBA foreground, *cached_foreground;
 	gint width, height;
 	GError *error = NULL;
 
@@ -31,23 +32,35 @@ e_table_col_ensure_surface (ETableCol *etc,
 	gtk_icon_size_lookup (GTK_ICON_SIZE_MENU, &width, &height);
 
 	style_context = gtk_widget_get_style_context (widget);
-	if (etc->surface && etc->surface_scale == gtk_style_context_get_scale (style_context))
+	gtk_style_context_get_color (style_context, gtk_style_context_get_state (style_context), &foreground);
+	cached_foreground = g_object_get_data (G_OBJECT (etc), "icon-foreground");
+	if (etc->surface && etc->surface_scale == gtk_style_context_get_scale (style_context) &&
+	    cached_foreground && gdk_rgba_equal (cached_foreground, &foreground))
 		return;
 
 	g_clear_pointer (&etc->surface, cairo_surface_destroy);
 
 	etc->surface_scale = gtk_style_context_get_scale (style_context);
 
-	pixbuf = gtk_icon_theme_load_icon_for_scale (
-		icon_theme, etc->icon_name, height, etc->surface_scale, GTK_ICON_LOOKUP_FORCE_SIZE, &error);
+	icon_info = gtk_icon_theme_lookup_icon_for_scale (
+		icon_theme, etc->icon_name, height, etc->surface_scale, GTK_ICON_LOOKUP_FORCE_SIZE |
+		(e_icon_factory_get_prefer_symbolic_icons () ? GTK_ICON_LOOKUP_FORCE_SYMBOLIC : 0));
+	if (icon_info) {
+		if (gtk_icon_info_is_symbolic (icon_info))
+			pixbuf = gtk_icon_info_load_symbolic_for_context (icon_info, style_context, NULL, &error);
+		else
+			pixbuf = gtk_icon_info_load_icon (icon_info, &error);
+		g_object_unref (icon_info);
+	}
 
 	if (error != NULL) {
 		g_warning ("%s", error->message);
 		g_error_free (error);
-	} else {
+	} else if (pixbuf) {
 		etc->surface = gdk_cairo_surface_create_from_pixbuf (pixbuf, etc->surface_scale, NULL);
 		etc->surface_width = gdk_pixbuf_get_width (pixbuf) / (etc->surface_scale > 1 ? etc->surface_scale : 1);
 		etc->surface_height = gdk_pixbuf_get_height (pixbuf) / (etc->surface_scale > 1 ? etc->surface_scale : 1);
+		g_object_set_data_full (G_OBJECT (etc), "icon-foreground", gdk_rgba_copy (&foreground), (GDestroyNotify) gdk_rgba_free);
 	}
 
 	g_clear_object (&pixbuf);

@@ -882,7 +882,7 @@ e_attachment_bar_init (EAttachmentBar *bar)
 	container = widget;
 
 	widget = gtk_image_new_from_icon_name (
-		"mail-attachment", GTK_ICON_SIZE_MENU);
+		"mail-attachment-symbolic", GTK_ICON_SIZE_MENU);
 	gtk_box_pack_start (GTK_BOX (container), widget, FALSE, FALSE, 0);
 	bar->priv->status_icon = g_object_ref (widget);
 	gtk_widget_show (widget);

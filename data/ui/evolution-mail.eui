@@ -95,9 +95,9 @@
   </toolbar>
   <toolbar id='mail-preview-toolbar'>
     <placeholder id='mail-toolbar-common'>
-      <item action='mail-reply-sender' important="true"/>
-      <item action='EMailReader::mail-reply-group' important="true"/>
-      <item action='EMailReader::mail-forward-as-group' important="true"/>
+      <item action='mail-reply-sender' important="false"/>
+      <item action='EMailReader::mail-reply-group' important="false"/>
+      <item action='EMailReader::mail-forward-as-group' important="false"/>
       <separator/>
       <item action='mail-delete'/>
       <item action='mail-mark-junk'/>
