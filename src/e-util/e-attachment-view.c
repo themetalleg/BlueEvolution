@@ -1901,7 +1901,7 @@ e_attachment_view_drag_begin (EAttachmentView *view,
 				pixbuf = gtk_icon_info_load_symbolic_for_context (
 					icon_info, gtk_widget_get_style_context (GTK_WIDGET (view)), NULL, &error);
 			else
-				pixbuf = gtk_icon_info_load_icon (icon_info, &error);
+				pixbuf = e_icon_factory_load_regular_icon (icon_info, &error);
 
 			if (pixbuf != NULL) {
 				gtk_drag_set_icon_pixbuf (

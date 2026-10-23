@@ -108,7 +108,7 @@ cell_toggle_ensure_icons (ECellToggle *cell_toggle,
 				if (style_context != NULL && gtk_icon_info_is_symbolic (info))
 					pixbuf = gtk_icon_info_load_symbolic_for_context (info, style_context, NULL, &error);
 				else
-					pixbuf = gtk_icon_info_load_icon (info, &error);
+					pixbuf = e_icon_factory_load_regular_icon (info, &error);
 				g_object_unref (info);
 			}
 		}

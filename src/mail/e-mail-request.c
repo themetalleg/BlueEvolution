@@ -72,7 +72,7 @@ save_gicon_to_stream (GIcon *icon,
 	if (gtk_icon_info_is_symbolic (icon_info))
 		pixbuf = gtk_icon_info_load_symbolic (icon_info, foreground, NULL, NULL, NULL, NULL, NULL);
 	else
-		pixbuf = gtk_icon_info_load_icon (icon_info, NULL);
+		pixbuf = e_icon_factory_load_regular_icon (icon_info, NULL);
 	if (pixbuf) {
 		if (gdk_pixbuf_save_to_stream (
 			pixbuf, output_stream,

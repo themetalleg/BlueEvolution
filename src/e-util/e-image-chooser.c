@@ -282,28 +282,27 @@ static void
 image_chooser_set_icon_name (EImageChooser *chooser,
                              const gchar *icon_name)
 {
-	GtkIconTheme *icon_theme;
-	GtkIconInfo *icon_info;
-	const gchar *filename;
+	gchar *symbolic_name = NULL;
 
 	if (g_strcmp0 (chooser->priv->icon_name, icon_name) != 0) {
 		g_free (chooser->priv->icon_name);
 		chooser->priv->icon_name = g_strdup (icon_name);
 	}
 
-	icon_theme = gtk_icon_theme_get_default ();
 	if (chooser->priv->pixel_size == 0) {
 		gint width, height;
 		gtk_icon_size_lookup (GTK_ICON_SIZE_DIALOG, &width, &height);
 		chooser->priv->pixel_size = height;
 	}
 
-	icon_info = gtk_icon_theme_lookup_icon (icon_theme, icon_name, chooser->priv->pixel_size, 0);
-	g_return_if_fail (icon_info != NULL);
-
-	filename = gtk_icon_info_get_filename (icon_info);
-	e_image_chooser_set_from_file (chooser, filename);
-	g_object_unref (icon_info);
+	if (e_icon_factory_get_prefer_symbolic_icons () && !g_str_has_suffix (icon_name, "-symbolic"))
+		symbolic_name = g_strconcat (icon_name, "-symbolic", NULL);
+	gtk_image_set_from_icon_name (GTK_IMAGE (chooser->priv->image),
+		symbolic_name ? symbolic_name : icon_name, GTK_ICON_SIZE_DIALOG);
+	gtk_image_set_pixel_size (GTK_IMAGE (chooser->priv->image), chooser->priv->pixel_size);
+	g_clear_pointer (&chooser->priv->image_buf, g_free);
+	chooser->priv->image_buf_size = 0;
+	g_free (symbolic_name);
 }
 
 static void

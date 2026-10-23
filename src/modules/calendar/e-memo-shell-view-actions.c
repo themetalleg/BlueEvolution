@@ -178,7 +178,7 @@ action_memo_list_new_cb (EUIAction *action,
 		GTK_WINDOW (dialog), GTK_WINDOW (shell_window));
 
 	icon_name = e_ui_action_get_icon_name (action);
-	gtk_window_set_icon_name (GTK_WINDOW (dialog), icon_name);
+	e_icon_factory_set_window_icon (GTK_WINDOW (dialog), icon_name);
 
 	gtk_window_set_title (GTK_WINDOW (dialog), _("New Memo List"));
 
@@ -256,7 +256,7 @@ action_memo_list_properties_cb (EUIAction *action,
 		GTK_WINDOW (dialog), GTK_WINDOW (shell_window));
 
 	icon_name = e_ui_action_get_icon_name (action);
-	gtk_window_set_icon_name (GTK_WINDOW (dialog), icon_name);
+	e_icon_factory_set_window_icon (GTK_WINDOW (dialog), icon_name);
 
 	gtk_window_set_title (GTK_WINDOW (dialog), _("Memo List Properties"));
 

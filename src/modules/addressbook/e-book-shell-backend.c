@@ -234,7 +234,7 @@ action_address_book_new_cb (EUIAction *action,
 		GTK_WINDOW (dialog), GTK_WINDOW (shell_window));
 
 	icon_name = e_ui_action_get_icon_name (action);
-	gtk_window_set_icon_name (GTK_WINDOW (dialog), icon_name);
+	e_icon_factory_set_window_icon (GTK_WINDOW (dialog), icon_name);
 
 	gtk_window_set_title (GTK_WINDOW (dialog), _("New Address Book"));
 
@@ -450,7 +450,7 @@ book_shell_backend_handle_uri_cb (EShellBackend *shell_backend,
 
 		if (shell_window)
 			gtk_window_set_transient_for (GTK_WINDOW (dialog), GTK_WINDOW (shell_window));
-		gtk_window_set_icon_name (GTK_WINDOW (dialog), "address-book-new");
+		e_icon_factory_set_window_icon (GTK_WINDOW (dialog), "address-book-new");
 		gtk_window_set_title (GTK_WINDOW (dialog), _("New Address Book"));
 
 		gtk_widget_show (dialog);

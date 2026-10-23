@@ -333,10 +333,10 @@ create_calendar_clicked_cb (GtkWidget *button,
 		gtk_window_set_transient_for (window, GTK_WINDOW (toplevel));
 
 	if (source_type == E_CAL_CLIENT_SOURCE_TYPE_EVENTS) {
-		gtk_window_set_icon_name (window, "x-office-calendar");
+		e_icon_factory_set_window_icon (window, "x-office-calendar");
 		gtk_window_set_title (window, _("New Calendar"));
 	} else {
-		gtk_window_set_icon_name (window, "stock_todo");
+		e_icon_factory_set_window_icon (window, "stock_todo");
 		gtk_window_set_title (window, _("New Task List"));
 	}
 

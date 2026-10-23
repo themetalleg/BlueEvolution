@@ -49,7 +49,7 @@ e_table_col_ensure_surface (ETableCol *etc,
 		if (gtk_icon_info_is_symbolic (icon_info))
 			pixbuf = gtk_icon_info_load_symbolic_for_context (icon_info, style_context, NULL, &error);
 		else
-			pixbuf = gtk_icon_info_load_icon (icon_info, &error);
+			pixbuf = e_icon_factory_load_regular_icon (icon_info, &error);
 		g_object_unref (icon_info);
 	}
 

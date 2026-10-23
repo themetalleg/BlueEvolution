@@ -364,7 +364,7 @@ e_shell_window_update_icon (EShellWindow *shell_window)
 {
 	g_return_if_fail (E_IS_SHELL_WINDOW (shell_window));
 
-	gtk_window_set_icon_name (GTK_WINDOW (shell_window), "blueevolution");
+	e_icon_factory_set_window_icon (GTK_WINDOW (shell_window), "blueevolution");
 }
 
 void

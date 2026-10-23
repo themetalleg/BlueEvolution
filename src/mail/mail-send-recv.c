@@ -756,7 +756,7 @@ build_dialog (GtkWindow *parent,
 
 	gd = GTK_DIALOG (send_recv_dialog);
 	gtk_window_set_modal (GTK_WINDOW (send_recv_dialog), FALSE);
-	gtk_window_set_icon_name (GTK_WINDOW (gd), "mail-send-receive");
+	e_icon_factory_set_window_icon (GTK_WINDOW (gd), "mail-send-receive");
 	gtk_window_set_default_size (GTK_WINDOW (gd), 600, 200);
 	gtk_window_set_title (GTK_WINDOW (gd), _("Send & Receive Mail"));
 	gtk_window_set_transient_for (GTK_WINDOW (gd), parent);

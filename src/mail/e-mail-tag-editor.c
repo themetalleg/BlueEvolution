@@ -133,7 +133,7 @@ e_mail_tag_editor_init (EMailTagEditor *editor)
 
 	gtk_window_set_default_size (window, 400, 500);
 	gtk_window_set_title (window, _("Flag to Follow Up"));
-	gtk_window_set_icon_name (window, "stock_mail-flag-for-followup");
+	e_icon_factory_set_window_icon (window, "stock_mail-flag-for-followup");
 
 	gtk_dialog_add_buttons (
 		dialog,

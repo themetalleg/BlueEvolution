@@ -270,7 +270,7 @@ accounts_window_editors_edit_unmanaged_collection (EAccountsWindow *accounts_win
 
 	container = gtk_dialog_get_content_area (GTK_DIALOG (dialog));
 
-	gtk_window_set_icon_name (GTK_WINDOW (dialog), "blueevolution");
+	e_icon_factory_set_window_icon (GTK_WINDOW (dialog), "blueevolution");
 
 	widget = e_alert_bar_new ();
 	gtk_box_pack_start (GTK_BOX (container), widget, FALSE, FALSE, 0);
@@ -498,7 +498,7 @@ accounts_window_editors_add_source_cb (EAccountsWindow *accounts_window,
 		dialog = e_source_config_dialog_new (E_SOURCE_CONFIG (config));
 
 		gtk_window_set_transient_for (GTK_WINDOW (dialog), GTK_WINDOW (accounts_window));
-		gtk_window_set_icon_name (GTK_WINDOW (dialog), icon_name);
+		e_icon_factory_set_window_icon (GTK_WINDOW (dialog), icon_name);
 		gtk_window_set_title (GTK_WINDOW (dialog), title);
 
 		gtk_widget_show (dialog);
@@ -550,7 +550,7 @@ accounts_window_editors_edit_source_cb (EAccountsWindow *accounts_window,
 		dialog = e_source_config_dialog_new (E_SOURCE_CONFIG (config));
 
 		gtk_window_set_transient_for (GTK_WINDOW (dialog), GTK_WINDOW (accounts_window));
-		gtk_window_set_icon_name (GTK_WINDOW (dialog), icon_name);
+		e_icon_factory_set_window_icon (GTK_WINDOW (dialog), icon_name);
 		gtk_window_set_title (GTK_WINDOW (dialog), title);
 
 		gtk_widget_show (dialog);

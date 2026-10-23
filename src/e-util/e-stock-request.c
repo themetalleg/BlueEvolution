@@ -178,7 +178,7 @@ process_stock_request_idle_cb (gpointer user_data)
 				pixbuf = gtk_icon_info_load_symbolic (icon_info, &theme_fg, NULL, NULL, NULL, NULL, NULL);
 
 			if (!pixbuf)
-				pixbuf = gtk_icon_info_load_icon (icon_info, NULL);
+				pixbuf = e_icon_factory_load_regular_icon (icon_info, NULL);
 
 			if (pixbuf) {
 				gdk_pixbuf_save_to_buffer (

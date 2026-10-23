@@ -2842,7 +2842,7 @@ msg_composer_constructed (GObject *object)
 	table = E_COMPOSER_HEADER_TABLE (composer->priv->header_table);
 
 	gtk_window_set_title (GTK_WINDOW (composer), _("Compose Message"));
-	gtk_window_set_icon_name (GTK_WINDOW (composer), "mail-message-new");
+	e_icon_factory_set_window_icon (GTK_WINDOW (composer), "mail-message-new");
 	gtk_window_set_default_size (GTK_WINDOW (composer), 600, 500);
 	gtk_window_set_position (GTK_WINDOW (composer), GTK_WIN_POS_CENTER);
 

@@ -933,7 +933,7 @@ folder_tree_icon_to_pixbuf (EMFolderTree *self,
 	if (gtk_icon_info_is_symbolic (icon_info))
 		pixbuf = gtk_icon_info_load_symbolic_for_context (icon_info, gtk_widget_get_style_context (widget), NULL, NULL);
 	else
-		pixbuf = gtk_icon_info_load_icon (icon_info, NULL);
+		pixbuf = e_icon_factory_load_regular_icon (icon_info, NULL);
 
 	g_object_unref (icon_info);
 

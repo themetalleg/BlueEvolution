@@ -249,7 +249,7 @@ action_save_as_cb (EUIAction *action,
 
 	gtk_file_chooser_set_local_only (GTK_FILE_CHOOSER (native), FALSE);
 	if (GTK_IS_WINDOW (native))
-		gtk_window_set_icon_name (GTK_WINDOW (native), "mail-message-new");
+		e_icon_factory_set_window_icon (GTK_WINDOW (native), "mail-message-new");
 
 	e_util_load_file_chooser_folder (GTK_FILE_CHOOSER (native));
 	if (gtk_native_dialog_run (GTK_NATIVE_DIALOG (native)) == GTK_RESPONSE_ACCEPT) {

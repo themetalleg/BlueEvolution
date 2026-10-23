@@ -1346,7 +1346,7 @@ e_comp_editor_update_window_title (ECompEditor *comp_editor)
 
 	title = g_strdup_printf (format, title_suffix && *title_suffix ? title_suffix : _("No Summary"));
 
-	gtk_window_set_icon_name (GTK_WINDOW (comp_editor), comp_editor_class->icon_name);
+	e_icon_factory_set_window_icon (GTK_WINDOW (comp_editor), comp_editor_class->icon_name);
 	gtk_window_set_title (GTK_WINDOW (comp_editor), title);
 
 	g_free (title);

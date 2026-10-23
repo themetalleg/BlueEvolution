@@ -28,6 +28,38 @@
 
 static gboolean prefer_symbolic_icons = FALSE;
 
+static gboolean
+icon_factory_check_regular_icon (GtkIconInfo *info,
+                                 GError **error)
+{
+	const gchar *filename = gtk_icon_info_get_filename (info);
+	const gchar *audit = g_getenv ("BLUEEVOLUTION_ICON_AUDIT");
+	gboolean symbolic = gtk_icon_info_is_symbolic (info);
+	gboolean unthemed = filename && strstr (filename, "/BlueEvolution/scalable/actions/") != NULL;
+
+	if ((symbolic || unthemed) && g_strcmp0 (audit, "strict") == 0)
+		g_error ("Unthemed UI icon reached the regular-image loader: %s", filename ? filename : "symbolic icon");
+	if (symbolic) {
+		g_set_error_literal (error, GTK_ICON_THEME_ERROR, GTK_ICON_THEME_FAILED,
+			"Symbolic UI icons must be rendered with theme colors");
+		return FALSE;
+	}
+	if (unthemed && audit && *audit)
+		g_warning ("Unthemed UI icon reached the regular-image loader: %s", filename);
+	return TRUE;
+}
+
+GdkPixbuf *
+e_icon_factory_load_regular_icon (GtkIconInfo *icon_info,
+                                  GError **error)
+{
+	g_return_val_if_fail (icon_info != NULL, NULL);
+
+	if (!icon_factory_check_regular_icon (icon_info, error))
+		return NULL;
+	return gtk_icon_info_load_icon (icon_info, error);
+}
+
 void
 e_icon_factory_set_prefer_symbolic_icons (gboolean prefer)
 {
@@ -38,6 +70,84 @@ gboolean
 e_icon_factory_get_prefer_symbolic_icons (void)
 {
 	return prefer_symbolic_icons;
+}
+
+static void
+icon_factory_update_window_icon (GtkWindow *window)
+{
+	const gchar *icon_name = g_object_get_data (G_OBJECT (window), "e-window-icon-name");
+	const gint sizes[] = { 16, 32, 48 };
+	GtkIconTheme *theme;
+	GtkIconInfo *info;
+	GtkStyleContext *context;
+	GdkRGBA foreground;
+	GList *icons = NULL;
+	gint scale;
+	guint index;
+
+	if (!icon_name)
+		return;
+	theme = gtk_icon_theme_get_for_screen (gtk_widget_get_screen (GTK_WIDGET (window)));
+	context = gtk_widget_get_style_context (GTK_WIDGET (window));
+	scale = gtk_widget_get_scale_factor (GTK_WIDGET (window));
+	info = gtk_icon_theme_lookup_icon_for_scale (theme, icon_name, 16, scale, GTK_ICON_LOOKUP_FORCE_SYMBOLIC);
+	if (!info || !gtk_icon_info_is_symbolic (info)) {
+		if (info)
+			icon_factory_check_regular_icon (info, NULL);
+		g_clear_object (&info);
+		gtk_window_set_icon_name (window, icon_name);
+		return;
+	}
+	g_object_unref (info);
+	if (!gtk_style_context_lookup_color (context, "theme_fg_color", &foreground))
+		gtk_style_context_get_color (context, GTK_STATE_FLAG_NORMAL, &foreground);
+	for (index = 0; index < G_N_ELEMENTS (sizes); index++) {
+		GdkPixbuf *pixbuf;
+		GError *error = NULL;
+
+		info = gtk_icon_theme_lookup_icon_for_scale (theme, icon_name, sizes[index], scale,
+			GTK_ICON_LOOKUP_FORCE_SYMBOLIC | GTK_ICON_LOOKUP_FORCE_SIZE);
+		if (!info)
+			continue;
+		pixbuf = gtk_icon_info_load_symbolic (info, &foreground, NULL, NULL, NULL, NULL, &error);
+		if (pixbuf)
+			icons = g_list_append (icons, pixbuf);
+		if (error) {
+			g_warning ("Cannot render window icon '%s': %s", icon_name, error->message);
+			g_clear_error (&error);
+		}
+		g_object_unref (info);
+	}
+	if (icons)
+		gtk_window_set_icon_list (window, icons);
+	g_list_free_full (icons, g_object_unref);
+}
+
+static void
+icon_factory_window_theme_changed (GtkIconTheme *theme,
+                                   GtkWindow *window)
+{
+	icon_factory_update_window_icon (window);
+}
+
+void
+e_icon_factory_set_window_icon (GtkWindow *window,
+                                const gchar *icon_name)
+{
+	g_return_if_fail (GTK_IS_WINDOW (window));
+
+	g_object_set_data_full (G_OBJECT (window), "e-window-icon-name", g_strdup (icon_name), g_free);
+	if (!g_object_get_data (G_OBJECT (window), "e-window-icon-watch")) {
+		g_object_set_data (G_OBJECT (window), "e-window-icon-watch", GINT_TO_POINTER (1));
+		g_signal_connect (window, "style-updated", G_CALLBACK (icon_factory_update_window_icon), NULL);
+		g_signal_connect (window, "notify::scale-factor", G_CALLBACK (icon_factory_update_window_icon), NULL);
+		g_signal_connect_object (gtk_icon_theme_get_for_screen (gtk_widget_get_screen (GTK_WIDGET (window))),
+			"changed", G_CALLBACK (icon_factory_window_theme_changed), window, 0);
+	}
+	if (icon_name)
+		icon_factory_update_window_icon (window);
+	else
+		gtk_window_set_icon_name (window, NULL);
 }
 
 /**
@@ -70,6 +180,8 @@ e_icon_factory_get_icon_filename (const gchar *icon_name,
 	if (!icon_info)
 		icon_info = gtk_icon_theme_lookup_icon (icon_theme, icon_name, height, 0);
 	if (icon_info != NULL) {
+		if (g_strcmp0 (g_getenv ("BLUEEVOLUTION_ICON_AUDIT"), "strict") == 0)
+			icon_factory_check_regular_icon (icon_info, NULL);
 		filename = g_strdup (
 			gtk_icon_info_get_filename (icon_info));
 		g_object_unref (icon_info);
@@ -117,7 +229,7 @@ icon_factory_load_icon (GtkIconTheme *icon_theme,
 		gtk_widget_path_unref (path);
 		g_object_unref (context);
 	} else {
-		pixbuf = gtk_icon_info_load_icon (info, error);
+		pixbuf = e_icon_factory_load_regular_icon (info, error);
 	}
 	g_object_unref (info);
 	return pixbuf;

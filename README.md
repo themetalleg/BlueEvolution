@@ -11,6 +11,15 @@ See [BLUEEVOLUTION.md](BLUEEVOLUTION.md) for the baseline, implementation
 status, build notes, and known limitations. Upstream Evolution documentation
 follows.
 
+## Icon Auditing
+
+Set `BLUEEVOLUTION_ICON_AUDIT=strict` in a disposable test profile to abort
+when an unthemed UI glyph reaches the shared regular-image loader or icon
+filename API. For Flatpak, pass `--env=BLUEEVOLUTION_ICON_AUDIT=strict` to
+`flatpak run`. Do not enable this in a normal mail session: audit failures
+deliberately terminate the process. Photos, thumbnails, and full-color
+application icons keep their regular image handling.
+
 ## GNOME Evolution
 
 **Evolution** is the integrated mail, calendar and address book suite from

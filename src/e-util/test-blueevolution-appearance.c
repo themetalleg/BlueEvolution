@@ -221,6 +221,135 @@ test_table_heading_palette (void)
 }
 
 static void
+test_window_icon_palette (void)
+{
+	GtkWidget *window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+	GtkCssProvider *provider = gtk_css_provider_new ();
+	const gchar *palettes[] = {
+		"@define-color theme_fg_color #202020;",
+		"@define-color theme_fg_color #eeeeee;",
+		"@define-color theme_fg_color #202020;"
+	};
+	guint index;
+
+	gtk_style_context_add_provider (gtk_widget_get_style_context (window), GTK_STYLE_PROVIDER (provider), GTK_STYLE_PROVIDER_PRIORITY_USER);
+	for (index = 0; index < G_N_ELEMENTS (palettes); index++) {
+		GList *icons, *link;
+
+		gtk_css_provider_load_from_data (provider, palettes[index], -1, NULL);
+		if (index == 0)
+			e_icon_factory_set_window_icon (GTK_WINDOW (window), "mail-message-new");
+		else
+			g_signal_emit_by_name (window, "style-updated");
+		icons = gtk_window_get_icon_list (GTK_WINDOW (window));
+		g_assert_cmpuint (g_list_length (icons), ==, 3);
+		for (link = icons; link; link = g_list_next (link))
+			check_icon_brightness (GDK_PIXBUF (link->data), index == 1);
+		g_list_free (icons);
+	}
+	e_icon_factory_set_window_icon (GTK_WINDOW (window), "blueevolution");
+	g_assert_cmpstr (gtk_window_get_icon_name (GTK_WINDOW (window)), ==, "blueevolution");
+	e_icon_factory_set_window_icon (GTK_WINDOW (window), NULL);
+	g_assert_null (gtk_window_get_icon_name (GTK_WINDOW (window)));
+	g_object_unref (provider);
+	gtk_widget_destroy (window);
+}
+
+static void
+test_regular_icon_audit (void)
+{
+	if (g_test_subprocess ()) {
+		GtkIconTheme *theme = gtk_icon_theme_new ();
+		GtkIconInfo *info;
+
+		g_setenv ("BLUEEVOLUTION_ICON_AUDIT", "strict", TRUE);
+		gtk_icon_theme_prepend_search_path (theme, EVOLUTION_ICONDIR);
+		gtk_icon_theme_set_custom_theme (theme, "BlueEvolution");
+		info = gtk_icon_theme_lookup_icon (theme, "mail-message-new", 16, GTK_ICON_LOOKUP_FORCE_REGULAR);
+		g_assert_nonnull (info);
+		e_icon_factory_load_regular_icon (info, NULL);
+		g_object_unref (info);
+		g_object_unref (theme);
+		return;
+	}
+	g_test_trap_subprocess (NULL, 0, G_TEST_SUBPROCESS_DEFAULT);
+	g_test_trap_assert_failed ();
+	g_test_trap_assert_stderr ("*Unthemed UI icon reached the regular-image loader*");
+}
+
+static void
+test_contact_placeholder_icon (void)
+{
+	gboolean prefer_symbolic = e_icon_factory_get_prefer_symbolic_icons ();
+	GtkWidget *chooser;
+	GList *children;
+	GtkImage *image;
+	GdkPixbuf *photo = gdk_pixbuf_new (GDK_COLORSPACE_RGB, TRUE, 8, 16, 16);
+	gchar *buffer;
+	gsize length;
+
+	e_icon_factory_set_prefer_symbolic_icons (TRUE);
+	chooser = e_image_chooser_new ("avatar-default");
+	g_object_ref_sink (chooser);
+	children = gtk_container_get_children (GTK_CONTAINER (chooser));
+	g_assert_cmpuint (g_list_length (children), ==, 1);
+	image = GTK_IMAGE (children->data);
+	g_assert_true (GTK_IS_IMAGE (image));
+	g_assert_cmpint (gtk_image_get_storage_type (image), ==, GTK_IMAGE_ICON_NAME);
+	g_assert_false (e_image_chooser_has_image (E_IMAGE_CHOOSER (chooser)));
+	gdk_pixbuf_fill (photo, 0x118833ff);
+	g_assert_true (gdk_pixbuf_save_to_buffer (photo, &buffer, &length, "png", NULL, NULL));
+	g_assert_true (e_image_chooser_set_image_data (E_IMAGE_CHOOSER (chooser), buffer, length));
+	g_assert_true (e_image_chooser_has_image (E_IMAGE_CHOOSER (chooser)));
+	g_assert_cmpint (gtk_image_get_storage_type (image), ==, GTK_IMAGE_PIXBUF);
+	e_image_chooser_unset_image (E_IMAGE_CHOOSER (chooser));
+	g_assert_false (e_image_chooser_has_image (E_IMAGE_CHOOSER (chooser)));
+	g_assert_cmpint (gtk_image_get_storage_type (image), ==, GTK_IMAGE_ICON_NAME);
+	g_free (buffer);
+	g_object_unref (photo);
+	g_list_free (children);
+	gtk_widget_destroy (chooser);
+	g_object_unref (chooser);
+	e_icon_factory_set_prefer_symbolic_icons (prefer_symbolic);
+}
+
+static void
+test_online_button_icon (void)
+{
+	GtkWidget *button = e_online_button_new ();
+	GList *children;
+	GtkWidget *image;
+	const gchar *name;
+	GtkIconSize size;
+
+	g_object_ref_sink (button);
+	children = gtk_container_get_children (GTK_CONTAINER (button));
+	g_assert_cmpuint (g_list_length (children), ==, 1);
+	image = children->data;
+	if (GTK_IS_CONTAINER (image)) {
+		GList *images = gtk_container_get_children (GTK_CONTAINER (image));
+
+		g_assert_nonnull (images);
+		image = images->data;
+		g_list_free (images);
+	}
+	g_assert_true (GTK_IS_IMAGE (image));
+	e_online_button_set_online (E_ONLINE_BUTTON (button), TRUE);
+	g_assert_cmpint (gtk_image_get_storage_type (GTK_IMAGE (image)), ==, GTK_IMAGE_ICON_NAME);
+	gtk_image_get_icon_name (GTK_IMAGE (image), &name, &size);
+	g_assert_cmpstr (name, ==, "network-transmit-receive-symbolic");
+	g_assert_true (gtk_icon_theme_has_icon (gtk_icon_theme_get_default (), name));
+	e_online_button_set_online (E_ONLINE_BUTTON (button), FALSE);
+	gtk_image_get_icon_name (GTK_IMAGE (image), &name, &size);
+	g_assert_cmpstr (name, ==, "network-offline-symbolic");
+	g_assert_true (gtk_icon_theme_has_icon (gtk_icon_theme_get_default (), name));
+	g_assert_cmpint (gtk_image_get_pixel_size (GTK_IMAGE (image)), ==, 16);
+	g_list_free (children);
+	gtk_widget_destroy (button);
+	g_object_unref (button);
+}
+
+static void
 test_bootstrap_aliases (void)
 {
 	GtkIconTheme *theme = gtk_icon_theme_new ();
@@ -263,5 +392,9 @@ main (gint argc, gchar **argv)
 	g_test_add_func ("/blueevolution/icons/bootstrap-aliases", test_bootstrap_aliases);
 	g_test_add_func ("/blueevolution/icons/factory-palette", test_icon_factory_palette);
 	g_test_add_func ("/blueevolution/icons/table-heading-palette", test_table_heading_palette);
+	g_test_add_func ("/blueevolution/icons/window-palette", test_window_icon_palette);
+	g_test_add_func ("/blueevolution/icons/regular-loader-audit", test_regular_icon_audit);
+	g_test_add_func ("/blueevolution/icons/contact-placeholder", test_contact_placeholder_icon);
+	g_test_add_func ("/blueevolution/icons/online-button", test_online_button_icon);
 	return g_test_run ();
 }

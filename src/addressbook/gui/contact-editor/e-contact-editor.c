@@ -2537,14 +2537,8 @@ fill_in_simple_field (EContactEditor *editor,
 		}
 
 		if (!editor->priv->image_set) {
-			gchar *file_name;
-
-			file_name = e_icon_factory_get_icon_filename (
-				"avatar-default", GTK_ICON_SIZE_DIALOG);
-			e_image_chooser_set_from_file (
-				E_IMAGE_CHOOSER (widget), file_name);
+			e_image_chooser_unset_image (E_IMAGE_CHOOSER (widget));
 			editor->priv->image_set = FALSE;
-			g_free (file_name);
 		}
 
 		editor->priv->image_changed = FALSE;
@@ -4281,22 +4275,15 @@ static void
 image_cleared (EContactEditor *editor)
 {
 	GtkWidget *image_chooser;
-	gchar     *file_name;
 
 	image_chooser = e_builder_get_widget (
 		editor->priv->builder, "image-chooser");
 
-	file_name = e_icon_factory_get_icon_filename (
-		"avatar-default", GTK_ICON_SIZE_DIALOG);
-
 	g_signal_handlers_block_by_func (
 		image_chooser, image_chooser_changed, editor);
-	e_image_chooser_set_from_file (
-		E_IMAGE_CHOOSER (image_chooser), file_name);
+	e_image_chooser_unset_image (E_IMAGE_CHOOSER (image_chooser));
 	g_signal_handlers_unblock_by_func (
 		image_chooser, image_chooser_changed, editor);
-
-	g_free (file_name);
 
 	editor->priv->image_set = FALSE;
 	editor->priv->image_changed = TRUE;
@@ -4354,14 +4341,10 @@ update_preview_cb (GtkFileChooser *file_chooser,
 	pixbuf = gdk_pixbuf_new_from_file_at_size (filename, 128, 128, NULL);
 
 	if (!pixbuf) {
-		gchar *alternate_file;
-		alternate_file = e_icon_factory_get_icon_filename (
-			"avatar-default", GTK_ICON_SIZE_DIALOG);
-		if (alternate_file) {
-			pixbuf = gdk_pixbuf_new_from_file_at_size (
-				alternate_file, 128, 128, NULL);
-			g_free (alternate_file);
-		}
+		gtk_image_set_from_icon_name (GTK_IMAGE (preview), "avatar-default-symbolic", GTK_ICON_SIZE_DIALOG);
+		gtk_image_set_pixel_size (GTK_IMAGE (preview), 128);
+		g_free (filename);
+		return;
 	}
 	g_free (filename);
 
@@ -5273,7 +5256,7 @@ e_contact_editor_init (EContactEditor *e_contact_editor)
 		G_CALLBACK (app_delete_event_cb), e_contact_editor);
 
 	/* set the icon */
-	gtk_window_set_icon_name (
+	e_icon_factory_set_window_icon (
 		GTK_WINDOW (e_contact_editor->priv->app), "contact-editor");
 
 	gtk_application_add_window (

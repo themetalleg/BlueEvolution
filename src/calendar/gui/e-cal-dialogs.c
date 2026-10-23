@@ -1259,7 +1259,7 @@ e_cal_dialogs_select_source (GtkWindow *parent,
 	dialog = e_source_selector_dialog_new (parent, registry, extension_name);
 
 	if (icon_name)
-		gtk_window_set_icon_name (GTK_WINDOW (dialog), icon_name);
+		e_icon_factory_set_window_icon (GTK_WINDOW (dialog), icon_name);
 
 	if (except_source)
 		e_source_selector_dialog_set_except_source (E_SOURCE_SELECTOR_DIALOG (dialog), except_source);

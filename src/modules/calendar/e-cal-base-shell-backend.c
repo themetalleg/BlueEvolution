@@ -69,7 +69,7 @@ cal_base_shell_backend_handle_webcal_uri (EShellBackend *shell_backend,
 
 	if (active_window)
 		gtk_window_set_transient_for (window, active_window);
-	gtk_window_set_icon_name (window, "x-office-calendar");
+	e_icon_factory_set_window_icon (window, "x-office-calendar");
 	gtk_window_set_title (window, _("New Calendar"));
 
 	gtk_widget_show (dialog);
@@ -289,7 +289,7 @@ e_cal_base_shell_backend_util_new_source (EShellWindow *shell_window,
 	window = GTK_WINDOW (dialog);
 
 	gtk_window_set_transient_for (window, GTK_WINDOW (shell_window));
-	gtk_window_set_icon_name (window, icon_name);
+	e_icon_factory_set_window_icon (window, icon_name);
 	gtk_window_set_title (window, title);
 
 	gtk_widget_show (dialog);
