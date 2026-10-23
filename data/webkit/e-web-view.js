@@ -668,6 +668,7 @@ Evo.initialize = function(elem)
 	} else
 		doc = document;
 
+	doc.addEventListener("copy", EvoClipboard.Copy);
 	Evo.setupPlugins(doc);
 
 	elems = doc.getElementsByTagName("iframe");

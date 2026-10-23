@@ -36,6 +36,37 @@ static const gchar *formatter_mime_types[] = {
 };
 
 static void
+format_message_status_icons (GString *buffer,
+                             guint32 flags)
+{
+	const gchar *icons[2], *labels[2];
+	guint count = 0, index;
+	if (flags & (CAMEL_MESSAGE_ANSWERED | CAMEL_MESSAGE_ANSWERED_ALL)) {
+		icons[count] = flags & CAMEL_MESSAGE_ANSWERED_ALL ? "mail-reply-all" : "mail-reply-sender";
+		labels[count++] = flags & CAMEL_MESSAGE_ANSWERED_ALL ?
+			_("You replied to all recipients of this message.") : _("You replied to this message.");
+	}
+	if (flags & CAMEL_MESSAGE_FORWARDED) {
+		icons[count] = "mail-forward";
+		labels[count++] = _("You forwarded this message.");
+	}
+	if (!count)
+		return;
+	g_string_append (buffer, "<div class=\"blueevolution-message-status\" role=\"status\" style=\"padding:6px 0 10px;\">");
+	for (index = 0; index < count; index++) {
+		gchar *label = g_markup_escape_text (labels[index], -1);
+		g_string_append_printf (buffer,
+			"<span style=\"display:inline-flex;align-items:center;gap:6px;margin-inline-end:16px;\">"
+			"<img src=\"gtk-stock://%s?size=%d&amp;color-scheme=light\" width=\"16\" height=\"16\" alt=\"\" class=\"-evo-color-scheme-light\"/>"
+			"<img src=\"gtk-stock://%s?size=%d&amp;color-scheme=dark\" width=\"16\" height=\"16\" alt=\"\" class=\"-evo-color-scheme-dark\"/>"
+			"<span>%s</span></span>",
+			icons[index], GTK_ICON_SIZE_MENU, icons[index], GTK_ICON_SIZE_MENU, label);
+		g_free (label);
+	}
+	g_string_append (buffer, "</div>");
+}
+
+static void
 format_short_headers (EMailFormatter *formatter,
                       GString *buffer,
                       EMailPart *part,
@@ -645,6 +676,17 @@ emfe_headers_format (EMailFormatterExtension *extension,
 	}
 
 	g_string_append (buffer, "<td>");
+
+	if (!is_rfc822_headers && !(context->flags & E_MAIL_FORMATTER_HEADER_FLAG_NO_FORMATTING) &&
+	    g_strcmp0 (e_mail_part_get_id (part), ".message.headers") == 0 && context->part_list) {
+		CamelFolder *folder = e_mail_part_list_get_folder (context->part_list);
+		const gchar *uid = e_mail_part_list_get_message_uid (context->part_list);
+		CamelMessageInfo *info = folder && uid ? camel_folder_get_message_info (folder, uid) : NULL;
+		if (info) {
+			format_message_status_icons (buffer, camel_message_info_get_flags (info));
+			g_object_unref (info);
+		}
+	}
 
 	if (is_collapsable)
 		format_short_headers (

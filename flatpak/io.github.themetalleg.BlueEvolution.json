@@ -27,6 +27,7 @@
     "--socket=pulseaudio",
     "--socket=pcsc",
     "--device=dri",
+    "--filesystem=xdg-download:ro",
     "--filesystem=~/.gnupg:rw",
     "--filesystem=xdg-config/gnupg:rw",
     "--filesystem=~/.pki:rw",

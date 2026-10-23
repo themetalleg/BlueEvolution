@@ -1,4 +1,5 @@
 set(DATA_FILES
+	e-clipboard.js
 	e-convert.js
 	e-editor.js
 	e-selection.js

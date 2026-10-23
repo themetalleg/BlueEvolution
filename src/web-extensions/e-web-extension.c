@@ -298,6 +298,7 @@ window_object_cleared_cb (WebKitScriptWorld *world,
 
 	/* Read e-convert.js first, because e-web-view.js uses it */
 	load_javascript_builtin_file (jsc_context, "e-convert.js");
+	load_javascript_builtin_file (jsc_context, "e-clipboard.js");
 	load_javascript_builtin_file (jsc_context, "e-web-view.js");
 
 	jsc_evo_object = jsc_context_get_value (jsc_context, "Evo");

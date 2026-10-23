@@ -1123,9 +1123,9 @@ filter:
 
 		case MAIL_FILTER_UNREAD_MESSAGES:
 			if (query && *query) {
-				temp = g_strdup_printf ("(and %s (match-all (not (system-flag \"Seen\"))))", query);
+				temp = g_strdup_printf ("(match-threads \"all\" (and %s (match-all (not (system-flag \"Seen\")))))", query);
 			} else {
-				temp = g_strdup ("(match-all (not (system-flag \"Seen\")))");
+				temp = g_strdup ("(match-threads \"all\" (match-all (not (system-flag \"Seen\"))))");
 			}
 			g_free (query);
 			query = temp;

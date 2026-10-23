@@ -71,6 +71,9 @@ gboolean	e_tree_table_adapter_get_sort_children_ascending
 void		e_tree_table_adapter_set_sort_children_ascending
 						(ETreeTableAdapter *etta,
 						 gboolean sort_children_ascending);
+void		e_tree_table_adapter_set_preserve_child_order
+						(ETreeTableAdapter *etta,
+						 gboolean preserve_child_order);
 ETreeModel *	e_tree_table_adapter_get_source_model
 						(ETreeTableAdapter *etta);
 

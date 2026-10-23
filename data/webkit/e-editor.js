@@ -6893,6 +6893,7 @@ EvoEditor.onContextMenu = function(event)
 }
 
 document.oncontextmenu = EvoEditor.onContextMenu;
+document.addEventListener("copy", EvoClipboard.Copy);
 document.onload = EvoEditor.initializeContent;
 
 document.onselectionchange = function() {

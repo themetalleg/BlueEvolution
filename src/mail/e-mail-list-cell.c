@@ -2,6 +2,7 @@
 
 #include <glib/gi18n.h>
 #include <string.h>
+#include <camel/camel.h>
 
 #include "e-mail-list-cell.h"
 
@@ -100,8 +101,8 @@ mail_list_compact_date (gint64 timestamp,
 
 		time_text = g_date_time_format (date, use_24hour ? "%H:%M" : "%I:%M %p");
 		g_object_unref (settings);
-		if (days == 0)
-			result = g_strdup (time_text);
+		if (days == 0 || days == 1)
+			result = g_strdup_printf ("%s, %s", days == 0 ? _("Today") : _("Yesterday"), time_text);
 		else {
 			weekday = g_date_time_format (date, "%a");
 			result = g_strdup_printf ("%s, %s", weekday, time_text);
@@ -205,7 +206,7 @@ static gint
 mail_list_node_indent (GNode *node)
 {
 	guint depth = node ? g_node_depth (node) : 0;
-	return depth > 2 ? MIN (depth - 2, 4) * 20 : 0;
+	return depth > 2 ? 20 : 0;
 }
 
 static gint
@@ -253,6 +254,77 @@ mail_list_canvas (ECellView *view)
 {
 	return GTK_WIDGET (GNOME_CANVAS_ITEM (view->e_table_item_view)->canvas);
 }
+
+typedef struct { ECell parent; } EMailListStatusCell;
+typedef ECellClass EMailListStatusCellClass;
+static GType e_mail_list_status_cell_get_type (void);
+G_DEFINE_TYPE (EMailListStatusCell, e_mail_list_status_cell, E_TYPE_CELL)
+
+static ECellView *
+mail_status_new_view (ECell *cell, ETableModel *model, gpointer item)
+{
+	ECellView *view = g_new0 (ECellView, 1);
+	view->ecell = cell;
+	view->e_table_model = model;
+	view->e_table_item_view = item;
+	return view;
+}
+
+static void
+mail_status_kill_view (ECellView *view)
+{
+	if (view->kill_view_cb)
+		view->kill_view_cb (view, view->kill_view_cb_data);
+	g_list_free (view->kill_view_cb_data);
+	g_free (view);
+}
+static gint mail_status_height (ECellView *view, gint column, gint view_column, gint row) { return 16; }
+static gint mail_status_width (ECellView *view, gint column, gint view_column) { return 40; }
+
+static void
+mail_status_draw (ECellView *view, cairo_t *context, gint column, gint view_column,
+                  gint row, ECellFlags cell_flags, gint x1, gint y1, gint x2, gint y2)
+{
+	gpointer value = e_table_model_value_at (view->e_table_model, column, row);
+	guint32 flags = GPOINTER_TO_UINT (value);
+	const gchar *icons[2];
+	guint count = 0, index;
+	GdkRGBA foreground;
+	GtkWidget *canvas = mail_list_canvas (view);
+	if (flags & (CAMEL_MESSAGE_ANSWERED | CAMEL_MESSAGE_ANSWERED_ALL))
+		icons[count++] = flags & CAMEL_MESSAGE_ANSWERED_ALL ? "mail-reply-all" : "mail-reply-sender";
+	if (flags & CAMEL_MESSAGE_FORWARDED)
+		icons[count++] = "mail-forward";
+	gtk_style_context_get_color (gtk_widget_get_style_context (canvas),
+		cell_flags & E_CELL_SELECTED ? GTK_STATE_FLAG_SELECTED : gtk_widget_get_state_flags (canvas), &foreground);
+	cairo_save (context);
+	cairo_rectangle (context, x1, y1, MAX (0, x2 - x1), MAX (0, y2 - y1));
+	cairo_clip (context);
+	for (index = 0; index < count; index++) {
+		GdkPixbuf *icon = e_icon_factory_get_icon (icons[index], GTK_ICON_SIZE_MENU);
+		if (icon) {
+			cairo_surface_t *surface = gdk_cairo_surface_create_from_pixbuf (icon, 1, NULL);
+			gdk_cairo_set_source_rgba (context, &foreground);
+			cairo_mask_surface (context, surface, x2 - count * 20 + index * 20, y1 + (y2 - y1 - 16) / 2);
+			cairo_surface_destroy (surface);
+			g_object_unref (icon);
+		}
+	}
+	cairo_restore (context);
+	e_table_model_free_value (view->e_table_model, column, value);
+}
+
+static void
+e_mail_list_status_cell_class_init (EMailListStatusCellClass *class)
+{
+	class->new_view = mail_status_new_view;
+	class->kill_view = mail_status_kill_view;
+	class->height = mail_status_height;
+	class->max_width = mail_status_width;
+	class->draw = mail_status_draw;
+}
+static void e_mail_list_status_cell_init (EMailListStatusCell *cell) {}
+ECell *e_mail_list_status_cell_new (void) { return g_object_new (e_mail_list_status_cell_get_type (), NULL); }
 
 static GdkRGBA
 mail_list_unread_background (const GdkRGBA *background)

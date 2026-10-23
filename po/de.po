@@ -49,6 +49,24 @@ msgstr ""
 msgid "Mark the current message as read"
 msgstr "Die aktuelle Nachricht als gelesen markieren"
 
+msgid "Replied"
+msgstr "Beantwortet"
+
+msgid "Replied to all"
+msgstr "Allen geantwortet"
+
+msgid "Replied and forwarded"
+msgstr "Beantwortet und weitergeleitet"
+
+msgid "You replied to this message."
+msgstr "Sie haben auf diese Nachricht geantwortet."
+
+msgid "You replied to all recipients of this message."
+msgstr "Sie haben allen Empfängern dieser Nachricht geantwortet."
+
+msgid "You forwarded this message."
+msgstr "Sie haben diese Nachricht weitergeleitet."
+
 msgid "Mail Assistant"
 msgstr "Mail-Assistent"
 

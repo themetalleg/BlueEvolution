@@ -48,6 +48,7 @@ struct _ETreeTableAdapterPrivate {
 	gulong sort_info_changed_handler_id;
 	ETableSortInfo *children_sort_info;
 	gboolean sort_children_ascending;
+	gboolean preserve_child_order;
 
 	ETableHeader *header;
 
@@ -185,7 +186,8 @@ resort_node (ETreeTableAdapter *etta,
 	if (node->num_visible_children == 0)
 		return;
 
-	sort_needed = etta->priv->sort_info && e_table_sort_info_sorting_get_count (etta->priv->sort_info) > 0;
+	sort_needed = etta->priv->sort_info && e_table_sort_info_sorting_get_count (etta->priv->sort_info) > 0 &&
+		(!etta->priv->preserve_child_order || !gnode->parent);
 
 	for (i = 0, path = e_tree_model_node_get_first_child (etta->priv->source_model, node->path); path;
 	     path = e_tree_model_node_get_next (etta->priv->source_model, path), i++);
@@ -1216,6 +1218,22 @@ e_tree_table_adapter_set_sort_children_ascending (ETreeTableAdapter *etta,
 	resort_node (etta, etta->priv->root, TRUE);
 	fill_map (etta, 0, etta->priv->root);
 	e_table_model_changed (E_TABLE_MODEL (etta));
+}
+
+void
+e_tree_table_adapter_set_preserve_child_order (ETreeTableAdapter *etta,
+                                              gboolean preserve_child_order)
+{
+	g_return_if_fail (E_IS_TREE_TABLE_ADAPTER (etta));
+	if (etta->priv->preserve_child_order == !!preserve_child_order)
+		return;
+	etta->priv->preserve_child_order = !!preserve_child_order;
+	if (etta->priv->root) {
+		e_table_model_pre_change (E_TABLE_MODEL (etta));
+		resort_node (etta, etta->priv->root, TRUE);
+		fill_map (etta, 0, etta->priv->root);
+		e_table_model_changed (E_TABLE_MODEL (etta));
+	}
 }
 
 ETreeModel *

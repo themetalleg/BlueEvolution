@@ -683,6 +683,26 @@ get_message_uid (MessageList *message_list,
 /* Gets the CamelMessageInfo for the message displayed at the given
  * view row.
  */
+static time_t
+message_list_message_date (CamelMessageInfo *info)
+{
+	time_t date = camel_message_info_get_date_sent (info);
+	return date ? date : camel_message_info_get_date_received (info);
+}
+
+static gint
+message_list_thread_message_compare (gconstpointer first,
+                                     gconstpointer second)
+{
+	CamelMessageInfo *first_info = *((CamelMessageInfo * const *) first);
+	CamelMessageInfo *second_info = *((CamelMessageInfo * const *) second);
+	time_t first_date = message_list_message_date (first_info);
+	time_t second_date = message_list_message_date (second_info);
+	if (first_date != second_date)
+		return first_date > second_date ? -1 : 1;
+	return g_strcmp0 (camel_message_info_get_uid (second_info), camel_message_info_get_uid (first_info));
+}
+
 static gboolean
 message_list_latest_message_cb (GNode *node,
                                gpointer user_data)
@@ -692,12 +712,8 @@ message_list_latest_message_cb (GNode *node,
 	time_t latest_date, date;
 	if (!info)
 		return FALSE;
-	date = camel_message_info_get_date_received (info);
-	if (!date)
-		date = camel_message_info_get_date_sent (info);
-	latest_date = camel_message_info_get_date_received (*latest);
-	if (!latest_date)
-		latest_date = camel_message_info_get_date_sent (*latest);
+	date = message_list_message_date (info);
+	latest_date = message_list_message_date (*latest);
 	if (date > latest_date)
 		*latest = info;
 	return FALSE;
@@ -1810,6 +1826,9 @@ ml_tree_value_at_ex (ETreeModel *etm,
 	g_return_val_if_fail (msg_info != NULL, NULL);
 
 	switch (col) {
+	case COL_REPLY_STATUS:
+		return GUINT_TO_POINTER (camel_message_info_get_flags (msg_info) &
+			(CAMEL_MESSAGE_ANSWERED | CAMEL_MESSAGE_ANSWERED_ALL | CAMEL_MESSAGE_FORWARDED));
 	case COL_MESSAGE_STATUS:
 		flags = camel_message_info_get_flags (msg_info);
 		if (!(flags & CAMEL_MESSAGE_SEEN) && (flags & CAMEL_MESSAGE_ANSWERED) != 0)
@@ -2288,6 +2307,7 @@ create_composite_cell (GSettings *mail_settings,
 {
 	ECell *cell_vbox, *cell_hbox, *cell_date, *cell_from, *cell_attach;
 	ECell *cell_subject, *cell_preview;
+	ECell *cell_heading, *cell_status;
 	ECell *list_cell;
 	gboolean show_email;
 	gboolean show_subject_above_sender;
@@ -2339,8 +2359,14 @@ create_composite_cell (GSettings *mail_settings,
 	e_cell_hbox_append_natural (E_CELL_HBOX (cell_hbox), cell_attach, COL_ATTACHMENT);
 	e_cell_hbox_append_natural (E_CELL_HBOX (cell_hbox), cell_date, COL_SENT);
 
-	e_cell_vbox_append (E_CELL_VBOX (cell_vbox), show_subject_above_sender ? cell_subject : cell_from,
-		show_subject_above_sender ? COL_SUBJECT : col);
+	cell_heading = e_cell_hbox_new ();
+	cell_status = e_mail_list_status_cell_new ();
+	e_cell_hbox_append (E_CELL_HBOX (cell_heading), show_subject_above_sender ? cell_subject : cell_from,
+		show_subject_above_sender ? COL_SUBJECT : col, 100);
+	e_cell_hbox_append_natural (E_CELL_HBOX (cell_heading), cell_status, COL_REPLY_STATUS);
+	e_cell_vbox_append (E_CELL_VBOX (cell_vbox), cell_heading, show_subject_above_sender ? COL_SUBJECT : col);
+	g_object_unref (cell_heading);
+	g_object_unref (cell_status);
 	e_cell_vbox_append (E_CELL_VBOX (cell_vbox), cell_hbox, show_subject_above_sender ? col : COL_SUBJECT);
 	e_cell_vbox_append (E_CELL_VBOX (cell_vbox), cell_preview, COL_BODY_PREVIEW);
 	g_object_unref (cell_hbox);
@@ -3823,6 +3849,7 @@ message_list_duplicate_value (ETreeModel *tree_model,
                               gconstpointer value)
 {
 	switch (col) {
+		case COL_REPLY_STATUS:
 		case COL_MESSAGE_STATUS:
 		case COL_FLAGGED:
 		case COL_SCORE:
@@ -3884,6 +3911,7 @@ message_list_free_value (ETreeModel *tree_model,
                          gpointer value)
 {
 	switch (col) {
+		case COL_REPLY_STATUS:
 		case COL_MESSAGE_STATUS:
 		case COL_FLAGGED:
 		case COL_SCORE:
@@ -3941,6 +3969,7 @@ message_list_initialize_value (ETreeModel *tree_model,
                                gint col)
 {
 	switch (col) {
+		case COL_REPLY_STATUS:
 		case COL_MESSAGE_STATUS:
 		case COL_FLAGGED:
 		case COL_SCORE:
@@ -3989,6 +4018,7 @@ message_list_value_is_empty (ETreeModel *tree_model,
                              gconstpointer value)
 {
 	switch (col) {
+		case COL_REPLY_STATUS:
 		case COL_MESSAGE_STATUS:
 		case COL_FLAGGED:
 		case COL_SCORE:
@@ -4039,6 +4069,15 @@ message_list_value_to_string (ETreeModel *tree_model,
 	guint ii;
 
 	switch (col) {
+		case COL_REPLY_STATUS:
+			ii = GPOINTER_TO_UINT (value);
+			if ((ii & (CAMEL_MESSAGE_ANSWERED | CAMEL_MESSAGE_ANSWERED_ALL)) && (ii & CAMEL_MESSAGE_FORWARDED))
+				return g_strdup (_("Replied and forwarded"));
+			if (ii & CAMEL_MESSAGE_ANSWERED_ALL)
+				return g_strdup (_("Replied to all"));
+			if (ii & CAMEL_MESSAGE_ANSWERED)
+				return g_strdup (_("Replied"));
+			return g_strdup (ii & CAMEL_MESSAGE_FORWARDED ? _("Forwarded") : "");
 		case COL_MESSAGE_STATUS:
 			ii = GPOINTER_TO_UINT (value);
 			if (ii > 5)
@@ -4945,6 +4984,7 @@ build_tree (MessageList *message_list,
 {
 	gint row = 0;
 	ETableItem *table_item = e_tree_get_item (E_TREE (message_list));
+	e_tree_table_adapter_set_preserve_child_order (e_tree_get_table_adapter (E_TREE (message_list)), TRUE);
 #ifdef TIMEIT
 	struct timeval start, end;
 	gulong diff;
@@ -4999,6 +5039,19 @@ build_tree (MessageList *message_list,
 }
 
 static void
+message_list_collect_thread_messages (CamelFolderThreadNode *thread,
+                                      GPtrArray *messages)
+{
+	CamelFolderThreadNode *child;
+	CamelMessageInfo *info = camel_folder_thread_node_get_item (thread);
+	if (info)
+		g_ptr_array_add (messages, info);
+	for (child = camel_folder_thread_node_get_child (thread); child;
+	     child = camel_folder_thread_node_get_next (child))
+		message_list_collect_thread_messages (child, messages);
+}
+
+static void
 build_subtree (MessageList *message_list,
                GNode *parent,
                CamelFolderThreadNode *c,
@@ -5006,23 +5059,19 @@ build_subtree (MessageList *message_list,
 	       gboolean thread_latest,
                gint *row)
 {
-	GNode *node;
-
 	while (c) {
-		CamelMessageInfo *nfo = camel_folder_thread_node_get_item (c);
-		/* phantom nodes no longer allowed */
-		if (!nfo) {
-			g_warning ("c->message shouldn't be NULL\n");
-			c = camel_folder_thread_node_get_next (c);
-			continue;
+		GPtrArray *messages = g_ptr_array_new ();
+		guint index;
+		GNode *conversation = NULL;
+		message_list_collect_thread_messages (c, messages);
+		g_ptr_array_sort (messages, message_list_thread_message_compare);
+		for (index = 0; index < messages->len; index++) {
+			GNode *node = ml_uid_nodemap_insert (message_list, g_ptr_array_index (messages, index),
+				index == 0 ? parent : conversation, -1);
+			if (index == 0)
+				conversation = node;
 		}
-
-		node = ml_uid_nodemap_insert (message_list, nfo, parent, -1);
-
-		if (camel_folder_thread_node_get_child (c)) {
-			build_subtree (message_list, (camel_folder_thread_node_get_parent (c) && thread_flat) ? parent : node,
-				camel_folder_thread_node_get_child (c), thread_flat, thread_latest, row);
-		}
+		g_ptr_array_unref (messages);
 		c = camel_folder_thread_node_get_next (c);
 	}
 }
@@ -5165,6 +5214,30 @@ mail_folder_hide_by_flag (CamelFolder *folder,
 	return newchanges;
 }
 
+static gboolean
+message_list_search_hides_read (const gchar *search)
+{
+	gchar *normalized;
+	gboolean hides_read;
+	if (!search)
+		return FALSE;
+	normalized = g_ascii_strdown (search, -1);
+	hides_read = strstr (normalized, "(not (system-flag \"seen\"))") != NULL;
+	g_free (normalized);
+	return hides_read;
+}
+
+static gboolean
+message_list_keep_displayed_message (const gchar *search,
+                                     guint32 flags,
+                                     gboolean show_deleted,
+                                     gboolean show_junk)
+{
+	return (!(flags & CAMEL_MESSAGE_JUNK) || show_junk) &&
+		(!(flags & CAMEL_MESSAGE_DELETED) || show_deleted) &&
+		(!(flags & CAMEL_MESSAGE_SEEN) || !message_list_search_hides_read (search));
+}
+
 static void
 message_list_folder_changed (CamelFolder *folder,
 			     CamelFolderChangeInfo *changes,
@@ -5223,7 +5296,8 @@ message_list_folder_changed (CamelFolder *folder,
 			camel_folder_change_info_cat (altered_changes, changes);
 		}
 
-		if (altered_changes->uid_added->len == 0 && altered_changes->uid_removed->len == 0 && altered_changes->uid_changed->len < 100) {
+		if (!message_list_search_hides_read (message_list->search) &&
+		    altered_changes->uid_added->len == 0 && altered_changes->uid_removed->len == 0 && altered_changes->uid_changed->len < 100) {
 			for (i = 0; i < altered_changes->uid_changed->len; i++) {
 				GNode *node;
 
@@ -6218,8 +6292,6 @@ message_list_regen_tweak_search_results (MessageList *message_list,
 	CamelMessageFlags flags;
 	const gchar *uid;
 	gboolean needs_tweaking;
-	gboolean uid_is_deleted;
-	gboolean uid_is_junk;
 	gboolean add_uid;
 	guint ii;
 
@@ -6249,15 +6321,11 @@ message_list_regen_tweak_search_results (MessageList *message_list,
 		return;
 
 	flags = camel_message_info_get_flags (info);
-	uid_is_deleted = ((flags & CAMEL_MESSAGE_DELETED) != 0);
-	uid_is_junk = ((flags & CAMEL_MESSAGE_JUNK) != 0);
 
 	if (!folder_store_supports_vjunk_folder (folder))
-		uid_is_junk = FALSE;
+		flags &= ~CAMEL_MESSAGE_JUNK;
 
-	add_uid =
-		(!uid_is_junk || show_junk) &&
-		(!uid_is_deleted || show_deleted);
+	add_uid = message_list_keep_displayed_message (message_list->search, flags, show_deleted, show_junk);
 
 	if (add_uid)
 		g_ptr_array_add (

@@ -849,6 +849,7 @@ action_mail_forward_cb (EUIAction *action,
 	GtkWindow *window;
 	GPtrArray *uids;
 
+	e_mail_reader_avoid_next_mark_as_seen (reader);
 	window = e_mail_reader_get_window (reader);
 	uids = e_mail_reader_get_selected_uids (reader);
 	g_return_if_fail (uids != NULL);
@@ -877,6 +878,7 @@ action_mail_forward_attached_cb (EUIAction *action,
 	GtkWindow *window;
 	GPtrArray *uids;
 
+	e_mail_reader_avoid_next_mark_as_seen (reader);
 	window = e_mail_reader_get_window (reader);
 	uids = e_mail_reader_get_selected_uids_with_collapsed_threads (reader);
 	g_return_if_fail (uids != NULL);
@@ -905,6 +907,7 @@ action_mail_forward_inline_cb (EUIAction *action,
 	GtkWindow *window;
 	GPtrArray *uids;
 
+	e_mail_reader_avoid_next_mark_as_seen (reader);
 	window = e_mail_reader_get_window (reader);
 	uids = e_mail_reader_get_selected_uids (reader);
 	g_return_if_fail (uids != NULL);
@@ -933,6 +936,7 @@ action_mail_forward_quoted_cb (EUIAction *action,
 	GtkWindow *window;
 	GPtrArray *uids;
 
+	e_mail_reader_avoid_next_mark_as_seen (reader);
 	window = e_mail_reader_get_window (reader);
 	uids = e_mail_reader_get_selected_uids (reader);
 	g_return_if_fail (uids != NULL);
@@ -1299,8 +1303,12 @@ action_mail_mark_current_read_cb (EUIAction *action,
 	EMailReader *reader = user_data;
 	CamelFolder *folder = e_mail_reader_ref_folder (reader);
 	GPtrArray *uids = e_mail_reader_get_selected_uids (reader);
-	if (folder && uids && uids->len == 1)
+	if (folder && uids && uids->len == 1) {
+		GtkWidget *message_list = e_mail_reader_get_message_list (reader);
 		camel_folder_set_message_flags (folder, g_ptr_array_index (uids, 0), CAMEL_MESSAGE_SEEN, CAMEL_MESSAGE_SEEN);
+		if (message_list)
+			e_tree_show_cursor_after_reflow (E_TREE (message_list));
+	}
 	g_clear_pointer (&uids, g_ptr_array_unref);
 	g_clear_object (&folder);
 }
@@ -2034,6 +2042,7 @@ action_mail_reply_all_cb (EUIAction *action,
 	guint32 state;
 	gboolean ask;
 
+	e_mail_reader_avoid_next_mark_as_seen (reader);
 	state = e_mail_reader_check_state (reader);
 
 	settings = e_util_ref_settings ("org.gnome.evolution.mail");
@@ -2154,6 +2163,7 @@ action_mail_reply_alternative_cb (EUIAction *action,
 	GtkWidget *message_list;
 	const gchar *message_uid;
 
+	e_mail_reader_avoid_next_mark_as_seen (reader);
 	message_list = e_mail_reader_get_message_list (reader);
 	message_uid = MESSAGE_LIST (message_list)->cursor_uid;
 	g_return_if_fail (message_uid != NULL);
@@ -2180,6 +2190,7 @@ action_mail_reply_group_cb (EUIAction *action,
 	guint32 state;
 	const gchar *key;
 
+	e_mail_reader_avoid_next_mark_as_seen (reader);
 	state = e_mail_reader_check_state (reader);
 
 	settings = e_util_ref_settings ("org.gnome.evolution.mail");
@@ -2203,6 +2214,7 @@ action_mail_reply_list_cb (EUIAction *action,
 {
 	EMailReader *reader = user_data;
 
+	e_mail_reader_avoid_next_mark_as_seen (reader);
 	e_mail_reader_reply_to_message (reader, NULL, E_MAIL_REPLY_TO_LIST);
 }
 
@@ -2520,6 +2532,7 @@ action_mail_reply_sender_cb (EUIAction *action,
 	guint32 state;
 	const gchar *key;
 
+	e_mail_reader_avoid_next_mark_as_seen (reader);
 	state = e_mail_reader_check_state (reader);
 
 	settings = e_util_ref_settings ("org.gnome.evolution.mail");
@@ -2575,6 +2588,7 @@ action_mail_reply_recipient_cb (EUIAction *action,
 {
 	EMailReader *reader = user_data;
 
+	e_mail_reader_avoid_next_mark_as_seen (reader);
 	e_mail_reader_reply_to_message (reader, NULL, E_MAIL_REPLY_TO_RECIPIENT);
 }
 
@@ -6762,6 +6776,10 @@ e_mail_reader_avoid_next_mark_as_seen (EMailReader *reader)
 	message_list = MESSAGE_LIST (e_mail_reader_get_message_list (reader));
 	g_return_if_fail (message_list != NULL);
 
+	if (message_list->seen_id) {
+		g_source_remove (message_list->seen_id);
+		message_list->seen_id = 0;
+	}
 	priv->avoid_next_mark_as_seen = TRUE;
 }
 

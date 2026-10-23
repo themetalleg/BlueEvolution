@@ -1859,8 +1859,8 @@ webkit_editor_style_updated (EWebKitEditor *wk_editor,
 	webkit_editor_page_set_link_color (cnt_editor, inherit_theme_colors ? &link_color : NULL);
 	webkit_editor_page_set_visited_link_color (cnt_editor, inherit_theme_colors ? &vlink_color : NULL);
 
-	webkit_editor_add_color_style (css, "html", "background-color", &bgcolor);
-	webkit_editor_add_color_style (css, "html", "color", &fgcolor);
+	webkit_editor_add_color_style (css, "html, body", "background-color", &bgcolor);
+	webkit_editor_add_color_style (css, "html, body", "color", &fgcolor);
 	webkit_editor_add_color_style (css, "a", "color", &link_color);
 	webkit_editor_add_color_style (css, "a:visited", "color", &vlink_color);
 

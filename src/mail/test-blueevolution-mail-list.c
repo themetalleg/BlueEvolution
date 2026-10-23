@@ -11,6 +11,239 @@
 #undef properties
 #undef N_PROPS
 #undef PROP_0
+#undef _
+#undef Q_
+#undef C_
+#include "em-format/e-mail-formatter-headers.c"
+
+typedef struct { CamelSession parent; } ThreadTestSession;
+typedef CamelSessionClass ThreadTestSessionClass;
+static GType thread_test_session_get_type (void);
+G_DEFINE_TYPE (ThreadTestSession, thread_test_session, CAMEL_TYPE_SESSION)
+static void thread_test_session_init (ThreadTestSession *session) {}
+static void thread_test_session_class_init (ThreadTestSessionClass *class) {}
+
+typedef struct { GObject parent; GNode *root; } ThreadOrderModel;
+typedef GObjectClass ThreadOrderModelClass;
+static GType thread_order_model_get_type (void);
+static void thread_order_model_interface_init (ETreeModelInterface *interface);
+G_DEFINE_TYPE_WITH_CODE (ThreadOrderModel, thread_order_model, G_TYPE_OBJECT,
+	G_IMPLEMENT_INTERFACE (E_TYPE_TREE_MODEL, thread_order_model_interface_init))
+static void thread_order_model_init (ThreadOrderModel *model) { model->root = g_node_new (NULL); }
+static void thread_order_model_finalize (GObject *object)
+{
+	g_node_destroy (((ThreadOrderModel *) object)->root);
+	G_OBJECT_CLASS (thread_order_model_parent_class)->finalize (object);
+}
+static void thread_order_model_class_init (ThreadOrderModelClass *class) { class->finalize = thread_order_model_finalize; }
+static ETreePath thread_order_root (ETreeModel *model) { return ((ThreadOrderModel *) model)->root; }
+static ETreePath thread_order_parent (ETreeModel *model, ETreePath path) { return ((GNode *) path)->parent; }
+static ETreePath thread_order_child (ETreeModel *model, ETreePath path) { return ((GNode *) path)->children; }
+static ETreePath thread_order_next (ETreeModel *model, ETreePath path) { return ((GNode *) path)->next; }
+static gboolean thread_order_is_root (ETreeModel *model, ETreePath path) { return G_NODE_IS_ROOT ((GNode *) path); }
+static gboolean thread_order_expandable (ETreeModel *model, ETreePath path) { return ((GNode *) path)->children != NULL; }
+static gboolean thread_order_expanded (ETreeModel *model) { return TRUE; }
+static guint thread_order_nodes (ETreeModel *model) { return g_node_n_nodes (((ThreadOrderModel *) model)->root, G_TRAVERSE_ALL) - 1; }
+static guint thread_order_children (ETreeModel *model, ETreePath path) { return g_node_n_children (path); }
+static guint thread_order_depth (ETreeModel *model, ETreePath path) { return g_node_depth (path); }
+static gint thread_order_columns (ETreeModel *model) { return COL_LAST; }
+static gpointer thread_order_value (ETreeModel *model, ETreePath path, gint column) { return ((GNode *) path)->data; }
+static void thread_order_free_value (ETreeModel *model, gint column, gpointer value) {}
+static gint thread_order_compare (gconstpointer first, gconstpointer second, gpointer data) { return e_int_compare (first, second); }
+static void
+thread_order_model_interface_init (ETreeModelInterface *interface)
+{
+	interface->get_root = thread_order_root;
+	interface->get_parent = thread_order_parent;
+	interface->get_first_child = thread_order_child;
+	interface->get_next = thread_order_next;
+	interface->is_root = thread_order_is_root;
+	interface->is_expandable = thread_order_expandable;
+	interface->get_expanded_default = thread_order_expanded;
+	interface->get_n_nodes = thread_order_nodes;
+	interface->get_n_children = thread_order_children;
+	interface->depth = thread_order_depth;
+	interface->column_count = thread_order_columns;
+	interface->value_at = thread_order_value;
+	interface->sort_value_at = thread_order_value;
+	interface->free_value = thread_order_free_value;
+}
+
+static void
+test_conversation_adapter_order (void)
+{
+	ThreadOrderModel *model = g_object_new (thread_order_model_get_type (), NULL);
+	GNode *first = g_node_append_data (model->root, GINT_TO_POINTER (30));
+	GNode *second = g_node_append_data (model->root, GINT_TO_POINTER (40));
+	GError *error = NULL;
+	gchar *path = g_build_filename (EVOLUTION_ETSPECDIR, "message-list.etspec", NULL);
+	ETableSpecification *specification = e_table_specification_new (path, &error);
+	ETableColumnSpecification *spec;
+	ETableSortInfo *sort;
+	ETableHeader *header = e_table_header_new ();
+	ECell *cell = e_cell_text_new (NULL, GTK_JUSTIFY_LEFT);
+	ETableCol *column;
+	ETreeTableAdapter *adapter;
+	const gint expected[][5] = { { 30, 20, 10, 40, 35 }, { 40, 35, 30, 20, 10 } };
+	guint direction, row;
+	g_assert_no_error (error);
+	g_assert_nonnull (specification);
+	g_free (path);
+	g_node_append_data (first, GINT_TO_POINTER (20));
+	g_node_append_data (first, GINT_TO_POINTER (10));
+	g_node_append_data (second, GINT_TO_POINTER (35));
+	spec = e_table_specification_get_column_by_model_col (specification, COL_SENT);
+	g_assert_nonnull (spec);
+	column = e_table_col_new (spec, "Synthetic date", NULL, cell, thread_order_compare);
+	e_table_header_add_column (header, column, 0);
+	sort = e_table_sort_info_new (specification);
+	e_table_sort_info_sorting_set_nth (sort, 0, spec, GTK_SORT_ASCENDING);
+	adapter = E_TREE_TABLE_ADAPTER (e_tree_table_adapter_new (E_TREE_MODEL (model), sort, header));
+	e_tree_table_adapter_root_node_set_visible (adapter, FALSE);
+	e_tree_table_adapter_set_sort_children_ascending (adapter, TRUE);
+	e_tree_table_adapter_set_preserve_child_order (adapter, TRUE);
+	for (direction = 0; direction < 2; direction++) {
+		e_table_sort_info_sorting_set_nth (sort, 0, spec, direction == 0 ? GTK_SORT_ASCENDING : GTK_SORT_DESCENDING);
+		e_tree_model_node_data_changed (E_TREE_MODEL (model), first->children);
+		while (g_main_context_iteration (NULL, FALSE));
+		g_assert_cmpint (e_table_model_row_count (E_TABLE_MODEL (adapter)), ==, 5);
+		for (row = 0; row < 5; row++) {
+			GNode *node = e_tree_table_adapter_node_at_row (adapter, row);
+			g_assert_cmpint (GPOINTER_TO_INT (node->data), ==, expected[direction][row]);
+		}
+	}
+	g_object_unref (adapter);
+	g_object_unref (sort);
+	g_object_unref (column);
+	g_object_unref (cell);
+	g_object_unref (header);
+	g_object_unref (specification);
+	g_object_unref (model);
+}
+
+static void
+test_unread_conversation_search (void)
+{
+	GError *error = NULL;
+	gchar *directory = g_dir_make_tmp ("blueevolution-thread-search-XXXXXX", &error);
+	CamelSession *session;
+	CamelService *service;
+	CamelSettings *settings;
+	CamelFolder *folder;
+	GPtrArray *matches = NULL;
+	gchar *unread_uid = NULL;
+	guint index;
+	const gchar *query = "(match-threads \"all\" (match-all (not (system-flag \"Seen\"))))";
+	g_assert_no_error (error);
+	g_assert_cmpint (camel_init (directory, FALSE), ==, 0);
+	camel_provider_init ();
+	session = g_object_new (thread_test_session_get_type (), "user-data-dir", directory,
+		"user-cache-dir", directory, NULL);
+	service = camel_session_add_service (session, "synthetic-thread-test", "mbox", CAMEL_PROVIDER_STORE, &error);
+	g_assert_no_error (error);
+	g_assert_nonnull (service);
+	settings = camel_service_ref_settings (service);
+	g_object_set (settings, "path", directory, NULL);
+	g_object_unref (settings);
+	g_assert_true (camel_service_connect_sync (service, NULL, &error));
+	g_assert_no_error (error);
+	folder = camel_store_get_folder_sync (CAMEL_STORE (service), "INBOX", CAMEL_STORE_FOLDER_CREATE, NULL, &error);
+	g_assert_no_error (error);
+	g_assert_nonnull (folder);
+	for (index = 0; index < 4; index++) {
+		CamelMimeMessage *message = camel_mime_message_new ();
+		CamelMessageInfo *info = camel_message_info_new (NULL);
+		gchar *message_id = g_strdup_printf ("synthetic-%u@example.invalid", index);
+		gchar *uid = NULL;
+		camel_mime_message_set_message_id (message, message_id);
+		camel_mime_message_set_subject (message, index < 3 ? "Synthetic conversation" : "Unrelated synthetic message");
+		camel_mime_message_set_date (message, 1000 + index, 0);
+		camel_mime_part_set_content (CAMEL_MIME_PART (message), "Synthetic test body", -1, "text/plain");
+		if (index == 1 || index == 2) {
+			camel_medium_set_header (CAMEL_MEDIUM (message), "References", index == 1 ?
+				"<synthetic-0@example.invalid>" : "<synthetic-0@example.invalid> <synthetic-1@example.invalid>");
+			camel_medium_set_header (CAMEL_MEDIUM (message), "In-Reply-To", index == 1 ?
+				"<synthetic-0@example.invalid>" : "<synthetic-1@example.invalid>");
+		}
+		camel_message_info_set_flags (info, CAMEL_MESSAGE_SEEN, index == 1 ? 0 : CAMEL_MESSAGE_SEEN);
+		g_assert_true (camel_folder_append_message_sync (folder, message, info, &uid, NULL, &error));
+		g_assert_no_error (error);
+		if (index == 1) unread_uid = uid; else g_free (uid);
+		g_free (message_id);
+		g_object_unref (message);
+		g_object_unref (info);
+	}
+	g_assert_true (camel_folder_search_sync (folder, query, &matches, NULL, &error));
+	g_assert_no_error (error);
+	g_assert_cmpuint (matches->len, ==, 3);
+	{
+		CamelFolderThread *thread = camel_folder_thread_new (folder, matches, CAMEL_FOLDER_THREAD_FLAG_NONE);
+		GPtrArray *messages = g_ptr_array_new ();
+		message_list_collect_thread_messages (camel_folder_thread_get_tree (thread), messages);
+		g_assert_cmpuint (messages->len, ==, 3);
+		g_ptr_array_sort (messages, message_list_thread_message_compare);
+		for (index = 0; index < messages->len; index++)
+			g_assert_cmpint (camel_message_info_get_date_sent (g_ptr_array_index (messages, index)), ==, 1002 - index);
+		g_ptr_array_unref (messages);
+		g_object_unref (thread);
+	}
+	g_ptr_array_unref (matches);
+	matches = NULL;
+	g_assert_true (camel_folder_search_sync (folder,
+		"(match-threads \"all\" (and (match-all (header-contains \"subject\" \"Synthetic conversation\")) (match-all (not (system-flag \"Seen\")))))",
+		&matches, NULL, &error));
+	g_assert_no_error (error);
+	g_assert_cmpuint (matches->len, ==, 3);
+	g_ptr_array_unref (matches);
+	matches = NULL;
+	camel_folder_set_message_flags (folder, unread_uid, CAMEL_MESSAGE_SEEN, CAMEL_MESSAGE_SEEN);
+	g_assert_true (camel_folder_search_sync (folder, query, &matches, NULL, &error));
+	g_assert_no_error (error);
+	g_assert_cmpuint (matches->len, ==, 0);
+	g_ptr_array_unref (matches);
+	g_free (unread_uid);
+	g_object_unref (folder);
+	camel_session_remove_services (session);
+	g_object_unref (service);
+	g_object_unref (session);
+	{
+		GFile *file = g_file_new_for_path (directory);
+		g_assert_true (e_file_recursive_delete_sync (file, NULL, &error));
+		g_assert_no_error (error);
+		g_object_unref (file);
+	}
+	g_free (directory);
+}
+
+static void
+test_reply_preserves_unread_default (void)
+{
+	GSettings *settings = g_settings_new ("org.gnome.evolution.mail");
+	GVariant *value = g_settings_get_default_value (settings, "composer-mark-read-on-reply");
+	g_assert_false (g_variant_get_boolean (value));
+	g_variant_unref (value);
+	g_object_unref (settings);
+}
+
+static void
+test_unread_filter_refresh (void)
+{
+	const gchar *unread = "(match-all (not (system-flag \"Seen\")))";
+	const gchar *combined = "(and (match-all (header-contains \"subject\" \"Synthetic\")) (match-all (not (system-flag \"Seen\"))))";
+	g_assert_true (message_list_search_hides_read (unread));
+	g_assert_true (message_list_search_hides_read (combined));
+	g_assert_true (message_list_search_hides_read ("(match-all (not (system-flag \"seen\")))"));
+	g_assert_false (message_list_search_hides_read (NULL));
+	g_assert_false (message_list_search_hides_read (" "));
+	g_assert_false (message_list_search_hides_read ("(match-all (system-flag \"Seen\"))"));
+	g_assert_true (message_list_keep_displayed_message (unread, 0, FALSE, FALSE));
+	g_assert_false (message_list_keep_displayed_message (unread, CAMEL_MESSAGE_SEEN, FALSE, FALSE));
+	g_assert_false (message_list_keep_displayed_message (combined, CAMEL_MESSAGE_SEEN, TRUE, TRUE));
+	g_assert_true (message_list_keep_displayed_message (NULL, CAMEL_MESSAGE_SEEN, FALSE, FALSE));
+	g_assert_false (message_list_keep_displayed_message (NULL, CAMEL_MESSAGE_DELETED, FALSE, FALSE));
+	g_assert_false (message_list_keep_displayed_message (NULL, CAMEL_MESSAGE_JUNK, FALSE, FALSE));
+	g_assert_true (message_list_keep_displayed_message (NULL, CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_JUNK, TRUE, TRUE));
+}
 
 static void
 test_collapsed_thread_latest_message (void)
@@ -146,15 +379,15 @@ test_date_headings_only_for_top_level_rows (void)
 	g_assert_cmpint (mail_list_node_indent (reply), ==, 20);
 	{
 		GNode *nested = g_node_append_data (reply, NULL);
-		g_assert_cmpint (mail_list_node_indent (nested), ==, 40);
+		g_assert_cmpint (mail_list_node_indent (nested), ==, 20);
 		for (guint depth = 0; depth < 8; depth++)
 			nested = g_node_append_data (nested, NULL);
-		g_assert_cmpint (mail_list_node_indent (nested), ==, 80);
+		g_assert_cmpint (mail_list_node_indent (nested), ==, 20);
 	}
 	g_node_destroy (tree);
 }
 
-typedef struct { GObject parent; gboolean unread; } RowModel;
+typedef struct { GObject parent; gboolean unread; guint32 status_flags; } RowModel;
 typedef GObjectClass RowModelClass;
 static GType row_model_get_type (void);
 static void row_model_interface_init (ETableModelInterface *interface);
@@ -166,6 +399,8 @@ static void row_model_class_init (RowModelClass *class) {}
 static gint row_model_columns (ETableModel *model) { return 3; }
 static gpointer row_model_value (ETableModel *model, gint column, gint row)
 {
+	if (column == 2)
+		return GUINT_TO_POINTER (((RowModel *) model)->status_flags);
 	return column == 0 ? g_strdup ("Synthetic Sender") : GINT_TO_POINTER (((RowModel *) model)->unread);
 }
 static void row_model_free_value (ETableModel *model, gint column, gpointer value)
@@ -189,6 +424,86 @@ test_surface_pixel (cairo_surface_t *surface, gint x, gint y)
 	cairo_surface_flush (surface);
 	memcpy (&pixel, cairo_image_surface_get_data (surface) + y * cairo_image_surface_get_stride (surface) + x * 4, sizeof (pixel));
 	return pixel;
+}
+
+static void
+test_message_status_icons (void)
+{
+	const guint32 cases[] = { 0, CAMEL_MESSAGE_ANSWERED, CAMEL_MESSAGE_ANSWERED_ALL,
+		CAMEL_MESSAGE_FORWARDED, CAMEL_MESSAGE_ANSWERED | CAMEL_MESSAGE_FORWARDED };
+	const gchar *palettes[] = { "* { color: #202020; }", "* { color: #eeeeee; }" };
+	GtkWidget *canvas = gnome_canvas_new ();
+	GtkCssProvider *style = gtk_css_provider_new ();
+	RowModel *model = g_object_new (row_model_get_type (), NULL);
+	ECell *cell = e_mail_list_status_cell_new ();
+	ECellView *view;
+	guint palette, index;
+	gtk_icon_theme_prepend_search_path (gtk_icon_theme_get_default (), EVOLUTION_ICONDIR);
+	g_object_set (gtk_settings_get_default (), "gtk-icon-theme-name", "BlueEvolution", NULL);
+	g_object_ref_sink (canvas);
+	view = e_cell_new_view (cell, E_TABLE_MODEL (model), gnome_canvas_item_new (
+		gnome_canvas_root (GNOME_CANVAS (canvas)), E_TYPE_TABLE_ITEM, NULL));
+	gtk_style_context_add_provider (gtk_widget_get_style_context (canvas), GTK_STYLE_PROVIDER (style), GTK_STYLE_PROVIDER_PRIORITY_USER);
+	for (palette = 0; palette < G_N_ELEMENTS (palettes); palette++) {
+		gtk_css_provider_load_from_data (style, palettes[palette], -1, NULL);
+		for (index = 0; index < G_N_ELEMENTS (cases); index++) {
+			cairo_surface_t *surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, 40, 20);
+			cairo_t *context = cairo_create (surface);
+			guint left = 0, right = 0, brightness = 0, opaque = 0;
+			gint column, row;
+			model->status_flags = cases[index];
+			e_cell_draw (view, context, 2, 0, 0, 0, 0, 0, 40, 20);
+			g_assert_cmpint (e_cell_max_width (view, 2, 0), ==, 40);
+			for (row = 0; row < 20; row++) {
+				for (column = 0; column < 40; column++) {
+					guint32 pixel = test_surface_pixel (surface, column, row);
+					if (pixel >> 24) {
+						if (column < 20) left++; else right++;
+					}
+					if ((pixel >> 24) == 255) { brightness += pixel & 255; opaque++; }
+				}
+			}
+			if (index == 0)
+				g_assert_cmpuint (right, ==, 0);
+			else
+				g_assert_cmpuint (right, >, 0);
+			if (index == 4) g_assert_cmpuint (left, >, 0); else g_assert_cmpuint (left, ==, 0);
+			if (opaque) g_assert_cmpuint (brightness / opaque, ==, palette == 0 ? 32 : 238);
+			cairo_destroy (context);
+			cairo_surface_destroy (surface);
+		}
+	}
+	e_cell_kill_view (view);
+	g_object_unref (cell);
+	g_object_unref (model);
+	g_object_unref (style);
+	gtk_widget_destroy (canvas);
+	g_object_unref (canvas);
+}
+
+static void
+test_message_status_header (void)
+{
+	GString *html = g_string_new (NULL);
+	format_message_status_icons (html, 0);
+	g_assert_cmpstr (html->str, ==, "");
+	format_message_status_icons (html, CAMEL_MESSAGE_SEEN);
+	g_assert_cmpstr (html->str, ==, "");
+	format_message_status_icons (html, CAMEL_MESSAGE_ANSWERED | CAMEL_MESSAGE_FORWARDED);
+	g_assert_nonnull (strstr (html->str, "gtk-stock://mail-reply-sender"));
+	g_assert_nonnull (strstr (html->str, "gtk-stock://mail-forward"));
+	g_assert_nonnull (strstr (html->str, _("You replied to this message.")));
+	g_assert_nonnull (strstr (html->str, _("You forwarded this message.")));
+	g_assert_nonnull (strstr (html->str, "color-scheme=light"));
+	g_assert_nonnull (strstr (html->str, "color-scheme=dark"));
+	g_string_truncate (html, 0);
+	format_message_status_icons (html, CAMEL_MESSAGE_ANSWERED_ALL);
+	g_assert_nonnull (strstr (html->str, "gtk-stock://mail-reply-all"));
+	g_assert_null (strstr (html->str, "gtk-stock://mail-forward"));
+	g_assert_nonnull (strstr (html->str, _("You replied to all recipients of this message.")));
+	g_string_free (html, TRUE);
+	g_assert_true (message_list_value_is_empty (NULL, COL_REPLY_STATUS, NULL));
+	message_list_free_value (NULL, COL_REPLY_STATUS, GUINT_TO_POINTER (CAMEL_MESSAGE_ANSWERED));
 }
 
 static void
@@ -456,6 +771,7 @@ test_dates (void)
 	GDateTime *boundary, *previous;
 	GSettings *settings = e_util_ref_settings ("org.gnome.evolution.calendar");
 	gchar *text;
+	gchar *expected;
 
 	check_group (zone, now, 2026, 10, 22, 0);
 	check_group (zone, now, 2026, 10, 21, 1);
@@ -468,8 +784,17 @@ test_dates (void)
 	g_assert_cmpint (mail_list_date_group (0, now), ==, 8);
 	g_settings_set_boolean (settings, "use-24hour-format", TRUE);
 	text = mail_list_compact_date (g_date_time_to_unix (now), now);
-	g_assert_cmpstr (text, ==, "15:00");
+	expected = g_strdup_printf ("%s, 15:00", _("Today"));
+	g_assert_cmpstr (text, ==, expected);
+	g_free (expected);
 	g_free (text);
+	previous = g_date_time_add_days (now, -1);
+	text = mail_list_compact_date (g_date_time_to_unix (previous), now);
+	expected = g_strdup_printf ("%s, 15:00", _("Yesterday"));
+	g_assert_cmpstr (text, ==, expected);
+	g_free (expected);
+	g_free (text);
+	g_date_time_unref (previous);
 	g_settings_set_boolean (settings, "use-24hour-format", FALSE);
 	text = mail_list_compact_date (g_date_time_to_unix (now), now);
 	g_assert_nonnull (strstr (text, "03:00"));
@@ -503,11 +828,30 @@ main (int argument_count, char **argument_values)
 	tzset ();
 	gtk_init (&argument_count, &argument_values);
 	g_test_init (&argument_count, &argument_values, NULL);
+	if (g_getenv ("BLUEEVOLUTION_TEST_LOCALEDIR")) {
+		bindtextdomain (GETTEXT_PACKAGE, g_getenv ("BLUEEVOLUTION_TEST_LOCALEDIR"));
+		bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
+		textdomain (GETTEXT_PACKAGE);
+		if (g_strcmp0 (g_getenv ("LANGUAGE"), "de") == 0) {
+			g_assert_cmpstr (_("Replied"), ==, "Beantwortet");
+			g_assert_cmpstr (_("Replied to all"), ==, "Allen geantwortet");
+			g_assert_cmpstr (_("Replied and forwarded"), ==, "Beantwortet und weitergeleitet");
+			g_assert_cmpstr (_("You replied to this message."), ==, "Sie haben auf diese Nachricht geantwortet.");
+			g_assert_cmpstr (_("You replied to all recipients of this message."), ==, "Sie haben allen Empfängern dieser Nachricht geantwortet.");
+			g_assert_cmpstr (_("You forwarded this message."), ==, "Sie haben diese Nachricht weitergeleitet.");
+		}
+	}
 	g_test_add_func ("/blueevolution/mail/date-width", test_widths);
 	g_test_add_func ("/blueevolution/mail/date-headings-top-level", test_date_headings_only_for_top_level_rows);
 	g_test_add_func ("/blueevolution/mail/older-date-weekday-abbreviated", test_older_dates_use_abbreviated_weekday);
 	g_test_add_func ("/blueevolution/mail/thread-expand-default-closed", test_thread_expand_default_closed);
 	g_test_add_func ("/blueevolution/mail/collapsed-thread-latest-message", test_collapsed_thread_latest_message);
+	g_test_add_func ("/blueevolution/mail/unread-filter-refresh", test_unread_filter_refresh);
+	g_test_add_func ("/blueevolution/mail/unread-conversation-search", test_unread_conversation_search);
+	g_test_add_func ("/blueevolution/mail/conversation-adapter-order", test_conversation_adapter_order);
+	g_test_add_func ("/blueevolution/mail/reply-preserves-unread-default", test_reply_preserves_unread_default);
+	g_test_add_func ("/blueevolution/mail/status-icons", test_message_status_icons);
+	g_test_add_func ("/blueevolution/mail/status-header", test_message_status_header);
 	g_test_add_func ("/blueevolution/mail/date-sections", test_dates);
 	g_test_add_func ("/blueevolution/mail/unread-row-background", test_unread_row_background);
 	g_test_add_func ("/blueevolution/mail/expander-under-initials", test_expander_placement);

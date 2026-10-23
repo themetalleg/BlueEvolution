@@ -4340,6 +4340,76 @@ test_paste_singleline_html2html (TestFixture *fixture)
 }
 
 static void
+test_theme_clipboard_script_done_cb (GObject *source_object,
+				    GAsyncResult *result,
+				    gpointer user_data)
+{
+	GError *error = NULL;
+	JSCValue *value = webkit_web_view_evaluate_javascript_finish (WEBKIT_WEB_VIEW (source_object), result, &error);
+
+	g_assert_no_error (error);
+	g_assert_nonnull (value);
+	g_assert_true (jsc_value_is_boolean (value));
+	g_assert_true (jsc_value_to_boolean (value));
+	g_object_unref (value);
+	test_utils_async_call_finish (user_data);
+}
+
+static void
+test_theme_clipboard_script (TestFixture *fixture,
+			     const gchar *script)
+{
+	gpointer async_data = test_utils_async_call_prepare ();
+
+	webkit_web_view_evaluate_javascript (WEBKIT_WEB_VIEW (test_utils_get_content_editor (fixture)),
+		script, -1, NULL, NULL, NULL, test_theme_clipboard_script_done_cb, async_data);
+	g_assert_true (test_utils_async_call_wait (async_data, 10));
+}
+
+static void
+test_theme_neutral_clipboard (TestFixture *fixture)
+{
+	gchar *html;
+
+	test_utils_fixture_change_setting_boolean (fixture, "org.gnome.evolution.mail", "composer-inherit-theme-colors", FALSE);
+	test_utils_fixture_change_setting_boolean (fixture, "org.gnome.evolution.mail", "composer-use-theme-colors", TRUE);
+	g_assert_true (test_utils_process_commands (fixture, "mode:html\n"));
+	test_theme_clipboard_script (fixture,
+		"(() => {"
+		"EvoEditor.UpdateThemeStyleSheet('html, body { background-color: #202020; color: #eeeeee; }');"
+		"document.body.innerHTML = '<div><b>Synthetic</b> <span style=\"background-color: yellow; color: black;\">highlight</span> <a href=\"https://example.invalid/\">link</a></div>';"
+		"document.getSelection().selectAllChildren(document.body);"
+		"return getComputedStyle(document.body).backgroundColor === 'rgb(32, 32, 32)';"
+		"})()");
+	e_content_editor_copy (test_utils_get_content_editor (fixture));
+	g_assert_true (test_utils_wait_milliseconds (100));
+	html = test_utils_get_clipboard_text (TRUE);
+	g_assert_nonnull (strstr (html, "<b>Synthetic</b>"));
+	g_assert_nonnull (strstr (html, "background-color: yellow"));
+	g_assert_nonnull (strstr (html, "https://example.invalid/"));
+	g_assert_null (strstr (html, "#202020"));
+	g_assert_null (strstr (html, "rgb(32, 32, 32)"));
+	g_assert_null (strstr (html, "#eeeeee"));
+	g_free (html);
+	g_assert_true (test_utils_process_commands (fixture, "action:paste\n"));
+	test_theme_clipboard_script (fixture,
+		"(() => {"
+		"var html = EvoEditor.convertHtmlToSend('');"
+		"return !html.includes('#202020') && !html.includes('rgb(32, 32, 32)') && !html.includes('#eeeeee') &&"
+		"html.includes('background-color: yellow') && html.includes('<b>Synthetic</b>') &&"
+		"getComputedStyle(document.body).backgroundColor === 'rgb(32, 32, 32)';"
+		"})()");
+	test_theme_clipboard_script (fixture,
+		"document.getSelection().selectAllChildren(document.querySelector('b')); true;");
+	e_content_editor_copy (test_utils_get_content_editor (fixture));
+	g_assert_true (test_utils_wait_milliseconds (100));
+	html = test_utils_get_clipboard_text (TRUE);
+	g_assert_nonnull (strstr (html, "<b>Synthetic</b>"));
+	g_assert_null (strstr (html, "#202020"));
+	g_free (html);
+}
+
+static void
 test_paste_singleline_html2plain (TestFixture *fixture)
 {
 	test_utils_set_clipboard_text ("<html><body>some <b>bold</b> text</body></html>", TRUE);
@@ -7898,6 +7968,7 @@ main (gint argc,
 	test_utils_add_test ("/paragraph/header6-typed", test_paragraph_header6_typed);
 	test_utils_add_test ("/paragraph/wrap-lines", test_paragraph_wrap_lines);
 	test_utils_add_test ("/paste/singleline-html2html", test_paste_singleline_html2html);
+	test_utils_add_test ("/paste/theme-neutral-clipboard", test_theme_neutral_clipboard);
 	test_utils_add_test ("/paste/singleline-html2plain", test_paste_singleline_html2plain);
 	test_utils_add_test ("/paste/singleline-plain2html", test_paste_singleline_plain2html);
 	test_utils_add_test ("/paste/singleline-plain2plain", test_paste_singleline_plain2plain);
