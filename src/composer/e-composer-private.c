@@ -4,6 +4,7 @@
  */
 
 #include "evolution-config.h"
+#include "e-composer-openai.h"
 
 #include "e-composer-private.h"
 #include "e-composer-from-header.h"
@@ -441,6 +442,7 @@ e_composer_private_constructed (EMsgComposer *composer)
 
 	/* Initial sync */
 	composer_update_gallery_visibility (composer);
+	e_composer_openai_attach (composer);
 
 	/* Bind headers to their corresponding actions. */
 

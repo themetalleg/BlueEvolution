@@ -15,6 +15,7 @@ set(SOURCES
 	e-composer-header-table.c
 	e-composer-header.c
 	e-composer-name-header.c
+	e-composer-openai.c
 	e-composer-post-header.c
 	e-composer-private.c
 	e-composer-spell-header.c
@@ -29,6 +30,7 @@ set(HEADERS
 	e-composer-header-table.h
 	e-composer-header.h
 	e-composer-name-header.h
+	e-composer-openai.h
 	e-composer-post-header.h
 	e-composer-private.h
 	e-composer-spell-header.h
@@ -77,6 +79,14 @@ target_link_libraries(evolution-mail-composer
 install(TARGETS evolution-mail-composer
 	DESTINATION ${privsolibdir}
 )
+
+add_executable(test-composer-openai test-composer-openai.c)
+target_compile_options(test-composer-openai PRIVATE ${EVOLUTION_DATA_SERVER_CFLAGS} ${GNOME_PLATFORM_CFLAGS})
+target_include_directories(test-composer-openai PRIVATE
+	${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src ${EVOLUTION_DATA_SERVER_INCLUDE_DIRS} ${GNOME_PLATFORM_INCLUDE_DIRS})
+target_link_libraries(test-composer-openai evolution-mail-composer ${EVOLUTION_DATA_SERVER_LDFLAGS} ${GNOME_PLATFORM_LDFLAGS})
+add_check_test(test-composer-openai)
+install(TARGETS test-composer-openai DESTINATION ${LIBEXEC_INSTALL_DIR}/blueevolution/tests)
 
 install(FILES ${HEADERS}
 	DESTINATION ${privincludedir}/composer

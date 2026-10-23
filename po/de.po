@@ -46,6 +46,237 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Poedit 3.8\n"
 
+msgid "Mail Assistant"
+msgstr "Mail-Assistent"
+
+msgid "You"
+msgstr "Sie"
+
+msgid "Reply ideas"
+msgstr "Antwortvorschläge"
+
+msgid "The provider returned invalid reply ideas. Try refreshing."
+msgstr "Der Anbieter hat ungültige Antwortvorschläge zurückgegeben. Versuchen Sie, diese zu aktualisieren."
+
+msgid "Draft ready"
+msgstr "Entwurf bereit"
+
+msgid "Add email content or enter a request."
+msgstr "Fügen Sie E-Mail-Inhalt hinzu oder geben Sie eine Anfrage ein."
+
+msgid "Contacting provider..."
+msgstr "Verbindung zum Anbieter wird hergestellt …"
+
+msgid "Inserted into draft"
+msgstr "In den Entwurf eingefügt"
+
+msgid "Open or close the mail assistant"
+msgstr "Mail-Assistenten öffnen oder schließen"
+
+msgid "Refresh reply ideas"
+msgstr "Antwortvorschläge aktualisieren"
+
+msgid "Integrations settings"
+msgstr "Integrationseinstellungen"
+
+msgid "Close assistant"
+msgstr "Assistenten schließen"
+
+msgid "Ask or refine the reply"
+msgstr "Anfrage eingeben oder Antwort verfeinern"
+
+msgid "Message to assistant"
+msgstr "Nachricht an den Assistenten"
+
+msgid "Generate reply"
+msgstr "Antwort erstellen"
+
+msgid "Cancel request"
+msgstr "Anfrage abbrechen"
+
+msgid "Insert at Cursor"
+msgstr "An Cursorposition einfügen"
+
+msgid "API key"
+msgstr "API-Schlüssel"
+
+#, c-format
+msgid "Enable %s email assistance?"
+msgstr "E-Mail-Unterstützung durch %s aktivieren?"
+
+#, c-format
+msgid "Opening the assistant sends the current email draft, quoted message, subject, and your instructions to %s. This can include personal or confidential information. Attachments are not uploaded. The provider's data policies, retention rules, and API charges apply. Review them before continuing. Generated drafts must be reviewed before sending. Your API key will be stored in your desktop's secure keyring, not in application settings."
+msgstr "Beim Öffnen des Assistenten werden der aktuelle E-Mail-Entwurf, die zitierte Nachricht, der Betreff und Ihre Anweisungen an %s gesendet. Dies kann persönliche oder vertrauliche Informationen umfassen. Anhänge werden nicht hochgeladen. Es gelten die Datenschutzrichtlinien, Aufbewahrungsregeln und API-Gebühren des Anbieters. Prüfen Sie diese, bevor Sie fortfahren. Generierte Entwürfe müssen vor dem Senden geprüft werden. Ihr API-Schlüssel wird im sicheren Schlüsselbund Ihrer Arbeitsumgebung gespeichert, nicht in den Anwendungseinstellungen."
+
+msgid "Model saved. Test API access before generating replies."
+msgstr "Modell gespeichert. Testen Sie den API-Zugriff, bevor Sie Antworten erstellen."
+
+msgid "Enter a valid model ID using letters, numbers, dots, hyphens, or underscores."
+msgstr "Geben Sie eine gültige Modellkennung mit Buchstaben, Ziffern, Punkten, Binde- oder Unterstrichen ein."
+
+msgid "Google AI Studio API keys"
+msgstr "API-Schlüssel in Google AI Studio"
+
+msgid "Anthropic API keys"
+msgstr "API-Schlüssel bei Anthropic"
+
+msgid "OpenAI API keys"
+msgstr "API-Schlüssel bei OpenAI"
+
+msgid "_Provider:"
+msgstr "_Anbieter:"
+
+msgid "_Model:"
+msgstr "_Modell:"
+
+msgid "Save model"
+msgstr "Modell speichern"
+
+msgid "The provider returned an incomplete, refused, or invalid response."
+msgstr "Der Anbieter hat eine unvollständige, abgelehnte oder ungültige Antwort zurückgegeben."
+
+#, c-format
+msgid "%s request failed (HTTP %u). Check your API key, billing, model access, and rate limits."
+msgstr "Die Anfrage an %s ist fehlgeschlagen (HTTP %u). Prüfen Sie Ihren API-Schlüssel, die Abrechnung, den Modellzugriff und die Anfragelimits."
+
+msgid "Configure the selected provider and accept the privacy notice in Integrations settings first."
+msgstr "Richten Sie zunächst den gewählten Anbieter unter »Integrationen« ein und bestätigen Sie den Datenschutzhinweis."
+
+msgid "Consent is required before enabling email assistance."
+msgstr "Vor der Aktivierung der E-Mail-Unterstützung ist Ihre Zustimmung erforderlich."
+
+msgid "The message or conversation is too long for the mail assistant."
+msgstr "Die Nachricht oder Unterhaltung ist zu lang für den Mail-Assistenten."
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "API key saved (hidden). Enter a new key to replace it."
+msgstr "API-Schlüssel gespeichert (ausgeblendet). Zum Ersetzen neuen Schlüssel eingeben."
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "API key securely stored; its value is never displayed."
+msgstr "Der API-Schlüssel ist sicher gespeichert und wird nicht angezeigt."
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "_Replace API Key"
+msgstr "API-Schlüssel _ersetzen"
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "Reply generation test succeeded"
+msgstr "Der Test der Antwortgenerierung war erfolgreich"
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "Reply generation works now. Quota and rate limits can change."
+msgstr "Die Antwortgenerierung funktioniert derzeit. Kontingent und Anfragelimits können sich ändern."
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "Testing reply generation..."
+msgstr "Antwortgenerierung wird getestet …"
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "Tests reply generation with a short synthetic prompt, not email content. A small API charge may apply."
+msgstr "Testet die Antwortgenerierung mit einer kurzen synthetischen Eingabe, nicht mit E-Mail-Inhalten. Dabei können geringe API-Gebühren anfallen."
+
+#: src/e-util/e-openai-manager.c
+msgid "OpenAI API quota is exhausted. Check your API billing, credits, and project limits."
+msgstr "Das OpenAI-API-Kontingent ist aufgebraucht. Prüfen Sie Ihre API-Abrechnung, Ihr Guthaben und die Projektlimits."
+
+#: src/e-util/e-openai-manager.c
+msgid "OpenAI's request rate limit was reached. Wait a moment and try again."
+msgstr "Das Anfragelimit von OpenAI wurde erreicht. Warten Sie einen Moment und versuchen Sie es erneut."
+
+#: src/e-util/e-openai-manager.c
+msgid "OpenAI returned HTTP 429: a request rate or API quota limit was reached. Wait and retry, or check API billing and project limits."
+msgstr "OpenAI hat HTTP 429 zurückgegeben: Ein Anfrage- oder API-Kontingentlimit wurde erreicht. Warten Sie und versuchen Sie es erneut oder prüfen Sie Ihre API-Abrechnung und die Projektlimits."
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "Integrations"
+msgstr "Integrationen"
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "OpenAI API key"
+msgstr "OpenAI-API-Schlüssel"
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "_Save API Key"
+msgstr "API-Schlüssel _speichern"
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "Test API Key"
+msgstr "API-Schlüssel testen"
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "Remove API Key"
+msgstr "API-Schlüssel entfernen"
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "Checking secure key storage..."
+msgstr "Sichere Schlüsselspeicherung wird geprüft …"
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "API key stored in the system keyring."
+msgstr "Der API-Schlüssel ist im Schlüsselbund des Systems gespeichert."
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "No API key configured."
+msgstr "Kein API-Schlüssel eingerichtet."
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "Testing API key..."
+msgstr "API-Schlüssel wird getestet …"
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "API key is valid"
+msgstr "Der API-Schlüssel ist gültig"
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "API key test failed"
+msgstr "Der Test des API-Schlüssels ist fehlgeschlagen"
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "API key is valid. Model access and usage limits may vary."
+msgstr "Der API-Schlüssel ist gültig. Modellzugriff und Nutzungslimits können abweichen."
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "The API key could not be saved securely."
+msgstr "Der API-Schlüssel konnte nicht sicher gespeichert werden."
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "Enable OpenAI email assistance?"
+msgstr "OpenAI-Unterstützung für E-Mails aktivieren?"
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "Opening the assistant sends the current email draft, quoted message, subject, and your instructions to OpenAI. This can include personal or confidential information. Attachments are not uploaded. OpenAI's data policies and API charges apply. Responses are requested with storage disabled, but this is not a guarantee of zero provider retention. Generated drafts must be reviewed before sending. Your API key will be stored in your desktop's secure keyring, not in application settings."
+msgstr "Beim Öffnen des Assistenten werden der aktuelle E-Mail-Entwurf, die zitierte Nachricht, der Betreff und Ihre Anweisungen an OpenAI gesendet. Dies kann persönliche oder vertrauliche Informationen umfassen. Anhänge werden nicht hochgeladen. Es gelten die Datenschutzrichtlinien und API-Gebühren von OpenAI. Antworten werden mit deaktivierter Speicherung angefordert; dies garantiert jedoch nicht, dass der Anbieter keine Daten aufbewahrt. Generierte Entwürfe müssen vor dem Senden geprüft werden. Ihr API-Schlüssel wird im sicheren Schlüsselbund Ihrer Arbeitsumgebung gespeichert, nicht in den Anwendungseinstellungen."
+
+#: src/modules/integrations/evolution-integrations.c
+msgid "I Understand, Save Key"
+msgstr "Verstanden, Schlüssel speichern"
+
+#: src/e-util/e-openai-manager.c
+msgid "OpenAI returned an incomplete, refused, or invalid response."
+msgstr "OpenAI hat eine unvollständige, abgelehnte oder ungültige Antwort zurückgegeben."
+
+#: src/e-util/e-openai-manager.c
+#, c-format
+msgid "OpenAI request failed (HTTP %u). Check your API key, billing, and model access."
+msgstr "Die OpenAI-Anfrage ist fehlgeschlagen (HTTP %u). Prüfen Sie Ihren API-Schlüssel, die Abrechnung und den Modellzugriff."
+
+#: src/e-util/e-openai-manager.c
+msgid "Configure OpenAI and accept the privacy notice in Integrations settings first."
+msgstr "Richten Sie zunächst OpenAI unter »Integrationen« ein und bestätigen Sie den Datenschutzhinweis."
+
+#: src/e-util/e-openai-manager.c
+msgid "Consent is required before enabling OpenAI."
+msgstr "Vor der Aktivierung von OpenAI ist Ihre Zustimmung erforderlich."
+
+#: src/e-util/e-openai-manager.c
+msgid "The message or conversation is too long for the OpenAI assistant."
+msgstr "Die Nachricht oder Unterhaltung ist zu lang für den OpenAI-Assistenten."
+
+#: src/e-util/e-openai-manager.c
+msgid "Enter a nonempty API key without spaces or control characters."
+msgstr "Geben Sie einen nicht leeren API-Schlüssel ohne Leer- oder Steuerzeichen ein."
+
 #: ../data/org.gnome.evolution.addressbook.gschema.xml.in.h:1
 msgid "Enable address formatting"
 msgstr "Adressformatierung aktivieren"

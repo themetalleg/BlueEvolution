@@ -184,6 +184,7 @@ set(SOURCES
 	e-name-selector-model.c
 	e-name-selector.c
 	e-online-button.c
+	e-openai-manager.c
 	e-paned.c
 	e-passwords.c
 	e-photo-cache.c
@@ -464,6 +465,7 @@ set(HEADERS
 	e-name-selector-model.h
 	e-name-selector.h
 	e-online-button.h
+	e-openai-manager.h
 	e-paned.h
 	e-passwords.h
 	e-photo-cache.h
@@ -858,6 +860,7 @@ add_test_programs(
 	test-markdown
 	test-ui-action
 	test-blueevolution-appearance
+	test-openai-manager
 	test-web-view-jsc
 )
 
@@ -866,7 +869,7 @@ target_compile_definitions(test-blueevolution-appearance PRIVATE
 	-DEVOLUTION_UIDIR="${uidir}")
 set_tests_properties(test-ui-action test-blueevolution-appearance PROPERTIES
 	ENVIRONMENT "GSETTINGS_SCHEMA_DIR=${CMAKE_BINARY_DIR}/data;GSETTINGS_BACKEND=memory;NO_AT_BRIDGE=1")
-install(TARGETS test-ui-action test-blueevolution-appearance
+install(TARGETS test-ui-action test-blueevolution-appearance test-openai-manager
 	DESTINATION ${LIBEXEC_INSTALL_DIR}/blueevolution/tests)
 
 add_private_program(test-html-editor-units
