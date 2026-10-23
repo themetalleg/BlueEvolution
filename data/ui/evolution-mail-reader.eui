@@ -147,6 +147,7 @@
       <item action='EMailReader::mail-forward-as-group' important='false'/>
       <separator/>
       <item action='mail-mark-unread' important='true'/>
+      <item action='mail-mark-current-read'/>
       <item action='mail-mark-junk'/>
     </placeholder>
     <separator/>
@@ -167,6 +168,7 @@
       <item action='mail-delete'/>
       <item action='mail-mark-junk'/>
       <item action='mail-mark-notjunk'/>
+      <item action='mail-mark-current-read'/>
       <item action='mail-archive'/>
       <item action='mail-load-images'/>
     </placeholder>

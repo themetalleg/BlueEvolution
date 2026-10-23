@@ -4,6 +4,41 @@
 
 #include "e-mail-list-cell.c"
 #include "e-mail-request.c"
+#define PROP_0 MESSAGE_LIST_PROP_0
+#define N_PROPS MESSAGE_LIST_N_PROPS
+#define properties message_list_properties
+#include "message-list.c"
+#undef properties
+#undef N_PROPS
+#undef PROP_0
+
+static void
+test_collapsed_thread_latest_message (void)
+{
+	CamelMessageInfo *first = camel_message_info_new (NULL);
+	CamelMessageInfo *reply = camel_message_info_new (NULL);
+	CamelMessageInfo *latest = camel_message_info_new (NULL);
+	GNode *root = g_node_new (first);
+	GNode *child = g_node_append_data (root, reply);
+	camel_message_info_set_uid (first, "first");
+	camel_message_info_set_uid (reply, "reply");
+	camel_message_info_set_uid (latest, "latest");
+	camel_message_info_set_date_received (first, 100);
+	camel_message_info_set_date_received (reply, 200);
+	camel_message_info_set_date_received (latest, 300);
+	g_node_append_data (child, latest);
+	g_assert_true (message_list_thread_message_info (root, TRUE) == latest);
+	g_assert_true (message_list_thread_message_info (root, FALSE) == first);
+	g_assert_true (message_list_thread_message_info (child, TRUE) == latest);
+	g_assert_true (message_list_thread_message_info (child, FALSE) == reply);
+	camel_message_info_set_date_received (latest, 0);
+	camel_message_info_set_date_sent (latest, 400);
+	g_assert_true (message_list_thread_message_info (root, TRUE) == latest);
+	g_node_destroy (root);
+	g_object_unref (first);
+	g_object_unref (reply);
+	g_object_unref (latest);
+}
 
 typedef struct { GObject parent; } WidthModel;
 typedef GObjectClass WidthModelClass;
@@ -107,6 +142,15 @@ test_date_headings_only_for_top_level_rows (void)
 	g_node_append (thread, reply);
 	g_assert_true (mail_list_is_top_level_row (thread));
 	g_assert_false (mail_list_is_top_level_row (reply));
+	g_assert_cmpint (mail_list_node_indent (thread), ==, 0);
+	g_assert_cmpint (mail_list_node_indent (reply), ==, 20);
+	{
+		GNode *nested = g_node_append_data (reply, NULL);
+		g_assert_cmpint (mail_list_node_indent (nested), ==, 40);
+		for (guint depth = 0; depth < 8; depth++)
+			nested = g_node_append_data (nested, NULL);
+		g_assert_cmpint (mail_list_node_indent (nested), ==, 80);
+	}
 	g_node_destroy (tree);
 }
 
@@ -463,6 +507,7 @@ main (int argument_count, char **argument_values)
 	g_test_add_func ("/blueevolution/mail/date-headings-top-level", test_date_headings_only_for_top_level_rows);
 	g_test_add_func ("/blueevolution/mail/older-date-weekday-abbreviated", test_older_dates_use_abbreviated_weekday);
 	g_test_add_func ("/blueevolution/mail/thread-expand-default-closed", test_thread_expand_default_closed);
+	g_test_add_func ("/blueevolution/mail/collapsed-thread-latest-message", test_collapsed_thread_latest_message);
 	g_test_add_func ("/blueevolution/mail/date-sections", test_dates);
 	g_test_add_func ("/blueevolution/mail/unread-row-background", test_unread_row_background);
 	g_test_add_func ("/blueevolution/mail/expander-under-initials", test_expander_placement);

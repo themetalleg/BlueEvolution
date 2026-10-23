@@ -1292,6 +1292,20 @@ action_mail_mark_read_cb (EUIAction *action,
 }
 
 static void
+action_mail_mark_current_read_cb (EUIAction *action,
+                                  GVariant *parameter,
+                                  gpointer user_data)
+{
+	EMailReader *reader = user_data;
+	CamelFolder *folder = e_mail_reader_ref_folder (reader);
+	GPtrArray *uids = e_mail_reader_get_selected_uids (reader);
+	if (folder && uids && uids->len == 1)
+		camel_folder_set_message_flags (folder, g_ptr_array_index (uids, 0), CAMEL_MESSAGE_SEEN, CAMEL_MESSAGE_SEEN);
+	g_clear_pointer (&uids, g_ptr_array_unref);
+	g_clear_object (&folder);
+}
+
+static void
 action_mail_mark_unimportant_cb (EUIAction *action,
 				 GVariant *parameter,
 				 gpointer user_data)
@@ -3320,6 +3334,13 @@ e_mail_reader_init_ui_data_default (EMailReader *self)
 		  "<Shift><Control>j",
 		  N_("Mark the selected messages as not being junk"),
 		  action_mail_mark_notjunk_cb, NULL, NULL, NULL },
+
+		{ "mail-mark-current-read",
+		  "mail-mark-read",
+		  N_("_Read"),
+		  NULL,
+		  N_("Mark the current message as read"),
+		  action_mail_mark_current_read_cb, NULL, NULL, NULL },
 
 		{ "mail-mark-read",
 		  "mail-mark-read",
@@ -5578,6 +5599,8 @@ mail_reader_update_actions (EMailReader *reader,
 	sensitive = selection_has_unread_messages;
 	action = e_mail_reader_get_action (reader, "mail-mark-read");
 	e_ui_action_set_sensitive (action, sensitive);
+	action = e_mail_reader_get_action (reader, "mail-mark-current-read");
+	e_ui_action_set_sensitive (action, sensitive && single_message_selected);
 
 	sensitive = selection_has_ignore_thread_messages;
 	action = e_mail_reader_get_action (reader, "mail-mark-unignore-thread-sub");

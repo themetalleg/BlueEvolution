@@ -45,6 +45,51 @@ test_privacy_body (void)
 }
 
 static void
+test_body_only (void)
+{
+	const gchar *headers[] = { "Subject: Test\n\nHello", "Betreff: Test\r\n\r\nHello",
+		"**Subject:** Test\n\nHello", "## Betreff: Test\nHello", "Objet : Test\nHello",
+		"Oggetto: Test\nHello", "Asunto: Test\nHello", "Assunto: Test\nHello" };
+	guint index;
+	for (index = 0; index < G_N_ELEMENTS (headers); index++) {
+		gchar *body = assistant_body_only (headers[index]);
+		g_assert_cmpstr (body, ==, "Hello");
+		g_free (body);
+	}
+	{
+		gchar *body = assistant_body_only ("Hello\n\nSubject: this is ordinary body text.");
+		g_assert_cmpstr (body, ==, "Hello\n\nSubject: this is ordinary body text.");
+		g_free (body);
+		body = assistant_body_only ("Subject: No message body");
+		g_assert_cmpstr (body, ==, "");
+		g_free (body);
+	}
+}
+
+static void
+test_body_only_prompt (void)
+{
+	guint provider;
+	for (provider = 0; provider < 3; provider++) {
+		OpenAIJob job = { .kind = E_OPENAI_DRAFT_REPLY, .provider = provider, .email = "Synthetic email" };
+		gchar *body = openai_build_body (&job);
+		JsonNode *root = json_from_string (body, NULL);
+		JsonObject *object = json_node_get_object (root);
+		const gchar *system;
+		if (provider == 1) {
+			JsonObject *instructions = assistant_object (object, "systemInstruction");
+			JsonArray *parts = assistant_array (instructions, "parts");
+			system = openai_string (json_array_get_object_element (parts, 0), "text");
+		} else
+			system = openai_string (object, provider == 0 ? "instructions" : "system");
+		g_assert_nonnull (strstr (system, "inserted directly into the body"));
+		g_assert_nonnull (strstr (system, "Never generate, suggest, or include a subject line"));
+		json_node_free (root);
+		g_free (body);
+	}
+}
+
+static void
 consent_finished (GObject *source, GAsyncResult *result, gpointer data)
 {
 	GError *error = NULL;
@@ -118,12 +163,12 @@ mock_handler (SoupServer *server, SoupServerMessage *message, const gchar *path,
 	if (request->status == 307)
 		soup_message_headers_replace (soup_server_message_get_response_headers (message), "Location", "/redirected");
 	body = request->status == 200 ?
-		"{\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"Synthetic reply\"}]}]}" :
+		"{\"status\":\"completed\",\"output\":[{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"Subject: Synthetic topic\\n\\nSynthetic reply\"}]}]}" :
 		"{\"error\":{\"message\":\"Do not expose synthetic-test-token\"}}";
 	if (request->status == 200 && request->job.provider == 1)
-		body = "{\"candidates\":[{\"finishReason\":\"STOP\",\"content\":{\"parts\":[{\"text\":\"Synthetic reply\"}]}}]}";
+		body = "{\"candidates\":[{\"finishReason\":\"STOP\",\"content\":{\"parts\":[{\"text\":\"Subject: Synthetic topic\\n\\nSynthetic reply\"}]}}]}";
 	if (request->status == 200 && request->job.provider == 2)
-		body = "{\"stop_reason\":\"end_turn\",\"content\":[{\"type\":\"text\",\"text\":\"Synthetic reply\"}]}";
+		body = "{\"stop_reason\":\"end_turn\",\"content\":[{\"type\":\"text\",\"text\":\"Subject: Synthetic topic\\n\\nSynthetic reply\"}]}";
 	if (request->status == 429)
 		body = request->job.kind == E_OPENAI_TEST_KEY ?
 			"{\"error\":{\"code\":\"insufficient_quota\",\"message\":\"synthetic-test-token\"}}" :
@@ -255,6 +300,8 @@ int main (int argc, char **argv)
 	g_test_add_func ("/openai/privacy-body", test_privacy_body);
 	g_test_add_func ("/openai/consent-required", test_consent);
 	g_test_add_func ("/assistant/providers", test_providers);
+	g_test_add_func ("/assistant/body-only", test_body_only);
+	g_test_add_func ("/assistant/body-only-prompt", test_body_only_prompt);
 	g_test_add_func ("/assistant/invalid-responses", test_provider_responses);
 	g_test_add_data_func ("/assistant/gemini/key-test", GUINT_TO_POINTER (257), test_http);
 	g_test_add_data_func ("/assistant/gemini/generate", GUINT_TO_POINTER (258), test_http);

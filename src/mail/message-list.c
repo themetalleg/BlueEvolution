@@ -683,6 +683,37 @@ get_message_uid (MessageList *message_list,
 /* Gets the CamelMessageInfo for the message displayed at the given
  * view row.
  */
+static gboolean
+message_list_latest_message_cb (GNode *node,
+                               gpointer user_data)
+{
+	CamelMessageInfo **latest = user_data;
+	CamelMessageInfo *info = node->data;
+	time_t latest_date, date;
+	if (!info)
+		return FALSE;
+	date = camel_message_info_get_date_received (info);
+	if (!date)
+		date = camel_message_info_get_date_sent (info);
+	latest_date = camel_message_info_get_date_received (*latest);
+	if (!latest_date)
+		latest_date = camel_message_info_get_date_sent (*latest);
+	if (date > latest_date)
+		*latest = info;
+	return FALSE;
+}
+
+static CamelMessageInfo *
+message_list_thread_message_info (GNode *node,
+                                 gboolean collapsed)
+{
+	CamelMessageInfo *info = node->data;
+	if (collapsed && node->children)
+		g_node_traverse (node, G_PRE_ORDER, G_TRAVERSE_ALL, -1,
+			message_list_latest_message_cb, &info);
+	return info;
+}
+
 static CamelMessageInfo *
 get_message_info (MessageList *message_list,
                   GNode *node)
@@ -690,7 +721,9 @@ get_message_info (MessageList *message_list,
 	g_return_val_if_fail (node != NULL, NULL);
 	g_return_val_if_fail (node->data != NULL, NULL);
 
-	return node->data;
+	return message_list_thread_message_info (node,
+		node->children && !e_tree_table_adapter_node_is_expanded (
+			e_tree_get_table_adapter (E_TREE (message_list)), node));
 }
 
 static const gchar *
@@ -1486,7 +1519,7 @@ for_node_and_subtree_if_collapsed (MessageList *message_list,
 	tree_model = E_TREE_MODEL (message_list);
 	adapter = e_tree_get_table_adapter (E_TREE (message_list));
 
-	func (NULL, (ETreePath) mi, data);
+	func (NULL, (ETreePath) (node ? node->data : mi), data);
 
 	if (node != NULL)
 		child = g_node_first_child (node);
@@ -1504,7 +1537,7 @@ for_node_and_latest_thread (MessageList *message_list,
 {
 	if (message_list->priv->thread_latest && node != NULL &&
 	    node->parent == message_list->priv->tree_model_root && node->children != NULL) {
-		func (NULL, (ETreePath) mi, data);
+		func (NULL, (ETreePath) node->data, data);
 		e_tree_model_node_traverse (E_TREE_MODEL (message_list), node, func, data);
 	} else {
 		for_node_and_subtree_if_collapsed (message_list, node, mi, func, data);
@@ -3774,7 +3807,7 @@ message_list_value_at (ETreeModel *tree_model,
 		return NULL;
 
 	/* retrieve the message information array */
-	msg_info = ((GNode *) path)->data;
+	msg_info = get_message_info (message_list, (GNode *) path);
 	g_return_val_if_fail (msg_info != NULL, NULL);
 
 	camel_message_info_property_lock (msg_info);
@@ -5703,7 +5736,7 @@ on_cursor_activated_cmd (ETree *tree,
 	if (node == NULL || G_NODE_IS_ROOT (node))
 		new_uid = NULL;
 	else
-		new_uid = get_message_uid (message_list, node);
+		new_uid = camel_message_info_get_uid (get_message_info (message_list, node));
 
 	/* Do not check the cursor_uid and the new_uid values, because the
 	* selected item (set in on_selection_changed_cmd) can be different
@@ -5744,7 +5777,7 @@ on_selection_changed_cmd (ETree *tree,
 		else
 			newuid = NULL;
 	} else if ((cursor = e_tree_get_cursor (tree)))
-		newuid = (gchar *) camel_message_info_get_uid (cursor->data);
+		newuid = camel_message_info_get_uid (get_message_info (message_list, cursor));
 	else
 		newuid = NULL;
 
@@ -5899,7 +5932,8 @@ ml_getselected_cb (GNode *node,
 	if (G_NODE_IS_ROOT (node))
 		return;
 
-	uid = get_message_uid (data->message_list, node);
+	uid = data->with_collapsed_threads ? get_message_uid (data->message_list, node) :
+		camel_message_info_get_uid (get_message_info (data->message_list, node));
 	g_return_if_fail (uid != NULL);
 	g_ptr_array_add (data->uids, g_strdup (uid));
 

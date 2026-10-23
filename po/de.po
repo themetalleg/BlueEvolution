@@ -46,6 +46,9 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Poedit 3.8\n"
 
+msgid "Mark the current message as read"
+msgstr "Die aktuelle Nachricht als gelesen markieren"
+
 msgid "Mail Assistant"
 msgstr "Mail-Assistent"
 

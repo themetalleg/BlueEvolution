@@ -318,6 +318,8 @@ target_link_libraries(test-mail-autoconfig
 )
 
 add_executable(test-blueevolution-mail-list test-blueevolution-mail-list.c)
+target_compile_definitions(test-blueevolution-mail-list PRIVATE
+	-DEVOLUTION_ETSPECDIR="${etspecdir}")
 target_compile_options(test-blueevolution-mail-list PRIVATE
 	${EVOLUTION_DATA_SERVER_CFLAGS} ${GNOME_PLATFORM_CFLAGS})
 target_include_directories(test-blueevolution-mail-list PRIVATE

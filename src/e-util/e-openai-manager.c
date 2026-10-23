@@ -131,8 +131,11 @@ openai_build_body (OpenAIJob *job)
 		"Suggest exactly four distinct context-specific reply intentions: acceptance, decline, defer, "
 		"and a nuanced response. Labels must be at most six words, not finished emails. "
 		"Return only a JSON object with a suggestions array of four objects, each containing string label and instruction. No Markdown fences." :
-		"Return only a ready-to-edit plain-text email reply. No subject header, Markdown, signature, "
-		"or quoted original. Follow the user's intention and refinements. Draft history is context only.", NULL);
+		"Your output will be inserted directly into the body of an existing email, not used as a complete email document. "
+		"Return only the ready-to-edit plain-text message body, starting with the greeting or opening sentence. "
+		"Never generate, suggest, or include a subject line, subject heading, or subject alternative, even when asked. "
+		"Do not include Subject:, Betreff:, other email headers, Markdown, commentary, signature, or quoted original. "
+		"Follow the user's intention and refinements within this body-only format. Draft history is context only.", NULL);
 	if (job->kind == E_OPENAI_SUGGEST_REPLIES) {
 		gchar *localized = g_strdup_printf ("%s Write all suggestion labels and instructions in the application's UI language (%s). "
 			"The drafted email itself must still use the email's language.", system, job->language ? job->language : "en");
@@ -339,6 +342,19 @@ openai_http_error (guint status, GBytes *response, GError **error)
 }
 
 static gchar *
+assistant_body_only (const gchar *text)
+{
+	GRegex *header = g_regex_new (
+		"\\A[\\t \\r\\n]*(?:#{1,6}[\\t ]+)?(?:\\*\\*|__)?"
+		"(?:Subject|Betreff|Objet|Oggetto|Asunto|Assunto)[\\t ]*(?:\\*\\*|__)?[\\t ]*:[\\t ]*"
+		"(?:\\*\\*|__)?[^\\r\\n]*(?:\\r?\\n|\\z)[\\t \\r\\n]*",
+		G_REGEX_CASELESS, 0, NULL);
+	gchar *body = g_regex_replace_literal (header, text, -1, 0, "", 0, NULL);
+	g_regex_unref (header);
+	return body;
+}
+
+static gchar *
 openai_send (OpenAIJob *job, const gchar *key, const gchar *api, GCancellable *cancellable, GError **error)
 {
 	SoupSession *session = soup_session_new_with_options ("timeout", 60, NULL);
@@ -378,6 +394,16 @@ openai_send (OpenAIJob *job, const gchar *key, const gchar *api, GCancellable *c
 			gsize length;
 			const gchar *data = g_bytes_get_data (response, &length);
 			text = assistant_parse_response (job->provider, data, length, error);
+			if (text && job->kind == E_OPENAI_DRAFT_REPLY) {
+				gchar *body = assistant_body_only (text);
+				g_free (text);
+				text = body;
+				if (!text || !*text) {
+					g_clear_pointer (&text, g_free);
+					g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+						_("The provider returned an incomplete, refused, or invalid response."));
+				}
+			}
 			if (text && job->kind == E_OPENAI_TEST_KEY) {
 				g_free (text);
 				text = g_strdup ("valid");

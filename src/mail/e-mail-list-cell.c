@@ -202,6 +202,23 @@ mail_list_is_top_level_row (GNode *node)
 }
 
 static gint
+mail_list_node_indent (GNode *node)
+{
+	guint depth = node ? g_node_depth (node) : 0;
+	return depth > 2 ? MIN (depth - 2, 4) * 20 : 0;
+}
+
+static gint
+mail_list_row_indent (ECellView *view,
+                      gint row)
+{
+	if (row < 0 || !E_IS_TREE_TABLE_ADAPTER (view->e_table_model))
+		return 0;
+	return mail_list_node_indent (e_tree_table_adapter_node_at_row (
+		E_TREE_TABLE_ADAPTER (view->e_table_model), row));
+}
+
+static gint
 mail_list_heading (ECellView *view,
                    gint row)
 {
@@ -361,7 +378,8 @@ mail_list_draw (ECellView *view,
 	gint heading = mail_list_heading (view, row);
 	gint heading_height = heading >= 0 ? 32 : 0;
 	gint text_width, text_height, initial_length;
-	gint avatar_x = rtl ? x2 - 24 : x1 + 24;
+	gint indent = mail_list_row_indent (view, row);
+	gint avatar_x = rtl ? x2 - 24 - indent : x1 + 24 + indent;
 	ETreePath thread_node = mail_list_expandable_node (view, row);
 	gint avatar_y = y1 + heading_height + (y2 - y1 - heading_height) / 2 - (thread_node != NULL ? 12 : 0);
 
@@ -436,6 +454,7 @@ mail_list_draw (ECellView *view,
 		GtkStateFlags state = gtk_widget_get_state_flags (canvas);
 
 		mail_list_expander_bounds (x2 - x1, y2 - y1, heading_height, rtl, &bounds);
+		bounds.x += rtl ? -indent : indent;
 		if (e_tree_table_adapter_node_is_expanded (E_TREE_TABLE_ADAPTER (view->e_table_model), thread_node))
 			state |= GTK_STATE_FLAG_CHECKED;
 		if (flags & E_CELL_SELECTED)
@@ -448,8 +467,8 @@ mail_list_draw (ECellView *view,
 	}
 
 	e_cell_draw (((EMailListCellView *) view)->content, context, model_column, view_column, row,
-		flags, x1 + (rtl ? 12 : 48), y1 + heading_height + 12,
-		x2 - (rtl ? 48 : 12), y2 - 12);
+		flags, x1 + (rtl ? 12 : 48 + indent), y1 + heading_height + 12,
+		x2 - (rtl ? 48 + indent : 12), y2 - 12);
 	foreground.alpha = 0.16;
 	gdk_cairo_set_source_rgba (context, &foreground);
 	cairo_set_line_width (context, 1);
@@ -472,7 +491,9 @@ mail_list_event (ECellView *view,
 	GdkEvent *translated;
 	gdouble event_x, event_y;
 	gint result, heading_height = mail_list_heading (view, row) >= 0 ? 32 : 0;
-	gint inset = gtk_widget_get_direction (mail_list_canvas (view)) == GTK_TEXT_DIR_RTL ? 12 : 48;
+	gboolean rtl = gtk_widget_get_direction (mail_list_canvas (view)) == GTK_TEXT_DIR_RTL;
+	gint indent = mail_list_row_indent (view, row);
+	gint inset = rtl ? 12 : 48 + indent;
 
 	if (!gdk_event_get_coords (event, &event_x, &event_y))
 		return e_cell_event (list_view->content, event, model_column, view_column, row, flags, actions);
@@ -488,7 +509,8 @@ mail_list_event (ECellView *view,
 
 			e_table_item_get_cell_geometry (view->e_table_item_view, &geometry_row, &geometry_column, NULL, NULL, &width, NULL);
 			mail_list_expander_bounds (width, height, heading_height,
-				gtk_widget_get_direction (mail_list_canvas (view)) == GTK_TEXT_DIR_RTL, &bounds);
+				rtl, &bounds);
+			bounds.x += rtl ? -indent : indent;
 			if (event_x >= bounds.x && event_x < bounds.x + bounds.width &&
 			    event_y >= bounds.y && event_y < bounds.y + bounds.height) {
 				ETreeTableAdapter *adapter = E_TREE_TABLE_ADAPTER (view->e_table_model);

@@ -83,6 +83,18 @@ test_ui_definitions (void)
 		g_assert_no_error (error);
 		g_assert_true (e_ui_parser_merge_data (parser, contents, length, &error));
 		g_assert_no_error (error);
+		if (index > 0) {
+			const gchar *toolbars[] = { "<toolbar id='mail-preview-toolbar'", "<toolbar id='main-toolbar-with-headerbar'", "<toolbar id='main-toolbar-without-headerbar'" };
+			guint toolbar_index;
+			for (toolbar_index = index == 1 ? 0 : 1; toolbar_index < (index == 1 ? 1 : 3); toolbar_index++) {
+				const gchar *start = strstr (contents, toolbars[toolbar_index]);
+				const gchar *end;
+				g_assert_nonnull (start);
+				end = strstr (start, "</toolbar>");
+				g_assert_nonnull (end);
+				g_assert_nonnull (g_strstr_len (start, end - start, "action='mail-mark-current-read'"));
+			}
+		}
 		g_free (contents);
 		g_free (filename);
 	}
