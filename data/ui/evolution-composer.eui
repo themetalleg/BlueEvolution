@@ -45,6 +45,7 @@
         <item action='view-bcc'/>
         <separator/>
         <item action='picture-gallery'/>
+        <item action='openai-assistant'/>
         <item action='toolbar-show-main'/>
         <item action='toolbar-show-edit'/>
         <separator/>
@@ -80,6 +81,7 @@
     </submenu>
   </menu>
   <toolbar id='main-toolbar-with-headerbar' primary='true'>
+    <item action='openai-assistant'/>
     <separator/>
     <item action='toolbar-pgp-sign'/>
     <item action='toolbar-pgp-encrypt'/>
@@ -87,6 +89,7 @@
     <item action='toolbar-smime-encrypt'/>
   </toolbar>
   <toolbar id='main-toolbar-without-headerbar' primary='true'>
+    <item action='openai-assistant'/>
     <placeholder id='pre-main-toolbar'>
       <item action='send' important='true'/>
       <separator/>

@@ -126,6 +126,7 @@ src/composer/e-composer-header-table.c
 src/composer/e-composer-name-header.c
 src/composer/e-composer-post-header.c
 src/composer/e-composer-private.c
+src/composer/e-composer-openai.c
 src/composer/e-msg-composer.c
 src/composer/mail-composer.error.xml
 src/em-format/e-mail-formatter-attachment.c
@@ -248,6 +249,7 @@ src/e-util/e-name-selector-dialog.c
 src/e-util/e-name-selector-entry.c
 src/e-util/e-name-selector-list.c
 src/e-util/e-online-button.c
+src/e-util/e-openai-manager.c
 src/e-util/e-paned.c
 src/e-util/e-passwords.c
 src/e-util/e-plugin.c
@@ -401,6 +403,7 @@ src/modules/accounts-window/e-accounts-window-editors.c
 src/modules/accounts-window/e-collection-wizard-page.c
 src/modules/accounts-window/e-webdav-browser-page.c
 src/modules/appearance-settings/evolution-appearance-settings.c
+src/modules/integrations/evolution-integrations.c
 src/modules/addressbook/autocompletion-config.c
 src/modules/addressbook/eab-composer-util.c
 src/modules/addressbook/e-book-shell-backend.c

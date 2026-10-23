@@ -1,5 +1,18 @@
 <schemalist gettext-domain="evolution">
   <schema id="io.github.themetalleg.BlueEvolution" path="/io/github/themetalleg/BlueEvolution/">
+    <key name="mail-assistant-provider" type="s">
+      <default>'openai'</default>
+      <choices>
+        <choice value='openai'/>
+        <choice value='gemini'/>
+        <choice value='claude'/>
+      </choices>
+      <_summary>Mail assistant provider</_summary>
+    </key>
+    <key name="mail-assistant-models" type="a{ss}">
+      <default>{'openai': 'gpt-4.1-mini', 'gemini': 'gemini-2.5-flash', 'claude': 'claude-haiku-4-5'}</default>
+      <_summary>Mail assistant models by provider</_summary>
+    </key>
     <key name="appearance-mode" type="s">
       <default>'system'</default>
       <choices>

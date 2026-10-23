@@ -11,6 +11,42 @@ See [BLUEEVOLUTION.md](BLUEEVOLUTION.md) for the baseline, implementation
 status, build notes, and known limitations. Upstream Evolution documentation
 follows.
 
+## Mail Assistant
+
+The `feature/mail-assistant` branch adds Settings > Integrations and an
+optional, closed-by-default composer sidebar. Add an API key there after
+accepting the privacy notice; the key is stored only through Secret Service
+in the desktop keyring. Select OpenAI, Google Gemini, or Claude (Anthropic).
+Each provider has its own model, API key, and consent; changing providers never
+falls back to another service. GitHub Copilot is not included. Removing a key
+also removes that provider's recorded consent.
+Testing a saved key performs a tiny reply-generation request using a fixed
+synthetic prompt, never mail. It uses the same model as the assistant and
+may incur a small API charge. Success confirms generation works at that
+moment; quota and rate limits can subsequently change.
+
+Opening the assistant sends the current subject and plain-text draft,
+including quoted mail, to the selected provider for four contextual reply ideas.
+Suggestion labels and instructions follow the application language, while
+drafted replies follow the email language unless instructed otherwise. Selecting
+an idea drafts a reply and collapses the suggestions; expand them to choose
+another. The conversation displays user and assistant messages separately.
+Opening the sidebar shares the existing window space without enlarging it.
+**Insert at Cursor** inserts
+plain text through the native editor's undoable insertion path. It never
+automatically replaces the whole message or sends mail. Review every draft.
+Attachments are not uploaded and chat history is memory-only. Changing provider
+or model clears the previous conversation before another request. OpenAI
+Responses API requests use `store: false`; each provider's retention policies
+and API charges still apply. Initial models are `gpt-4.1-mini`,
+`gemini-2.5-flash`, and `claude-haiku-4-5`; model IDs can be changed in settings.
+
+For porting to another fork, the reusable manager lives in
+`src/e-util/e-openai-manager.[ch]`; settings registration is isolated under
+`src/modules/integrations`, and composer UI under `src/composer/e-composer-openai.[ch]`.
+Dependencies are libsecret, libsoup 3, JSON-GLib, and GTK 3. Offline tests use a
+loopback mock server and synthetic messages; they never call live providers.
+
 ## Icon Auditing
 
 Set `BLUEEVOLUTION_ICON_AUDIT=strict` in a disposable test profile to abort
