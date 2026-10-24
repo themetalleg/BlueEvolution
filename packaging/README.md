@@ -120,8 +120,10 @@ commit: reusing that source SHA can leave Pages serving the preceding artifact.
 Preparing the commit does not advance the state branch; that still happens only
 after deployment succeeds.
 
-The merged snapshot is stored as `BlueEvolution-updates.tar.gz` on the most
-recent deployed GitHub release. It preserves both channels and rollback
+The merged snapshot is stored with a unique `BlueEvolution-updates-RUN-ATTEMPT.tar.gz`
+name on the most recent deployed GitHub release. Its exact name is recorded in
+the state branch. Failed publications cannot overwrite the active checkpoint.
+It preserves both channels and rollback
 history. Do not delete or modify that asset or the `flatpak-state` branch;
 they are required for the next release. Versioned source/bundle assets remain
 unchanged. Pages hosts only the resulting static repository, installer links,
@@ -135,8 +137,9 @@ version/asset contents to perform a rollback; publish a higher-version repair.
 
 For hosting recovery after state was already recorded, run the publisher from
 `main`, select the latest snapshot's release tag, and set `redeploy` to true.
-This explicitly republishes the verified signed snapshot with a fresh deployment
-identity; it does not rebuild or replace the versioned release binaries.
+This reconstructs both channel refs from their immutable signed release assets
+and republishes them with a fresh deployment identity; it does not rebuild or
+replace the versioned release binaries.
 
 The publisher stops before deploying a site of 950 MB or more. GitHub Pages has
 size/bandwidth limits; monitor repository growth and move to Flathub or another

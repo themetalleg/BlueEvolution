@@ -7,9 +7,16 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import test from 'node:test';
 import YAML from 'yaml';
 import { releaseMetadata, assertNewerRelease, writeInstallFiles } from './release.mjs';
-import { mergeRepository, nextPublicationState } from './publish-flatpak.mjs';
+import { mergeRepository, nextPublicationState, snapshotName } from './publish-flatpak.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
+
+test('snapshot assets remain immutable across publications and retries', () => {
+  assert.notEqual(snapshotName('100'), snapshotName('101'));
+  assert.notEqual(snapshotName('100', '1'), snapshotName('100', '2'));
+  assert.equal(snapshotName('100', '2'), 'BlueEvolution-updates-100-2.tar.gz');
+  assert.throws(() => snapshotName('../unsafe'));
+});
 
 test('stable and prerelease versions have independent identities and refs', () => {
   const stable = releaseMetadata('0.2.0');
@@ -125,11 +132,29 @@ test('CI and publication workflow YAML and embedded shell scripts are valid', ()
     releaseSteps.findIndex(step => step.name === 'Verify release tooling'));
   assert.equal(publication.concurrency['cancel-in-progress'], false);
   const steps = publication.jobs.publish.steps;
-  assert.equal(steps.find(step => step.name === 'Deploy updates').env.BLUEEVOLUTION_PUBLICATION_SHA,
+  assert.equal(steps.find(step => step.name === 'Deploy updates').with.publication_sha,
     '${{ steps.prepare.outputs.publication_sha }}');
-  assert.ok(steps.find(step => step.name === 'Deploy updates').run.includes('GITHUB_SHA="$BLUEEVOLUTION_PUBLICATION_SHA" node'));
+  assert.equal(steps.find(step => step.name === 'Deploy updates').uses, './packaging/pages-deploy');
   assert.ok(steps.findIndex(step => step.name === 'Deploy updates') <
     steps.findIndex(step => step.run?.includes('publish-flatpak.mjs record')));
+});
+
+test('Pages action wrapper sets a unique identity and retains its runtime context', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'blueevolution-pages-action-'));
+  try {
+    mkdirSync(join(directory, '.pages-deploy-action/dist'), { recursive: true });
+    writeFileSync(join(directory, '.pages-deploy-action/dist/index.js'),
+      'console.log(JSON.stringify({sha:process.env.GITHUB_SHA,hasRuntime:process.env.ACTIONS_RUNTIME_TOKEN === "synthetic-runtime-token"}));');
+    const wrapper = resolve(root, 'packaging/pages-deploy/index.cjs');
+    const env = { ...process.env, GITHUB_WORKSPACE: directory, GITHUB_SHA: 'b'.repeat(40),
+      INPUT_PUBLICATION_SHA: 'a'.repeat(40), ACTIONS_RUNTIME_TOKEN: 'synthetic-runtime-token' };
+    const result = spawnSync(process.execPath, [wrapper], { env, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout), { sha: 'a'.repeat(40), hasRuntime: true });
+    assert.notEqual(spawnSync(process.execPath, [wrapper], {
+      env: { ...env, INPUT_PUBLICATION_SHA: 'invalid' }, encoding: 'utf8'
+    }).status, 0);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
 test('both install links use signed updates without cross-channel replacement', () => {

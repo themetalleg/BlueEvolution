@@ -1,0 +1,30 @@
+name: Deploy Flatpak update site
+description: Deploy with the official Pages action and a unique publication identity
+inputs:
+  token:
+    description: GitHub token
+    required: true
+  publication_sha:
+    description: Prepared publication commit
+    required: true
+  artifact_name:
+    description: Pages artifact name
+    default: github-pages
+  timeout:
+    description: Deployment timeout in milliseconds
+    default: '600000'
+  error_count:
+    description: Maximum status request errors
+    default: '10'
+  reporting_interval:
+    description: Status reporting interval in milliseconds
+    default: '5000'
+  preview:
+    description: Whether this is a preview
+    default: 'false'
+outputs:
+  page_url:
+    description: Published site URL
+runs:
+  using: node24
+  main: index.cjs

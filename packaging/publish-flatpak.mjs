@@ -33,6 +33,12 @@ export function nextPublicationState(metadata, previous, fingerprint) {
   };
 }
 
+export function snapshotName(runId, attempt = '1') {
+  assert.match(runId, /^[0-9]+$/);
+  assert.match(attempt, /^[0-9]+$/);
+  return `BlueEvolution-updates-${runId}-${attempt}.tar.gz`;
+}
+
 export function mergeRepository(repository, incoming, metadata, publicKey, fingerprint) {
   mkdirSync(repository, { recursive: true });
   if (!existsSync(join(repository, 'config'))) run('ostree', ['init', `--repo=${repository}`, '--mode=archive-z2']);
@@ -80,6 +86,7 @@ async function prepare(root, repository, tag, baseUrl) {
     assert.equal(previous.signing_fingerprint, fingerprint);
   }
   const state = alreadyPublished ? { ...previous } : nextPublicationState(metadata, previous, fingerprint);
+  state.archive_name = snapshotName(process.env.GITHUB_RUN_ID, process.env.GITHUB_RUN_ATTEMPT ?? '1');
   const candidate = join(root, 'candidate');
   const site = join(root, 'site');
   const repo = join(site, 'repo');
@@ -91,16 +98,32 @@ async function prepare(root, repository, tag, baseUrl) {
   for (const asset of [archive, `${archive}.sha256`, 'release.json']) download(tag, asset, candidate);
   assert.deepEqual(JSON.parse(readFileSync(join(candidate, 'release.json'))), metadata);
   run('sha256sum', ['--check', `${archive}.sha256`], { cwd: candidate });
-  if (previous) {
+  const keyFile = join(site, 'signing-key.gpg');
+  run('gpg', ['--batch', '--export', '--output', keyFile, fingerprint]);
+  if (previous && !alreadyPublished) {
     download(previous.latest_tag, previous.archive_name, root);
     assert.equal(await checksum(join(root, previous.archive_name)), previous.archive_sha256, 'Saved repository checksum mismatch');
     run('tar', ['-xzf', join(root, previous.archive_name), '-C', repo]);
   }
+  if (alreadyPublished) {
+    for (const channel of Object.values(previous.channels)) {
+      const savedMetadata = releaseMetadata(channel.version);
+      if (savedMetadata.tag === tag) continue;
+      const directory = join(root, savedMetadata.channel);
+      mkdirSync(directory);
+      const savedArchive = `BlueEvolution-${savedMetadata.version}-repository.tar.gz`;
+      for (const asset of [savedArchive, `${savedArchive}.sha256`, 'release.json']) download(savedMetadata.tag, asset, directory);
+      assert.deepEqual(JSON.parse(readFileSync(join(directory, 'release.json'))), savedMetadata);
+      run('sha256sum', ['--check', `${savedArchive}.sha256`], { cwd: directory });
+      const savedRepo = join(directory, 'repository');
+      mkdirSync(savedRepo);
+      run('tar', ['-xzf', join(directory, savedArchive), '-C', savedRepo]);
+      mergeRepository(repo, savedRepo, savedMetadata, keyFile, fingerprint);
+    }
+  }
   const incoming = join(root, 'incoming');
   mkdirSync(incoming);
   run('tar', ['-xzf', join(candidate, archive), '-C', incoming]);
-  const keyFile = join(site, 'signing-key.gpg');
-  run('gpg', ['--batch', '--export', '--output', keyFile, fingerprint]);
   mergeRepository(repo, incoming, metadata, keyFile, fingerprint);
   writeInstallFiles(site, baseUrl, readFileSync(keyFile), state.channels);
   const bytes = Number(run('du', ['-sb', site]).split(/\s/)[0]);
