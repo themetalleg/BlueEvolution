@@ -43,9 +43,14 @@ For an already-installed development bundle, explicitly reinstall from the
 public remote once its channel is live, keeping its existing profile:
 
 ```sh
-flatpak install --user --reinstall https://themetalleg.github.io/BlueEvolution/BlueEvolution.flatpakref
-flatpak install --user --reinstall https://themetalleg.github.io/BlueEvolution/BlueEvolution-Beta.flatpakref
+flatpak remote-add --user --if-not-exists --from blueevolution https://themetalleg.github.io/BlueEvolution/BlueEvolution.flatpakrepo
+flatpak install --user --reinstall blueevolution app/io.github.themetalleg.BlueEvolution/x86_64/stable
+flatpak install --user --reinstall blueevolution app/io.github.themetalleg.BlueEvolution.Beta/x86_64/beta
 ```
+
+Use explicit remote/ref reinstalls for existing installations; the `.flatpakref`
+shortcut can report that an app is already installed instead of changing its
+origin. Verify the result with `flatpak info --user --show-origin APP_ID`.
 
 The historical `io.github.themetalleg.BlueEvolution` identity belongs to stable,
 even if a locally installed development version was labelled beta.
@@ -79,6 +84,11 @@ secret and hoping existing installations accept a different key.
    Flatpak updates. Its release prerelease flag must match the version.
 5. Wait for successful Pages deployment and state recording before announcing
    the update. Both channel install links remain available once published.
+
+Pages caches can briefly serve the preceding deployment after a job succeeds.
+Allow up to ten minutes for propagation and verify both installer links and
+`flatpak remote-info --user blueevolution app/APP_ID/x86_64/CHANNEL` before
+announcing the release. Never disable GPG verification to work around caches.
 
 Draft builds can be explicitly replaced with `replace_draft`. Published
 versioned build assets are not rebuilt or replaced by the release workflow.
