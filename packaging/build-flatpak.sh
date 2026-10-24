@@ -59,7 +59,7 @@ jq --arg source "$repo_root" --arg version "$version" --arg channel "$channel" \
 				"rm /app/share/NEWS.eds /app/share/NEWS.evo /app/share/NEWS.ews /app/share/news-to-appdata.c /app/share/" + $app_id + ".metainfo.xml"
 			]
 		},
-		{ type: "file", path: $source + "/packaging/release-metainfo.xsl" }
+		{ type: "file", path: ($source + "/packaging/release-metainfo.xsl") }
 	]
 ' "$manifest_source" > "$manifest"
 
