@@ -14,11 +14,38 @@ follows.
 
 ## Releases
 
-Stable and beta use separate Flatpak identities and can be installed together.
-Signed updates are distributed through GitHub Pages and your Flatpak software
-manager. See [release and update instructions](packaging/README.md) for channel
-installation links, publication steps, and automatic-update settings. Links
-become available after the first approved release for each channel is deployed.
+Signed stable and beta releases are live on the
+[installation page](https://themetalleg.github.io/BlueEvolution/).
+
+| Channel | Install | Application ID |
+| --- | --- | --- |
+| Stable | [Install stable](https://themetalleg.github.io/BlueEvolution/BlueEvolution.flatpakref) | `io.github.themetalleg.BlueEvolution` |
+| Beta | [Install beta](https://themetalleg.github.io/BlueEvolution/BlueEvolution-Beta.flatpakref) | `io.github.themetalleg.BlueEvolution.Beta` |
+
+Both can be installed and run together with separate local profiles. Both use
+the signed `blueevolution` Flatpak remote, but stable follows the `stable` branch
+and beta follows `beta`; beta never replaces stable. Using the same account in
+both applications still affects the same server mailbox.
+
+Updates are delivered through Discover, GNOME Software, or `flatpak update --user`.
+Automatic installation depends on the user's update settings. The maintainer's
+current machine additionally has a verified hourly user timer that updates only
+these two apps; that timer is not installed automatically for other users.
+
+### Publishing Updates
+
+1. Commit and push tested changes to `main`.
+2. Push a new immutable `blueevolution-vX.Y.Z` tag for stable, or
+  `blueevolution-vX.Y.Z-beta.N` for beta. Prerelease versions route to beta.
+3. GitHub Actions builds, signs, tests, and creates a draft release.
+4. Review and publish the draft. The publication workflow deploys the signed
+  Flatpak repository to GitHub Pages while preserving both channels.
+5. Verify the deployment, both public install links, and the remote refs before
+  announcing the update. Connected installations then receive their channel's
+  update through Flatpak; restart a running app to use an installed update.
+
+See [release and update instructions](packaging/README.md) for full procedures,
+existing-installation migration, validation commands, signing, and recovery.
 
 ## Mail Assistant
 

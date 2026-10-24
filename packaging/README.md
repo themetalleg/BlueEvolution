@@ -24,7 +24,7 @@ separate testing environments. Prefer a test account for beta evaluation.
 
 ## Installing and Updating
 
-After the first approved release has deployed, use:
+The signed channels are live. Install using:
 
 - Stable: <https://themetalleg.github.io/BlueEvolution/BlueEvolution.flatpakref>
 - Beta: <https://themetalleg.github.io/BlueEvolution/BlueEvolution-Beta.flatpakref>
@@ -35,6 +35,26 @@ application IDs and branches. Subsequent updates are delivered through Discover,
 GNOME Software, or `flatpak update --user`. Enable automatic Flatpak updates in
 the software manager to install them automatically. BlueEvolution does not
 override desktop update policy or restart a running mail session.
+
+### Maintainer Machine Automation
+
+The maintainer's current machine has the user units `blueevolution-update.timer`
+and `blueevolution-update.service` enabled. The timer checks hourly with up to
+ten minutes of randomized delay while the user session is running. The service
+updates only the two BlueEvolution app IDs, not every installed application or
+the operating system. Its update run was verified successfully after both apps
+were migrated to the signed `blueevolution` remote.
+
+This is a machine-local configuration, not a timer installed by the Flatpak or
+enabled for every user. Other users choose their software manager's automatic
+update policy. Preserve the local units when working on this machine, and check
+their actual state rather than assuming that a timer exists elsewhere:
+
+```sh
+systemctl --user is-enabled blueevolution-update.timer
+systemctl --user list-timers --no-pager blueevolution-update.timer
+systemctl --user show blueevolution-update.service --property=Result --property=ExecMainStatus
+```
 
 Release bundles also embed the repository origin and public signing key.
 An older development bundle without an update origin needs a one-time install
