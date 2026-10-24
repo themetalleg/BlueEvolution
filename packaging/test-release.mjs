@@ -108,6 +108,9 @@ test('CI and publication workflow YAML and embedded shell scripts are valid', ()
     for (const job of Object.values(workflow.jobs)) {
       for (const step of job.steps ?? []) {
         if (!step.run) continue;
+        if (step.name === 'Run account-free regression tests' || step.name === 'Verify bundle checksum and account-free regressions') {
+          assert.ok(step.run.includes('dbus-run-session -- xvfb-run --auto-servernum flatpak run --user'));
+        }
         const result = spawnSync('bash', ['-n'], { input: step.run, encoding: 'utf8' });
         assert.equal(result.status, 0, `${filename}: ${step.name}: ${result.stderr}`);
       }

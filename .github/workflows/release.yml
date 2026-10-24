@@ -125,7 +125,7 @@ jobs:
           sha256sum --check "BlueEvolution-${VERSION}-x86_64.flatpak.sha256"
           mkdir -p "$RUNNER_TEMP/regression-profile"/{home,config,data,cache}
           flatpak install --user --assumeyes --bundle "$RUNNER_TEMP/BlueEvolution-${VERSION}-x86_64.flatpak"
-          xvfb-run --auto-servernum flatpak run --user \
+          dbus-run-session -- xvfb-run --auto-servernum flatpak run --user \
             --socket=x11 --nosocket=wayland --unshare=network \
             --filesystem="$RUNNER_TEMP/regression-profile" \
             --command=/usr/bin/env "$APP_ID" \
