@@ -114,6 +114,12 @@ The `flatpak-state` branch contains a small JSON state file, updated only after
 Pages deployment succeeds. It records channel versions, the trusted signing
 fingerprint, and the checksum/location of the repository snapshot.
 
+Each publication prepares a distinct state commit and uses its SHA as the Pages
+build identity. This matters when stable and beta are built from the same source
+commit: reusing that source SHA can leave Pages serving the preceding artifact.
+Preparing the commit does not advance the state branch; that still happens only
+after deployment succeeds.
+
 The merged snapshot is stored as `BlueEvolution-updates.tar.gz` on the most
 recent deployed GitHub release. It preserves both channels and rollback
 history. Do not delete or modify that asset or the `flatpak-state` branch;
@@ -126,6 +132,11 @@ release tag. Already-recorded releases are no-ops. If Pages deployed but state
 recording failed, retry that tag before publishing another release. Never
 manually rewind the state branch or change a previously published release's
 version/asset contents to perform a rollback; publish a higher-version repair.
+
+For hosting recovery after state was already recorded, run the publisher from
+`main`, select the latest snapshot's release tag, and set `redeploy` to true.
+This explicitly republishes the verified signed snapshot with a fresh deployment
+identity; it does not rebuild or replace the versioned release binaries.
 
 The publisher stops before deploying a site of 950 MB or more. GitHub Pages has
 size/bandwidth limits; monitor repository growth and move to Flathub or another
