@@ -9,6 +9,11 @@ on:
         description: Published release tag to deploy or retry
         required: true
         type: string
+      redeploy:
+        description: Redeploy the latest published snapshot to repair hosting
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -30,6 +35,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      REDEPLOY_RELEASE: ${{ inputs.redeploy && 'true' || 'false' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -74,6 +80,8 @@ jobs:
         if: steps.prepare.outputs.skip != 'true'
         id: deployment
         uses: actions/deploy-pages@v4
+        env:
+          GITHUB_SHA: ${{ steps.prepare.outputs.publication_sha }}
       - name: Record deployed repository state
         if: steps.prepare.outputs.skip != 'true'
         run: node packaging/publish-flatpak.mjs record

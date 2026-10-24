@@ -125,6 +125,8 @@ test('CI and publication workflow YAML and embedded shell scripts are valid', ()
     releaseSteps.findIndex(step => step.name === 'Verify release tooling'));
   assert.equal(publication.concurrency['cancel-in-progress'], false);
   const steps = publication.jobs.publish.steps;
+  assert.equal(steps.find(step => step.name === 'Deploy updates').env.GITHUB_SHA,
+    '${{ steps.prepare.outputs.publication_sha }}');
   assert.ok(steps.findIndex(step => step.uses?.startsWith('actions/deploy-pages@')) <
     steps.findIndex(step => step.run?.includes('publish-flatpak.mjs record')));
 });

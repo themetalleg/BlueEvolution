@@ -65,7 +65,9 @@ async function prepare(root, repository, tag, baseUrl) {
   const previousSha = stateHead(repository);
   const previous = previousSha ? JSON.parse(Buffer.from(
     api(`repos/${repository}/contents/state.json?ref=${previousSha}`).content, 'base64')) : null;
-  if (previous?.channels[metadata.channel]?.tag === tag) {
+  const alreadyPublished = previous?.channels[metadata.channel]?.tag === tag;
+  const redeploy = process.env.REDEPLOY_RELEASE === 'true';
+  if (alreadyPublished && !redeploy) {
     if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, 'skip=true\n');
     console.log(`${tag} is already published to ${metadata.channel}`);
     return;
@@ -73,7 +75,11 @@ async function prepare(root, repository, tag, baseUrl) {
   const fingerprint = run('gpg', ['--batch', '--with-colons', '--fingerprint', process.env.FLATPAK_GPG_KEY_ID])
     .split('\n').find(line => line.startsWith('fpr:'))?.split(':')[9];
   assert.match(fingerprint ?? '', /^[A-F0-9]{40,64}$/);
-  const state = nextPublicationState(metadata, previous, fingerprint);
+  if (alreadyPublished) {
+    assert.equal(previous.latest_tag, tag, 'Only the latest repository snapshot can be redeployed');
+    assert.equal(previous.signing_fingerprint, fingerprint);
+  }
+  const state = alreadyPublished ? { ...previous } : nextPublicationState(metadata, previous, fingerprint);
   const candidate = join(root, 'candidate');
   const site = join(root, 'site');
   const repo = join(site, 'repo');
@@ -106,25 +112,28 @@ async function prepare(root, repository, tag, baseUrl) {
   state.archive_sha256 = await checksum(savedArchive);
   writeFileSync(join(root, 'state.json'), `${JSON.stringify(state, null, 2)}\n`);
   writeFileSync(join(root, 'previous.json'), JSON.stringify(previousSha));
+  const content = readFileSync(join(root, 'state.json'), 'utf8');
+  const blob = api(`repos/${repository}/git/blobs`, 'POST', { content, encoding: 'utf-8' });
+  const tree = api(`repos/${repository}/git/trees`, 'POST', {
+    tree: [{ path: 'state.json', mode: '100644', type: 'blob', sha: blob.sha }]
+  });
+  const commit = api(`repos/${repository}/git/commits`, 'POST', {
+    message: `Publish ${state.latest_tag} (${process.env.GITHUB_RUN_ID ?? 'manual'})`, tree: tree.sha,
+    parents: previousSha ? [previousSha] : []
+  });
+  writeFileSync(join(root, 'publication-commit.json'), JSON.stringify(commit.sha));
   run('gh', ['release', 'upload', tag, savedArchive, '--repo', repository, '--clobber']);
-  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, 'skip=false\n');
+  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `skip=false\npublication_sha=${commit.sha}\n`);
   console.log(`Prepared ${metadata.app_name} ${metadata.version}; repository is ${bytes} bytes`);
 }
 
 function record(root, repository) {
   const previousSha = JSON.parse(readFileSync(join(root, 'previous.json')));
   assert.equal(stateHead(repository), previousSha, 'Publication state changed during deployment; do not overwrite it');
-  const content = readFileSync(join(root, 'state.json'), 'utf8');
-  const state = JSON.parse(content);
-  const blob = api(`repos/${repository}/git/blobs`, 'POST', { content, encoding: 'utf-8' });
-  const tree = api(`repos/${repository}/git/trees`, 'POST', {
-    tree: [{ path: 'state.json', mode: '100644', type: 'blob', sha: blob.sha }]
-  });
-  const commit = api(`repos/${repository}/git/commits`, 'POST', {
-    message: `Publish ${state.latest_tag}`, tree: tree.sha, parents: previousSha ? [previousSha] : []
-  });
-  if (previousSha) api(`repos/${repository}/git/refs/heads/flatpak-state`, 'PATCH', { sha: commit.sha, force: false });
-  else api(`repos/${repository}/git/refs`, 'POST', { ref: 'refs/heads/flatpak-state', sha: commit.sha });
+  const state = JSON.parse(readFileSync(join(root, 'state.json'), 'utf8'));
+  const commit = JSON.parse(readFileSync(join(root, 'publication-commit.json')));
+  if (previousSha) api(`repos/${repository}/git/refs/heads/flatpak-state`, 'PATCH', { sha: commit, force: false });
+  else api(`repos/${repository}/git/refs`, 'POST', { ref: 'refs/heads/flatpak-state', sha: commit });
   console.log(`Recorded deployed update repository for ${state.latest_tag}`);
 }
 
