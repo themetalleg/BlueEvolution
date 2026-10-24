@@ -598,11 +598,8 @@ mail_shell_view_constructed (GObject *object)
 		G_BINDING_BIDIRECTIONAL |
 		G_BINDING_SYNC_CREATE);
 
-	e_binding_bind_property (
-		ACTION (MAIL_SHOW_PREVIEW_TOOLBAR), "active",
-		mail_view, "preview-toolbar-visible",
-		G_BINDING_BIDIRECTIONAL |
-		G_BINDING_SYNC_CREATE);
+	g_object_set (mail_view, "preview-toolbar-visible", FALSE, NULL);
+	e_ui_action_set_visible (ACTION (MAIL_SHOW_PREVIEW_TOOLBAR), FALSE);
 
 	to_do_pane = e_mail_shell_content_get_to_do_pane (self->priv->mail_shell_content);
 
@@ -1843,6 +1840,13 @@ e_mail_shell_view_ui_manager_create_item_cb (EUIManager *ui_manager,
 	if (is_action ("EMailShellView::mail-send-receive")) {
 		EUIAction *button_action = e_ui_manager_get_action (ui_manager, "mail-send-receive");
 		*out_item = e_ui_manager_create_item_from_menu_model (ui_manager, elem, button_action, for_kind, G_MENU_MODEL (self->priv->send_receive_menu));
+	} else if (for_kind == E_UI_ELEMENT_KIND_TOOLBAR && is_action ("EMailShellView::mail-toolbar-spacer")) {
+		GtkToolItem *spacer = gtk_separator_tool_item_new ();
+		gtk_separator_tool_item_set_draw (GTK_SEPARATOR_TOOL_ITEM (spacer), FALSE);
+		gtk_tool_item_set_homogeneous (spacer, FALSE);
+		gtk_tool_item_set_expand (spacer, TRUE);
+		gtk_widget_show (GTK_WIDGET (spacer));
+		*out_item = G_OBJECT (spacer);
 	} else if (for_kind == E_UI_ELEMENT_KIND_MENU) {
 		g_warning ("%s: Unhandled menu action '%s'", G_STRFUNC, name);
 	} else if (for_kind == E_UI_ELEMENT_KIND_TOOLBAR) {

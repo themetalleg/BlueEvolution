@@ -6,10 +6,10 @@ or custom in-app updater is required.
 
 ## Channels
 
-| Channel | Versions | Application ID | Flatpak branch |
+| Channel | Application ID | Flatpak branch |
 | --- | --- | --- | --- |
-| Stable | `0.2.0`, `0.2.1` | `io.github.themetalleg.BlueEvolution` | `stable` |
-| Beta | `0.3.0-beta.1`, `0.3.0-rc.1` | `io.github.themetalleg.BlueEvolution.Beta` | `beta` |
+| Stable | `io.github.themetalleg.BlueEvolution` | `stable` |
+| Beta | `io.github.themetalleg.BlueEvolution.Beta` | `beta` |
 
 Stable and beta have independent desktop entries, running application IDs,
 EDS D-Bus services, and sandbox configuration/data directories. Their launcher
@@ -167,6 +167,53 @@ Flatpak host if these become restrictive. Such a migration needs to preserve
 the installed clients' signing trust and update origin.
 
 ## Local Validation
+
+### Preview Before Publishing
+
+Test uncommitted changes locally before creating any version tag or GitHub
+release. A local preview does not need to be published as beta and does not
+replace either installed signed channel:
+
+```sh
+BLUEEVOLUTION_CHANNEL=beta BLUEEVOLUTION_VERSION=0.2.3-dev.1 \
+   BUILD_ROOT="$PWD/build/flatpak-local-preview" \
+   FLATPAK_STATE_DIR="$PWD/.flatpak-builder" packaging/build-flatpak.sh
+scripts/vscode-blueevolution.sh preview light
+```
+
+The `beta` build identity here is only a private development choice; the build
+is never installed over your signed channels or uploaded. Preview tasks clear
+only their generated `BUILD_ROOT/app` staging directory and retain the builder
+module cache for faster rebuilds. Release builds continue to force clean. The launcher uses a
+separate Flatpak installation, a private D-Bus session/runtime directory and an isolated
+synthetic-mail profile, with network and keyring access blocked. It reuses the
+existing user installation's GNOME runtime without modifying it. Its profile is under
+`~/.cache/blueevolution-vscode-source-profile`, separate from both real profiles.
+Use `BUILD_ROOT` to select another staged build and `BUNDLE_PATH` if its bundle
+has a custom filename. The existing `launch` mode previews the
+installed app, not uncommitted source changes.
+
+Close the previous preview before starting another one with the same profile.
+When VS Code is installed as a Snap, launch from a regular desktop terminal if
+its confinement interferes with native portal helpers. Full click-through review
+of message selection, deletion and standalone readers is still required before
+promoting a candidate to a public release.
+
+Only after local testing should a new version tag enter the signed draft/beta
+release workflow. Neither preview mode creates a tag, commits, or publishes.
+
+In VS Code, run **BlueEvolution: Preview Light** or **BlueEvolution: Preview
+Dark** from Tasks. Each task fingerprints application sources and build
+configuration. The first run builds the private staging bundle; later launches
+skip Flatpak Builder entirely when the source fingerprint and bundle checksum
+are unchanged. Ordinary C/C++ and UI-resource edits reuse the persistent GNOME
+SDK CMake/Ninja tree, compile affected targets and refresh the private app bundle
+incrementally. Changes to CMake or Flatpak build configuration fall back to the
+full Flatpak module build. A build lock serializes simultaneous Light/Dark
+starts. The appearance tasks use separate private profiles and never target
+signed channels. There are no install-dev or system-theme tasks.
+
+### Automated Checks
 
 ```sh
 npm --prefix packaging ci --ignore-scripts

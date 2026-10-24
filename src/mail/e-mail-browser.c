@@ -782,6 +782,7 @@ mail_browser_constructed (GObject *object)
 
 	ui_item = e_ui_manager_create_item (browser->priv->ui_manager, toolbar_id);
 	widget = GTK_WIDGET (ui_item);
+	gtk_toolbar_set_style (GTK_TOOLBAR (widget), GTK_TOOLBAR_ICONS);
 	gtk_box_pack_start (GTK_BOX (container), widget, FALSE, FALSE, 0);
 	browser->priv->main_toolbar = g_object_ref (widget);
 	gtk_widget_show (widget);

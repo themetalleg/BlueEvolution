@@ -63,6 +63,31 @@ test_appearance_preference_without_theme_name (void)
 }
 
 static void
+check_toolbar_icon_items (EUIElement *element)
+{
+	guint index;
+
+	if (e_ui_element_get_kind (element) == E_UI_ELEMENT_KIND_ITEM)
+		g_assert_false (e_ui_element_item_get_important (element));
+
+	for (index = 0; index < e_ui_element_get_n_children (element); index++)
+		check_toolbar_icon_items (e_ui_element_get_child (element, index));
+}
+
+static void
+collect_toolbar_actions (EUIElement *element,
+			 GPtrArray *actions)
+{
+	guint index;
+
+	if (e_ui_element_get_kind (element) == E_UI_ELEMENT_KIND_ITEM)
+		g_ptr_array_add (actions, (gpointer) e_ui_element_item_get_action (element));
+
+	for (index = 0; index < e_ui_element_get_n_children (element); index++)
+		collect_toolbar_actions (e_ui_element_get_child (element, index), actions);
+}
+
+static void
 test_ui_definitions (void)
 {
 	const gchar *names[] = { "evolution-shell.eui", "evolution-mail.eui", "evolution-mail-reader.eui" };
@@ -97,6 +122,30 @@ test_ui_definitions (void)
 		}
 		g_free (contents);
 		g_free (filename);
+	}
+	{
+		const gchar *toolbars[] = { "main-toolbar-with-headerbar", "main-toolbar-without-headerbar", "mail-preview-toolbar" };
+		guint toolbar_index;
+
+		for (toolbar_index = 0; toolbar_index < G_N_ELEMENTS (toolbars); toolbar_index++) {
+			EUIElement *toolbar = e_ui_element_get_child_by_id (e_ui_parser_get_root (parser), toolbars[toolbar_index]);
+			g_assert_nonnull (toolbar);
+			check_toolbar_icon_items (toolbar);
+			if (toolbar_index < 2) {
+				GPtrArray *actions = g_ptr_array_new ();
+				guint stop_index, send_receive_index, spacer_index, delete_index;
+
+				collect_toolbar_actions (toolbar, actions);
+				g_assert_true (g_ptr_array_find_with_equal_func (actions, "mail-stop", g_str_equal, &stop_index));
+				g_assert_true (g_ptr_array_find_with_equal_func (actions, "EMailShellView::mail-send-receive", g_str_equal, &send_receive_index));
+				g_assert_true (g_ptr_array_find_with_equal_func (actions, "EMailShellView::mail-toolbar-spacer", g_str_equal, &spacer_index));
+				g_assert_true (g_ptr_array_find_with_equal_func (actions, "mail-delete", g_str_equal, &delete_index));
+				g_assert_cmpuint (stop_index, <, send_receive_index);
+				g_assert_cmpuint (send_receive_index, <, spacer_index);
+				g_assert_cmpuint (spacer_index, <, delete_index);
+				g_ptr_array_unref (actions);
+			}
+		}
 	}
 	g_object_unref (parser);
 }

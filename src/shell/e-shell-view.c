@@ -2221,8 +2221,15 @@ shell_view_constructed (GObject *object)
 
 	ui_item = e_ui_manager_create_item (shell_view->priv->ui_manager, toolbar_id);
 	widget = GTK_WIDGET (ui_item);
-	if (GTK_IS_TOOLBAR (widget))
-		gtk_toolbar_set_style (GTK_TOOLBAR (widget), GTK_TOOLBAR_BOTH_HORIZ);
+	if (GTK_IS_TOOLBAR (widget)) {
+		gboolean is_mail_view = g_strcmp0 (
+			E_SHELL_BACKEND_GET_CLASS (e_shell_view_get_shell_backend (shell_view))->name, "mail") == 0;
+
+		gtk_toolbar_set_style (GTK_TOOLBAR (widget),
+			is_mail_view ? GTK_TOOLBAR_ICONS : GTK_TOOLBAR_BOTH_HORIZ);
+		if (is_mail_view)
+			gtk_widget_set_hexpand (widget, TRUE);
+	}
 	gtk_box_pack_start (GTK_BOX (shell_view), widget, FALSE, FALSE, 0);
 
 	e_ui_customizer_register (customizer, toolbar_id, NULL);

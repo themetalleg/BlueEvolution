@@ -74,22 +74,21 @@
   </menu>
   <toolbar id='main-toolbar-with-headerbar'>
     <placeholder id='toolbar-actions'>
-      <item action='EMailShellView::mail-send-receive'/>
+      <item action='mail-stop'/>
+      <item action='EMailShellView::mail-send-receive' important='false'/>
+      <item action='EMailShellView::mail-toolbar-spacer'/>
     </placeholder>
-    <separator/>
     <placeholder id='mail-toolbar-common'/>
-    <separator/>
-    <item action='mail-stop'/>
     <separator/>
     <placeholder id='mail-toolbar-navigation'/>
   </toolbar>
   <toolbar id='main-toolbar-without-headerbar'>
     <placeholder id='toolbar-actions'>
-      <item action='EMailShellView::mail-send-receive' important='true'/>
+      <item action='mail-stop'/>
+      <item action='EMailShellView::mail-send-receive' important='false'/>
+      <item action='EMailShellView::mail-toolbar-spacer'/>
     </placeholder>
-    <separator/>
     <placeholder id='mail-toolbar-common'/>
-    <item action='mail-stop'/>
     <separator/>
     <placeholder id='mail-toolbar-navigation'/>
   </toolbar>

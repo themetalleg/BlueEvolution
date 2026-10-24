@@ -96,8 +96,19 @@ if [[ -n "${FLATPAK_GPG_KEY_ID:-}" ]]; then
 	bundle_key_args+=(--gpg-keys "$public_key")
 fi
 
-flatpak-builder --user --disable-rofiles-fuse --build-only --force-clean \
-	--jobs="${FLATPAK_BUILD_JOBS:-2}" \
+builder_options=(--user --disable-rofiles-fuse --build-only --jobs="${FLATPAK_BUILD_JOBS:-2}")
+if [[ "${FLATPAK_BUILD_FORCE_CLEAN:-true}" == true ]]; then
+	builder_options+=(--force-clean)
+else
+	if [[ "$build_dir" != "$build_root/app" || "$build_root" == "/" || "$build_root" == "$repo_root" ]]; then
+		echo "Refusing to reset an unexpected preview build directory." >&2
+		exit 1
+	fi
+	rm -rf -- "$build_dir"
+	mkdir -p "$build_dir"
+fi
+
+flatpak-builder "${builder_options[@]}" \
 	--state-dir="$state_dir" --repo="$repo_dir" "$build_dir" "$manifest"
 install -D -m644 \
 	"$build_dir/files/share/icons/hicolor/scalable/apps/blueevolution.svg" \

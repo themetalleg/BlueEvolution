@@ -849,6 +849,7 @@ mail_paned_view_constructed (GObject *object)
 	/* cannot ask the shell_view for the "mail-preview-toolbar" now, because its EUIManager is not loaded yet;
 	   postpone it to the e_mail_paned_view_take_preview_toolbar() function */
 	self->priv->preview_toolbar_box = g_object_ref_sink (gtk_box_new (GTK_ORIENTATION_VERTICAL, 0));
+	gtk_widget_set_no_show_all (self->priv->preview_toolbar_box, TRUE);
 	gtk_box_pack_start (GTK_BOX (container), GTK_WIDGET (self->priv->preview_toolbar_box), FALSE, FALSE, 0);
 
 	gtk_box_pack_start (GTK_BOX (container), widget, TRUE, TRUE, 0);

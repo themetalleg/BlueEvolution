@@ -2,23 +2,20 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "BlueEvolution: Build and install dev Flatpak",
+      "label": "BlueEvolution: Preview Light",
       "type": "process",
       "command": "${workspaceFolder}/scripts/vscode-blueevolution.sh",
-      "args": ["install"],
+      "args": ["preview", "light"],
       "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": [],
-      "group": "build"
-    },
-    {
-      "label": "BlueEvolution: Preview (follow system)",
-      "type": "process",
-      "command": "${workspaceFolder}/scripts/vscode-blueevolution.sh",
-      "args": ["launch", "system"],
-      "options": {
-        "cwd": "${workspaceFolder}"
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "${env:PATH}:/tmp/blueevolution-build-tools/usr/bin",
+          "BUILD_ROOT": "${workspaceFolder}/build/flatpak-local-preview",
+          "FLATPAK_STATE_DIR": "${workspaceFolder}/.flatpak-builder",
+          "FLATPAK_BUILD_JOBS": "2",
+          "BLUEEVOLUTION_CHANNEL": "beta",
+          "BLUEEVOLUTION_VERSION": "0.2.3-dev.1"
+        }
       },
       "problemMatcher": [],
       "presentation": {
@@ -28,27 +25,20 @@
       }
     },
     {
-      "label": "BlueEvolution: Preview (light)",
+      "label": "BlueEvolution: Preview Dark",
       "type": "process",
       "command": "${workspaceFolder}/scripts/vscode-blueevolution.sh",
-      "args": ["launch", "light"],
+      "args": ["preview", "dark"],
       "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "focus": false,
-        "panel": "dedicated"
-      }
-    },
-    {
-      "label": "BlueEvolution: Preview (dark)",
-      "type": "process",
-      "command": "${workspaceFolder}/scripts/vscode-blueevolution.sh",
-      "args": ["launch", "dark"],
-      "options": {
-        "cwd": "${workspaceFolder}"
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "${env:PATH}:/tmp/blueevolution-build-tools/usr/bin",
+          "BUILD_ROOT": "${workspaceFolder}/build/flatpak-local-preview",
+          "FLATPAK_STATE_DIR": "${workspaceFolder}/.flatpak-builder",
+          "FLATPAK_BUILD_JOBS": "2",
+          "BLUEEVOLUTION_CHANNEL": "beta",
+          "BLUEEVOLUTION_VERSION": "0.2.3-dev.1"
+        }
       },
       "problemMatcher": [],
       "presentation": {

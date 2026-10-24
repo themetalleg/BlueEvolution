@@ -11,6 +11,88 @@ import { mergeRepository, nextPublicationState, snapshotName } from './publish-f
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 
+test('local preview uses a private installation without replacing signed channels', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'blueevolution-local-preview-'));
+  try {
+    const build = join(directory, 'build');
+    mkdirSync(join(build, 'app'), { recursive: true });
+    writeFileSync(join(build, 'app/metadata'), '[Application]\n');
+    const manifest = { 'app-id': 'io.github.themetalleg.BlueEvolution.Beta', branch: 'beta', modules: [
+      { name: 'evolution', 'config-opts': ['-DBLUEEVOLUTION_VERSION=0.2.3-dev.1'] }
+    ] };
+    writeFileSync(join(build, 'manifest.json'), JSON.stringify(manifest));
+    const bundle = join(build, 'preview.flatpak');
+    writeFileSync(bundle, 'synthetic bundle');
+    const logfile = join(directory, 'commands.jsonl');
+    const flatpak = join(directory, 'flatpak');
+    writeFileSync(flatpak, '#!/usr/bin/env node\n' +
+      'require("node:fs").appendFileSync(process.env.PREVIEW_TEST_LOG, JSON.stringify({args:process.argv.slice(2),installation:process.env.FLATPAK_USER_DIR,runtime:process.env.FLATPAK_SYSTEM_DIR,sessionRuntime:process.env.XDG_RUNTIME_DIR})+"\\n");\n' +
+      'if(process.argv[2] === "info") { if(process.env.PREVIEW_TEST_COMMIT) process.stdout.write(process.env.PREVIEW_TEST_COMMIT+"\\n"); else process.exit(1); }\n',
+      { mode: 0o755 });
+    const result = spawnSync('bash', [resolve(root, 'scripts/vscode-blueevolution.sh'), 'preview', 'dark'], {
+      env: { ...process.env, BUILD_ROOT: build, BUNDLE_PATH: bundle, BLUEEVOLUTION_PREVIEW_BUILD: 'false', PATH: `${directory}:${process.env.PATH}`,
+        GDK_BACKEND: 'x11',
+        DISPLAY: ':123',
+        FLATPAK_USER_DIR: join(directory, 'signed-installation'),
+        BLUEEVOLUTION_DEV_PROFILE: join(directory, 'profile'), PREVIEW_TEST_LOG: logfile }, encoding: 'utf8'
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const commands = readFileSync(logfile, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+    assert.ok(commands.length > 1);
+    const installation = commands.find(command => command.args[0] === 'install');
+    assert.ok(installation.args.includes('--or-update'));
+    assert.ok(installation.args.includes(bundle));
+    for (const command of commands) {
+      assert.equal(command.installation, join(directory, 'profile/flatpak'));
+      assert.equal(command.runtime, join(directory, 'signed-installation'));
+    }
+    for (const { args } of commands.filter(command => command.args[0] === 'run')) {
+      assert.equal(args[0], 'run');
+      assert.ok(args.includes('--user'));
+      assert.ok(args.includes('--unshare=network'));
+      assert.ok(args.includes('--no-documents-portal'));
+      assert.ok(args.includes('--socket=x11'));
+      assert.ok(args.includes('--nosocket=wayland'));
+      assert.ok(args.includes('GDK_BACKEND=x11'));
+      assert.ok(args.includes('DISPLAY=:123'));
+      assert.ok(args.includes('--no-talk-name=org.freedesktop.secrets'));
+      assert.ok(args.includes(`XDG_DATA_HOME=${join(directory, 'profile/data')}`));
+      assert.ok(args.includes('BLUEEVOLUTION_DEMO_MODE=1'));
+      assert.ok(!args.includes('install'));
+    }
+    assert.deepEqual(JSON.parse(readFileSync(join(build, 'manifest.json'))), manifest);
+    assert.ok(commands.at(-1).args.includes('--offline'));
+    assert.equal(commands.at(-1).sessionRuntime, join(directory, 'profile/runtime'));
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('VS Code preview tasks offer only source-build light and dark modes', () => {
+  const tasks = JSON.parse(readFileSync(resolve(root, '.vscode/tasks.json'), 'utf8')).tasks;
+  assert.deepEqual(tasks.map(task => task.label), [
+    'BlueEvolution: Preview Light', 'BlueEvolution: Preview Dark'
+  ]);
+  assert.deepEqual(tasks.map(task => task.args), [['preview', 'light'], ['preview', 'dark']]);
+  for (const task of tasks) {
+	assert.equal(task.command, '${workspaceFolder}/scripts/vscode-blueevolution.sh');
+    assert.equal(task.options.env.BUILD_ROOT, '${workspaceFolder}/build/flatpak-local-preview');
+    assert.equal(task.options.env.BLUEEVOLUTION_CHANNEL, 'beta');
+    assert.equal(task.options.env.BLUEEVOLUTION_VERSION, '0.2.3-dev.1');
+    assert.equal(task.options.env.FLATPAK_BUILD_JOBS, '2');
+  }
+});
+
+test('preview builds try persistent Ninja incrementally before a clean fallback', () => {
+  const preview = readFileSync(resolve(root, 'packaging/build-preview.sh'), 'utf8');
+  const incremental = readFileSync(resolve(root, 'scripts/vscode-blueevolution-incremental.sh'), 'utf8');
+  assert.ok(preview.includes('vscode-blueevolution-incremental.sh'));
+  assert.ok(preview.indexOf('vscode-blueevolution-incremental.sh') < preview.indexOf('FLATPAK_BUILD_FORCE_CLEAN=true'));
+  assert.ok(preview.includes('Preview build is current'));
+  assert.ok(incremental.includes('/usr/bin/ninja -j'));
+  assert.ok(incremental.includes('/usr/bin/ninja -j"${FLATPAK_BUILD_JOBS:-2}" -C /run/build/evolution install'));
+  assert.ok(incremental.includes('OVERRIDE_APPLICATION_ID:BOOL=$app_id'));
+  assert.ok(incremental.includes('Build configuration changed; incremental preview is not applicable'));
+});
+
 test('snapshot assets remain immutable across publications and retries', () => {
   assert.notEqual(snapshotName('100'), snapshotName('101'));
   assert.notEqual(snapshotName('100', '1'), snapshotName('100', '2'));

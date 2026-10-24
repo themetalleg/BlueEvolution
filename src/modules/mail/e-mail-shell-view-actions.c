@@ -1840,7 +1840,8 @@ e_mail_shell_view_actions_init (EMailShellView *mail_shell_view)
 
 		{ "mail-folder-menu", NULL, N_("F_older"), NULL, NULL, NULL, NULL, NULL, NULL },
 		{ "mail-preview-menu", NULL, N_("_Preview"), NULL, NULL, NULL, NULL, NULL, NULL },
-		{ "EMailShellView::mail-send-receive", "mail-send-receive", N_("Send / _Receive"), NULL, NULL, NULL, NULL, NULL, NULL }
+		{ "EMailShellView::mail-send-receive", "mail-send-receive", N_("Send / _Receive"), NULL, NULL, NULL, NULL, NULL, NULL },
+		{ "EMailShellView::mail-toolbar-spacer", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 	};
 
 	static const EUIActionEntry search_folder_entries[] = {
