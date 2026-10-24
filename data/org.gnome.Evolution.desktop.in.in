@@ -1,12 +1,12 @@
 [Desktop Entry]
-_Name=BlueEvolution
+_Name=@BLUEEVOLUTION_APPLICATION_NAME@
 _GenericName=Groupware Suite
-_X-GNOME-FullName=BlueEvolution Mail and Calendar
+_X-GNOME-FullName=@BLUEEVOLUTION_APPLICATION_NAME@ Mail and Calendar
 _Comment=BlueEvolution — an independent fork of GNOME Evolution with a modern, Outlook-inspired interface.
 _Keywords=email;calendar;contact;addressbook;task;
 Actions=new-window;compose;contacts;calendar;mail;memos;tasks;
 Exec=blueevolution %U
-Icon=io.github.themetalleg.BlueEvolution
+Icon=@BLUEEVOLUTION_APP_ID@
 Terminal=false
 Type=Application
 Categories=GNOME;GTK;Office;Email;Calendar;ContactManagement;X-Red-Hat-Base;

@@ -32,6 +32,9 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Install release tooling
+        run: npm --prefix packaging ci --ignore-scripts --no-fund --no-audit
+
       - name: Resolve release version
         id: release
         shell: bash
@@ -45,16 +48,13 @@ jobs:
             version="$INPUT_VERSION"
             tag="blueevolution-v${version}"
           fi
-          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
-            echo "Invalid semantic version: $version" >&2
-            exit 1
-          fi
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          if [[ "$version" == *-* ]]; then
-            echo "prerelease=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          node packaging/release.mjs metadata "$version" |
+            jq -r 'to_entries[] | "\(.key)=\(.value)"' >> "$GITHUB_OUTPUT"
+          if tagged_commit=$(git rev-parse --verify "refs/tags/$tag^{commit}" 2>/dev/null); then
+            if [[ "$tagged_commit" != "$GITHUB_SHA" ]]; then
+              echo "Tag $tag points to another commit. Use a new version or explicitly correct the unpublished draft tag first." >&2
+              exit 1
+            fi
           fi
 
       - name: Check draft replacement eligibility
@@ -74,18 +74,22 @@ jobs:
       - name: Install build tools and GNOME runtime
         run: |
           sudo apt-get update
-          sudo apt-get install --yes flatpak flatpak-builder jq libxml2-utils xvfb xauth
+          sudo apt-get install --yes flatpak flatpak-builder jq libxml2-utils xsltproc xvfb xauth
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           flatpak install --user --assumeyes flathub org.gnome.Sdk//49 org.gnome.Platform//49
 
-      - name: Import optional Flatpak signing key
+      - name: Verify release tooling
+        run: |
+          npm --prefix packaging test
+
+      - name: Import required Flatpak signing key
         env:
           FLATPAK_GPG_PRIVATE_KEY: ${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}
         shell: bash
         run: |
           if [[ -z "${FLATPAK_GPG_PRIVATE_KEY:-}" ]]; then
-            echo "FLATPAK_GPG_PRIVATE_KEY is not configured; this draft will be unsigned."
-            exit 0
+            echo "Configure FLATPAK_GPG_PRIVATE_KEY before building public releases." >&2
+            exit 1
           fi
           export GNUPGHOME="$RUNNER_TEMP/gnupg"
           install -d -m 700 "$GNUPGHOME"
@@ -101,25 +105,30 @@ jobs:
       - name: Build Flatpak and checksum
         env:
           BLUEEVOLUTION_VERSION: ${{ steps.release.outputs.version }}
+          BLUEEVOLUTION_CHANNEL: ${{ steps.release.outputs.channel }}
+          FLATPAK_REPO_URL: https://themetalleg.github.io/BlueEvolution/repo
           BUILD_ROOT: ${{ runner.temp }}/blueevolution-flatpak
           BUNDLE_PATH: ${{ runner.temp }}/BlueEvolution-${{ steps.release.outputs.version }}-x86_64.flatpak
         run: |
           node scripts/import-bootstrap-icons.mjs --check
           packaging/build-flatpak.sh
+          node packaging/release.mjs metadata "$BLUEEVOLUTION_VERSION" > "$BUILD_ROOT/release.json"
 
       - name: Verify bundle checksum and account-free regressions
         env:
           VERSION: ${{ steps.release.outputs.version }}
+          APP_ID: ${{ steps.release.outputs.app_id }}
+          APP_NAME: ${{ steps.release.outputs.app_name }}
+          CHANNEL: ${{ steps.release.outputs.channel }}
         run: |
           cd "$RUNNER_TEMP"
           sha256sum --check "BlueEvolution-${VERSION}-x86_64.flatpak.sha256"
           mkdir -p "$RUNNER_TEMP/regression-profile"/{home,config,data,cache}
-          xvfb-run --auto-servernum flatpak-builder --run \
+          flatpak install --user --assumeyes --bundle "$RUNNER_TEMP/BlueEvolution-${VERSION}-x86_64.flatpak"
+          xvfb-run --auto-servernum flatpak run --user \
             --socket=x11 --nosocket=wayland --unshare=network \
             --filesystem="$RUNNER_TEMP/regression-profile" \
-            "$RUNNER_TEMP/blueevolution-flatpak/app" \
-            "$RUNNER_TEMP/blueevolution-flatpak/manifest.json" \
-            /usr/bin/env \
+            --command=/usr/bin/env "$APP_ID" \
             HOME="$RUNNER_TEMP/regression-profile/home" \
             XDG_CONFIG_HOME="$RUNNER_TEMP/regression-profile/config" \
             XDG_DATA_HOME="$RUNNER_TEMP/regression-profile/data" \
@@ -135,6 +144,8 @@ jobs:
       - name: Prepare release notes
         env:
           VERSION: ${{ steps.release.outputs.version }}
+          APP_ID: ${{ steps.release.outputs.app_id }}
+          CHANNEL: ${{ steps.release.outputs.channel }}
           BUNDLE: ${{ runner.temp }}/BlueEvolution-${{ steps.release.outputs.version }}-x86_64.flatpak
           FLATPAK_GPG_PRIVATE_KEY: ${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}
         run: |
@@ -151,13 +162,16 @@ jobs:
 
           ### Install
 
-          Install with: flatpak install --user --bundle $(basename "$BUNDLE")
+          **Channel:** ${CHANNEL}. Stable and beta can be installed together with separate profiles.
 
-          The bundle uses the GNOME 49 runtime. Launch with: flatpak run io.github.themetalleg.BlueEvolution
+          After this release is published, install from https://themetalleg.github.io/BlueEvolution/
+          or use: flatpak install --user --bundle $(basename "$BUNDLE")
+
+          The bundle uses the GNOME 49 runtime. Launch with: flatpak run ${APP_ID}
 
           ### Integrity and updates
 
-          ${signing_status} The accompanying SHA-256 file also detects accidental corruption. Flatpak-managed updates are not yet published; install a newer release bundle manually. GitHub release notes and mail content are never executed by the app.
+          ${signing_status} Publishing this release triggers the signed Flatpak repository deployment. Existing ${CHANNEL} installations receive updates through Flatpak once deployment succeeds. Automatic installation depends on the user's software-manager settings; restart the app to use an installed update. GitHub release notes and mail content are never executed by the app.
 
           GitHub provides the corresponding source archives with this release.
           EOF
@@ -174,6 +188,8 @@ jobs:
           PRERELEASE: ${{ steps.release.outputs.prerelease }}
           REPLACE_DRAFT: ${{ inputs.replace_draft }}
           BUNDLE: ${{ runner.temp }}/BlueEvolution-${{ steps.release.outputs.version }}-x86_64.flatpak
+          REPOSITORY: ${{ runner.temp }}/blueevolution-flatpak/BlueEvolution-${{ steps.release.outputs.version }}-repository.tar.gz
+          METADATA: ${{ runner.temp }}/blueevolution-flatpak/release.json
         shell: bash
         run: |
           if is_draft=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null); then
@@ -181,12 +197,12 @@ jobs:
               echo "Release $TAG cannot be replaced; published versioned assets are immutable." >&2
               exit 1
             fi
-            gh release upload "$TAG" "$BUNDLE" "$BUNDLE.sha256" --clobber
+            gh release upload "$TAG" "$BUNDLE" "$BUNDLE.sha256" "$REPOSITORY" "$REPOSITORY.sha256" "$METADATA" --clobber
             gh release edit "$TAG" --draft --prerelease="$PRERELEASE" \
               --title "BlueEvolution $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" --target "$GITHUB_SHA"
             exit 0
           fi
-          args=("$TAG" "$BUNDLE" "$BUNDLE.sha256" --draft --title "BlueEvolution $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" --target "$GITHUB_SHA")
+          args=("$TAG" "$BUNDLE" "$BUNDLE.sha256" "$REPOSITORY" "$REPOSITORY.sha256" "$METADATA" --draft --title "BlueEvolution $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" --target "$GITHUB_SHA")
           if [[ "$PRERELEASE" == "true" ]]; then
             args+=(--prerelease)
           fi

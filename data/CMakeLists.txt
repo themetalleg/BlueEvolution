@@ -1,6 +1,10 @@
 set(filedeps)
 set(desktopdir ${SHARE_INSTALL_PREFIX}/applications)
-set(blueevolution_desktop_id io.github.themetalleg.BlueEvolution.desktop)
+set(BLUEEVOLUTION_APP_ID "io.github.themetalleg.BlueEvolution")
+if(OVERRIDE_APPLICATION_ID)
+	set(BLUEEVOLUTION_APP_ID "${OVERRIDE_APPLICATION_ID}")
+endif()
+set(blueevolution_desktop_id ${BLUEEVOLUTION_APP_ID}.desktop)
 
 configure_file(blueevolution.in blueevolution @ONLY)
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/blueevolution
@@ -51,11 +55,11 @@ if("${APPDATA_RELEASES}" STREQUAL "")
 endif("${APPDATA_RELEASES}" STREQUAL "")
 
 configure_file(org.gnome.Evolution.metainfo.xml.in.in
-	io.github.themetalleg.BlueEvolution.metainfo.xml.in
+	${BLUEEVOLUTION_APP_ID}.metainfo.xml.in
 	@ONLY
 )
 
-add_appdata_file(${CMAKE_CURRENT_BINARY_DIR}/io.github.themetalleg.BlueEvolution.metainfo.xml.in io.github.themetalleg.BlueEvolution.metainfo.xml)
+add_appdata_file(${CMAKE_CURRENT_BINARY_DIR}/${BLUEEVOLUTION_APP_ID}.metainfo.xml.in ${BLUEEVOLUTION_APP_ID}.metainfo.xml)
 
 set(SCHEMAS
 	io.github.themetalleg.BlueEvolution.gschema.xml

@@ -7,6 +7,8 @@ project(evolution
 	VERSION 3.62.1
 	LANGUAGES C)
 set(BLUEEVOLUTION_VERSION "0.2.0-beta.1" CACHE STRING "BlueEvolution release version")
+set(BLUEEVOLUTION_APPLICATION_NAME "BlueEvolution" CACHE STRING "BlueEvolution channel display name")
+add_compile_definitions(BLUEEVOLUTION_APPLICATION_NAME="${BLUEEVOLUTION_APPLICATION_NAME}")
 set(PROJECT_BUGREPORT "https://github.com/themetalleg/BlueEvolution/issues")
 set(PROJECT_URL "https://github.com/themetalleg/BlueEvolution")
 

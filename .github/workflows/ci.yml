@@ -17,6 +17,14 @@ jobs:
   flatpak-build:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - channel: stable
+            version: 0.2.0
+          - channel: beta
+            version: 0.2.0-beta.1
     steps:
       - uses: actions/checkout@v4
 
@@ -27,7 +35,14 @@ jobs:
       - name: Install build tools
         run: |
           sudo apt-get update
-          sudo apt-get install --yes flatpak flatpak-builder jq libxml2-utils xvfb xauth
+          sudo apt-get install --yes flatpak flatpak-builder jq libxml2-utils xsltproc xvfb xauth ostree
+
+      - name: Test channel identities and signed updates
+        env:
+          BLUEEVOLUTION_TEST_FLATPAK: '1'
+        run: |
+          npm --prefix packaging ci --ignore-scripts --no-fund --no-audit
+          npm --prefix packaging test
 
       - name: Install GNOME SDK
         run: |
@@ -49,7 +64,8 @@ jobs:
 
       - name: Build Flatpak bundle
         env:
-          BLUEEVOLUTION_VERSION: 0.2.0-beta.1
+          BLUEEVOLUTION_VERSION: ${{ matrix.version }}
+          BLUEEVOLUTION_CHANNEL: ${{ matrix.channel }}
           BUILD_ROOT: ${{ runner.temp }}/blueevolution-build
           FLATPAK_STATE_DIR: ${{ runner.temp }}/flatpak-state
           BUNDLE_PATH: ${{ runner.temp }}/BlueEvolution-ci-x86_64.flatpak
@@ -70,14 +86,15 @@ jobs:
             /app/bin/blueevolution --help
 
       - name: Run account-free regression tests
+        env:
+          APP_ID: ${{ matrix.channel == 'beta' && 'io.github.themetalleg.BlueEvolution.Beta' || 'io.github.themetalleg.BlueEvolution' }}
         run: |
           mkdir -p "$RUNNER_TEMP/regression-profile"/{home,config,data,cache}
-          xvfb-run --auto-servernum flatpak-builder --run \
+          flatpak install --user --assumeyes --bundle "$RUNNER_TEMP/BlueEvolution-ci-x86_64.flatpak"
+          xvfb-run --auto-servernum flatpak run --user \
             --socket=x11 --nosocket=wayland --unshare=network \
             --filesystem="$RUNNER_TEMP/regression-profile" \
-            "$RUNNER_TEMP/blueevolution-build/app" \
-            "$RUNNER_TEMP/blueevolution-build/manifest.json" \
-            /usr/bin/env \
+            --command=/usr/bin/env "$APP_ID" \
             HOME="$RUNNER_TEMP/regression-profile/home" \
             XDG_CONFIG_HOME="$RUNNER_TEMP/regression-profile/config" \
             XDG_DATA_HOME="$RUNNER_TEMP/regression-profile/data" \
@@ -92,7 +109,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: BlueEvolution-beta-candidate-x86_64
+          name: BlueEvolution-${{ matrix.channel }}-candidate-x86_64
           path: |
             ${{ runner.temp }}/BlueEvolution-ci-x86_64.flatpak
             ${{ runner.temp }}/BlueEvolution-ci-x86_64.flatpak.sha256

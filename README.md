@@ -12,6 +12,14 @@ See [BLUEEVOLUTION.md](BLUEEVOLUTION.md) for the baseline, implementation
 status, build notes, and known limitations. Upstream Evolution documentation
 follows.
 
+## Releases
+
+Stable and beta use separate Flatpak identities and can be installed together.
+Signed updates are distributed through GitHub Pages and your Flatpak software
+manager. See [release and update instructions](packaging/README.md) for channel
+installation links, publication steps, and automatic-update settings. Links
+become available after the first approved release for each channel is deployed.
+
 ## Mail Assistant
 
 The Mail Assistant is included in `main`. Its composer sidebar starts closed

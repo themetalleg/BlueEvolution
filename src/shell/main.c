@@ -270,7 +270,7 @@ main (gint argc,
 
 	/* To pair the app with the desktop file */
 	g_set_prgname (APPLICATION_ID);
-	g_set_application_name ("BlueEvolution");
+	g_set_application_name (BLUEEVOLUTION_APPLICATION_NAME);
 
 	/* Pre-cache list of supported locales */
 	e_util_enum_supported_locales ();
