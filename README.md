@@ -32,6 +32,11 @@ Automatic installation depends on the user's update settings. The maintainer's
 current machine additionally has a verified hourly user timer that updates only
 these two apps; that timer is not installed automatically for other users.
 
+KDE Discover lists Flatpak applications only when its Flatpak backend is
+installed. On Kubuntu, install `plasma-discover-backend-flatpak`; without it,
+user-installed BlueEvolution apps do not appear in Discover's Installed or
+Updates views. Restart Discover after installing the backend.
+
 ### Publishing Updates
 
 1. Commit and push tested changes to `main`.
