@@ -59,7 +59,6 @@ never copy private messages, credentials, or signing keys into code or logs.
 - Migrate existing bundles with an explicit remote/ref reinstall, as documented;
   the `.flatpakref` shortcut may refuse an already-installed app without changing
   its origin. Verify both origins are `blueevolution` and profiles stay separate.
-- The maintainer machine has a verified hourly `blueevolution-update.timer` for
-  both app IDs. Preserve it, but do not assume other users have it. General users
-  control automatic updates through their software manager. Verify timer/service
-  state and a successful update run before claiming host automation is active.
+- Users control update installation through their software manager. Do not add
+  a BlueEvolution-specific update timer or in-app updater; preserve the signed
+  Flatpak release infrastructure and the user's software-manager settings.

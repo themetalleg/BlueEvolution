@@ -28,9 +28,8 @@ and beta follows `beta`; beta never replaces stable. Using the same account in
 both applications still affects the same server mailbox.
 
 Updates are delivered through Discover, GNOME Software, or `flatpak update --user`.
-Automatic installation depends on the user's update settings. The maintainer's
-current machine additionally has a verified hourly user timer that updates only
-these two apps; that timer is not installed automatically for other users.
+Users choose when to install updates. Automatic installation is optional and
+controlled through their software manager's settings, not by BlueEvolution.
 
 KDE Discover lists Flatpak applications only when its Flatpak backend is
 installed. On Kubuntu, install `plasma-discover-backend-flatpak`; without it,

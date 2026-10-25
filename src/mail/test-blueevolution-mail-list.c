@@ -236,13 +236,24 @@ test_unread_filter_refresh (void)
 	g_assert_false (message_list_search_hides_read (NULL));
 	g_assert_false (message_list_search_hides_read (" "));
 	g_assert_false (message_list_search_hides_read ("(match-all (system-flag \"Seen\"))"));
-	g_assert_true (message_list_keep_displayed_message (unread, 0, FALSE, FALSE));
-	g_assert_false (message_list_keep_displayed_message (unread, CAMEL_MESSAGE_SEEN, FALSE, FALSE));
-	g_assert_false (message_list_keep_displayed_message (combined, CAMEL_MESSAGE_SEEN, TRUE, TRUE));
-	g_assert_true (message_list_keep_displayed_message (NULL, CAMEL_MESSAGE_SEEN, FALSE, FALSE));
-	g_assert_false (message_list_keep_displayed_message (NULL, CAMEL_MESSAGE_DELETED, FALSE, FALSE));
-	g_assert_false (message_list_keep_displayed_message (NULL, CAMEL_MESSAGE_JUNK, FALSE, FALSE));
-	g_assert_true (message_list_keep_displayed_message (NULL, CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_JUNK, TRUE, TRUE));
+	g_assert_false (message_list_show_deleted_for_search (unread, TRUE));
+	g_assert_false (message_list_show_deleted_for_search (combined, TRUE));
+	g_assert_false (message_list_show_deleted_for_search (unread, FALSE));
+	g_assert_true (message_list_show_deleted_for_search (NULL, TRUE));
+	g_assert_false (message_list_show_deleted_for_search (NULL, FALSE));
+	g_assert_true (message_list_keep_displayed_message (unread, 0, FALSE, FALSE, FALSE));
+	g_assert_false (message_list_keep_displayed_message (unread, CAMEL_MESSAGE_SEEN, FALSE, FALSE, FALSE));
+	g_assert_true (message_list_keep_displayed_message (unread, CAMEL_MESSAGE_SEEN, FALSE, FALSE, TRUE));
+	g_assert_true (message_list_keep_displayed_message (combined, CAMEL_MESSAGE_SEEN, TRUE, TRUE, TRUE));
+	g_assert_false (message_list_keep_displayed_message (combined, CAMEL_MESSAGE_SEEN, TRUE, TRUE, FALSE));
+	g_assert_false (message_list_keep_displayed_message (unread, CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_SEEN, TRUE, TRUE, TRUE));
+	g_assert_false (message_list_keep_displayed_message (unread, CAMEL_MESSAGE_JUNK | CAMEL_MESSAGE_SEEN, FALSE, FALSE, TRUE));
+	g_assert_false (message_list_keep_displayed_message (unread, CAMEL_MESSAGE_DELETED, TRUE, TRUE, FALSE));
+	g_assert_false (message_list_keep_displayed_message (combined, CAMEL_MESSAGE_DELETED, TRUE, TRUE, FALSE));
+	g_assert_true (message_list_keep_displayed_message (NULL, CAMEL_MESSAGE_SEEN, FALSE, FALSE, FALSE));
+	g_assert_false (message_list_keep_displayed_message (NULL, CAMEL_MESSAGE_DELETED, FALSE, FALSE, FALSE));
+	g_assert_false (message_list_keep_displayed_message (NULL, CAMEL_MESSAGE_JUNK, FALSE, FALSE, FALSE));
+	g_assert_true (message_list_keep_displayed_message (NULL, CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_JUNK, TRUE, TRUE, FALSE));
 }
 
 static void

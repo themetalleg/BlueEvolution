@@ -222,6 +222,9 @@ void		message_list_set_threaded_collapse_all
 						(MessageList *message_list);
 void		message_list_set_search		(MessageList *message_list,
 						 const gchar *search);
+void		message_list_set_automatically_seen_uid
+						(MessageList *message_list,
+						 const gchar *uid);
 void		message_list_save_state		(MessageList *message_list);
 
 void		message_list_sort_uids		(MessageList *message_list,

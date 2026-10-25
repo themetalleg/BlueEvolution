@@ -77,8 +77,14 @@ metainfo="$build_dir/files/share/metainfo/$app_id.metainfo.xml"
 tmp_metainfo="$metainfo.tmp"
 release_type=stable
 if [[ "$channel" == beta ]]; then release_type=development; fi
-xsltproc --nonet --stringparam version "$version" --stringparam type "$release_type" --stringparam date "$(date +%Y-%m-%d)" "$repo_root/packaging/release-metainfo.xsl" "$metainfo" > "$tmp_metainfo"
-xmllint --noout "$tmp_metainfo"
+flatpak build --die-with-parent --nofilesystem=host:reset \
+	--bind-mount="/run/build/release-metainfo.xsl=$repo_root/packaging/release-metainfo.xsl" \
+	"$build_dir" /usr/bin/xsltproc --nonet \
+	--stringparam version "$version" --stringparam type "$release_type" \
+	--stringparam date "$(date +%Y-%m-%d)" /run/build/release-metainfo.xsl \
+	"/app/share/metainfo/$app_id.metainfo.xml" > "$tmp_metainfo"
+flatpak build --die-with-parent --nofilesystem=host:reset \
+	"$build_dir" /usr/bin/xmllint --noout "/app/share/metainfo/$app_id.metainfo.xml.tmp"
 mv "$tmp_metainfo" "$metainfo"
 flatpak build-export --arch=x86_64 --no-update-summary "$build_root/repo" "$build_dir" "$branch"
 flatpak build-bundle --arch=x86_64 --runtime-repo="${FLATPAK_RUNTIME_REPO:-https://dl.flathub.org/repo/flathub.flatpakrepo}" "$build_root/repo" "$bundle" "$app_id" "$branch"

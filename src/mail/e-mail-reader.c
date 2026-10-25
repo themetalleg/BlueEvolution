@@ -1305,6 +1305,8 @@ action_mail_mark_current_read_cb (EUIAction *action,
 	GPtrArray *uids = e_mail_reader_get_selected_uids (reader);
 	if (folder && uids && uids->len == 1) {
 		GtkWidget *message_list = e_mail_reader_get_message_list (reader);
+		if (message_list)
+			message_list_set_automatically_seen_uid (MESSAGE_LIST (message_list), NULL);
 		camel_folder_set_message_flags (folder, g_ptr_array_index (uids, 0), CAMEL_MESSAGE_SEEN, CAMEL_MESSAGE_SEEN);
 		if (message_list)
 			e_tree_show_cursor_after_reflow (E_TREE (message_list));
@@ -4775,6 +4777,8 @@ mail_reader_message_seen (EMailReader *reader,
 	set = CAMEL_MESSAGE_SEEN;
 
 	folder = e_mail_reader_ref_folder (reader);
+	message_list_set_automatically_seen_uid (
+		MESSAGE_LIST (e_mail_reader_get_message_list (reader)), message_uid);
 	camel_folder_set_message_flags (folder, message_uid, mask, set);
 	g_clear_object (&folder);
 }

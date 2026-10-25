@@ -1024,6 +1024,10 @@ e_mail_reader_mark_selected (EMailReader *reader,
 
 	if (folder != NULL) {
 		GPtrArray *uids;
+		GtkWidget *message_list = e_mail_reader_get_message_list (reader);
+
+		if (message_list)
+			message_list_set_automatically_seen_uid (MESSAGE_LIST (message_list), NULL);
 
 		camel_folder_freeze (folder);
 
@@ -1037,8 +1041,6 @@ e_mail_reader_mark_selected (EMailReader *reader,
 		   will scroll to the selected message, which can eventually change due to
 		   view filters on the folder. */
 		if (uids->len > 0) {
-			GtkWidget *message_list = e_mail_reader_get_message_list (reader);
-
 			if (message_list)
 				e_tree_show_cursor_after_reflow (E_TREE (message_list));
 		}

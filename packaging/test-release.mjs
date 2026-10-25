@@ -91,6 +91,8 @@ test('preview builds try persistent Ninja incrementally before a clean fallback'
   assert.ok(incremental.includes('/usr/bin/ninja -j"${FLATPAK_BUILD_JOBS:-2}" -C /run/build/evolution install'));
   assert.ok(incremental.includes('OVERRIDE_APPLICATION_ID:BOOL=$app_id'));
   assert.ok(incremental.includes('Build configuration changed; incremental preview is not applicable'));
+  assert.match(incremental, /"\$build_dir" \/usr\/bin\/xsltproc --nonet/);
+  assert.match(incremental, /"\$build_dir" \/usr\/bin\/xmllint --noout/);
 });
 
 test('snapshot assets remain immutable across publications and retries', () => {

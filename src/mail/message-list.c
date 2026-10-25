@@ -76,6 +76,7 @@ struct _MessageListPrivate {
 	GMutex regen_lock;
 	GTask *regen_task;
 	GSource *regen_idle_source;
+	gchar *automatically_seen_uid;
 
 	gboolean thaw_needs_regen;
 
@@ -196,6 +197,7 @@ static void	message_list_tree_model_init
 static gboolean	message_list_get_hide_deleted
 					(MessageList *message_list,
 					 CamelFolder *folder);
+static gboolean message_list_search_hides_read (const gchar *search);
 
 G_DEFINE_TYPE_WITH_CODE (MessageList, message_list, E_TYPE_TREE,
 	G_ADD_PRIVATE (MessageList)
@@ -3587,6 +3589,7 @@ message_list_finalize (GObject *object)
 	g_free (message_list->frozen_search);
 	g_free (message_list->cursor_uid);
 	g_strfreev (message_list->priv->re_prefixes);
+	g_free (message_list->priv->automatically_seen_uid);
 	g_strfreev (message_list->priv->re_separators);
 
 	g_mutex_clear (&message_list->priv->regen_lock);
@@ -4759,6 +4762,13 @@ message_list_get_hide_junk (MessageList *message_list,
 }
 
 static gboolean
+message_list_show_deleted_for_search (const gchar *search,
+                                     gboolean show_deleted)
+{
+	return show_deleted && !message_list_search_hides_read (search);
+}
+
+static gboolean
 message_list_get_hide_deleted (MessageList *message_list,
                                CamelFolder *folder)
 {
@@ -4768,7 +4778,7 @@ message_list_get_hide_deleted (MessageList *message_list,
 	if (folder == NULL)
 		return FALSE;
 
-	if (message_list_get_show_deleted (message_list))
+	if (message_list_show_deleted_for_search (message_list->search, message_list_get_show_deleted (message_list)))
 		return FALSE;
 
 	store = camel_folder_get_parent_store (folder);
@@ -5231,11 +5241,35 @@ static gboolean
 message_list_keep_displayed_message (const gchar *search,
                                      guint32 flags,
                                      gboolean show_deleted,
-                                     gboolean show_junk)
+									 gboolean show_junk,
+									 gboolean automatically_seen)
 {
 	return (!(flags & CAMEL_MESSAGE_JUNK) || show_junk) &&
-		(!(flags & CAMEL_MESSAGE_DELETED) || show_deleted) &&
-		(!(flags & CAMEL_MESSAGE_SEEN) || !message_list_search_hides_read (search));
+		(!(flags & CAMEL_MESSAGE_DELETED) || message_list_show_deleted_for_search (search, show_deleted)) &&
+		(!(flags & CAMEL_MESSAGE_SEEN) || automatically_seen || !message_list_search_hides_read (search));
+}
+
+void
+message_list_set_automatically_seen_uid (MessageList *message_list,
+                                        const gchar *uid)
+{
+	gboolean refresh;
+
+	g_return_if_fail (IS_MESSAGE_LIST (message_list));
+
+	if (!uid && message_list->seen_id) {
+		g_source_remove (message_list->seen_id);
+		message_list->seen_id = 0;
+	}
+
+	g_mutex_lock (&message_list->priv->regen_lock);
+	refresh = !uid && message_list->priv->automatically_seen_uid != NULL;
+	g_free (message_list->priv->automatically_seen_uid);
+	message_list->priv->automatically_seen_uid = g_strdup (uid);
+	g_mutex_unlock (&message_list->priv->regen_lock);
+
+	if (refresh)
+		mail_regen_list (message_list, NULL, NULL);
 }
 
 static void
@@ -5436,6 +5470,10 @@ message_list_set_folder (MessageList *message_list,
 	}
 
 	mail_regen_cancel (message_list);
+
+	g_mutex_lock (&message_list->priv->regen_lock);
+	g_clear_pointer (&message_list->priv->automatically_seen_uid, g_free);
+	g_mutex_unlock (&message_list->priv->regen_lock);
 
 	g_free (message_list->search);
 	message_list->search = NULL;
@@ -5904,6 +5942,8 @@ on_click (ETree *tree,
 	folder = message_list_ref_folder (list);
 	g_return_val_if_fail (folder != NULL, FALSE);
 
+	message_list_set_automatically_seen_uid (list, NULL);
+
 	if (col == COL_FOLLOWUP_FLAG_STATUS) {
 		const gchar *tag, *cmp;
 
@@ -6293,6 +6333,7 @@ message_list_regen_tweak_search_results (MessageList *message_list,
 	const gchar *uid;
 	gboolean needs_tweaking;
 	gboolean add_uid;
+	gboolean automatically_seen;
 	guint ii;
 
 	/* If we're responding to a "folder-changed" signal, then the
@@ -6325,7 +6366,10 @@ message_list_regen_tweak_search_results (MessageList *message_list,
 	if (!folder_store_supports_vjunk_folder (folder))
 		flags &= ~CAMEL_MESSAGE_JUNK;
 
-	add_uid = message_list_keep_displayed_message (message_list->search, flags, show_deleted, show_junk);
+	g_mutex_lock (&message_list->priv->regen_lock);
+	automatically_seen = g_strcmp0 (uid, message_list->priv->automatically_seen_uid) == 0;
+	g_mutex_unlock (&message_list->priv->regen_lock);
+	add_uid = message_list_keep_displayed_message (message_list->search, flags, show_deleted, show_junk, automatically_seen);
 
 	if (add_uid)
 		g_ptr_array_add (
