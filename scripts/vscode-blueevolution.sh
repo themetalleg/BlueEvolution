@@ -49,7 +49,13 @@ launch|preview)
 		run_args+=(--socket=x11 --nosocket=wayland)
 	fi
 	session_installation=()
+	session_runtime=()
 	if [[ "$action" == preview ]]; then
+		run_args+=(--nosocket=pcsc)
+		example_email_dir="$repo_root/examples/email-samples"
+		if [[ -d "$example_email_dir" ]]; then
+			run_args+=(--filesystem="$example_email_dir:ro")
+		fi
 		build_root="${BUILD_ROOT:-$repo_root/build/flatpak-local-preview}"
 		if [[ ! -f "$build_root/app/metadata" || ! -f "$build_root/manifest.json" ]]; then
 			echo "Build the local preview first; see packaging/README.md." >&2
@@ -79,6 +85,7 @@ launch|preview)
 			--no-talk-name=org.gnome.keyring.SystemPrompter \
 			--no-talk-name=org.gnome.OnlineAccounts --command=env "$preview_app_id")
 	else
+		session_runtime=("XDG_RUNTIME_DIR=$profile_root/runtime")
 		runner=(flatpak run --user "${run_args[@]}" \
 			--no-talk-name=org.freedesktop.secrets \
 			--no-talk-name=org.gnome.keyring.SystemPrompter \
@@ -93,6 +100,9 @@ launch|preview)
 		GSETTINGS_SCHEMA_DIR=/app/share/glib-2.0/schemas
 		BLUEEVOLUTION_DEMO_MODE=1
 	)
+	if [[ "$action" == preview && -d "$repo_root/examples/email-samples" ]]; then
+		preview_env+=("BLUEEVOLUTION_EXAMPLE_EMAIL_DIR=$repo_root/examples/email-samples")
+	fi
 	if [[ -n "${GDK_BACKEND:-}" ]]; then
 		preview_env+=("GDK_BACKEND=$GDK_BACKEND")
 	fi
@@ -127,7 +137,7 @@ launch|preview)
 	"${runner[@]}" "${preview_env[@]}" gsettings set \
 		org.gnome.evolution.mail show-startup-wizard false
 	exec env -u LD_LIBRARY_PATH -u LD_PRELOAD -u GTK_PATH -u GIO_EXTRA_MODULES -u GIO_MODULE_DIR \
-		"${session_installation[@]}" "XDG_RUNTIME_DIR=$profile_root/runtime" \
+		"${session_installation[@]}" "${session_runtime[@]}" \
 		dbus-run-session -- "${runner[@]}" "${preview_env[@]}" blueevolution --offline \
 		--geometry="${BLUEEVOLUTION_DEV_GEOMETRY:-1600x950}"
 	;;

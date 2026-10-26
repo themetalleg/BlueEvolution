@@ -6,8 +6,16 @@ build_root="${BUILD_ROOT:-$repo_root/build/flatpak-local-preview}"
 version="${BLUEEVOLUTION_VERSION:-0.2.3-dev.1}"
 channel="${BLUEEVOLUTION_CHANNEL:-beta}"
 bundle="${BUNDLE_PATH:-$build_root/BlueEvolution-${version}-x86_64.flatpak}"
+state_dir="${FLATPAK_STATE_DIR:-$build_root/state}"
 marker="$build_root/.preview-source-id"
 checksum="${bundle}.sha256"
+
+prune_obsolete_builder_trees() {
+	local app_id=io.github.themetalleg.BlueEvolution
+	[[ "$channel" == beta ]] && app_id+=.Beta
+	bash "$repo_root/scripts/prune-flatpak-builder-cache.sh" \
+		"$state_dir/build" "$app_id" "$version"
+}
 
 mkdir -p "$build_root"
 exec 9>"$build_root/.preview-build.lock"
@@ -66,6 +74,7 @@ fi
 if [[ -f "$marker" && -f "$bundle" && -f "$checksum" && -f "$build_root/manifest.json" ]] &&
 	[[ "$(<"$marker")" == "$source_id" ]] &&
 	(cd "$(dirname "$bundle")" && sha256sum --status --check "$(basename "$checksum")"); then
+	prune_obsolete_builder_trees
 	echo "Preview build is current ($version, $channel); reusing cached bundle."
 	exit 0
 fi
@@ -81,6 +90,7 @@ fi
 
 if [[ "$incremental_status" == 0 ]]; then
 	(cd "$(dirname "$bundle")" && sha256sum --check "$(basename "$checksum")")
+	prune_obsolete_builder_trees
 	printf '%s\n' "$source_id" > "$marker.tmp"
 	mv "$marker.tmp" "$marker"
 	exit 0
@@ -96,5 +106,6 @@ FLATPAK_BUILD_FORCE_CLEAN=true \
 	"$repo_root/packaging/build-flatpak.sh"
 
 (cd "$(dirname "$bundle")" && sha256sum --check "$(basename "$checksum")")
+prune_obsolete_builder_trees
 printf '%s\n' "$source_id" > "$marker.tmp"
 mv "$marker.tmp" "$marker"

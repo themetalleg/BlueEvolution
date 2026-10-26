@@ -163,10 +163,12 @@ scripts/vscode-blueevolution.sh preview light
 
 The `beta` build identity here is only a private development choice; the build
 is never installed over your signed channels or uploaded. Preview tasks clear
-only their generated `BUILD_ROOT/app` staging directory and retain the builder
-module cache for faster rebuilds. Release builds continue to force clean. The launcher uses a
-separate Flatpak installation, a private D-Bus session/runtime directory and an isolated
-synthetic-mail profile, with network and keyring access blocked. It reuses the
+only their generated `BUILD_ROOT/app` staging directory and retain the fullest
+builder module cache matching the current app and version for faster rebuilds;
+older build trees are pruned after a successful preview. Release builds continue to force clean. The launcher uses a
+separate Flatpak installation, a private D-Bus session and isolated app profile,
+with network and keyring access blocked. Preview mode retains the host runtime
+directory so Flatpak helper sockets remain available. It reuses the
 existing user installation's GNOME runtime without modifying it. Its profile is under
 `~/.cache/blueevolution-vscode-source-profile`, separate from both real profiles.
 Use `BUILD_ROOT` to select another staged build and `BUNDLE_PATH` if its bundle
@@ -189,7 +191,8 @@ skip Flatpak Builder entirely when the source fingerprint and bundle checksum
 are unchanged. Ordinary C/C++ and UI-resource edits reuse the persistent GNOME
 SDK CMake/Ninja tree, compile affected targets and refresh the private app bundle
 incrementally. Changes to CMake or Flatpak build configuration fall back to the
-full Flatpak module build. A build lock serializes simultaneous Light/Dark
+full Flatpak module build. After a successful preview, stale Evolution module
+build trees are pruned while one current cache is retained. A build lock serializes simultaneous Light/Dark
 starts. The appearance tasks use separate private profiles and never target
 signed channels. There are no install-dev or system-theme tasks.
 

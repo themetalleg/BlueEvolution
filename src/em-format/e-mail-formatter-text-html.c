@@ -315,11 +315,24 @@ emfe_text_html_format (EMailFormatterExtension *extension,
 	} else {
 		CamelFolder *folder;
 		GSettings *settings;
+		GSettings *appearance_settings;
+		GtkSettings *gtk_settings;
 		const gchar *message_uid;
 		const gchar *default_charset, *charset;
-		gchar *uri, *str;
+		gboolean prefer_dark_theme = FALSE;
+		gboolean unset_html_colors;
+		gchar *appearance_mode, *uri, *str;
 
 		settings = e_util_ref_settings ("org.gnome.evolution.mail");
+		gtk_settings = gtk_settings_get_default ();
+		if (gtk_settings)
+			g_object_get (gtk_settings, "gtk-application-prefer-dark-theme", &prefer_dark_theme, NULL);
+		appearance_settings = e_util_ref_settings ("io.github.themetalleg.BlueEvolution");
+		appearance_mode = g_settings_get_string (appearance_settings, "appearance-mode");
+		prefer_dark_theme = prefer_dark_theme || g_strcmp0 (appearance_mode, "dark") == 0;
+		g_free (appearance_mode);
+		g_clear_object (&appearance_settings);
+		unset_html_colors = g_settings_get_boolean (settings, "preview-unset-html-colors");
 		folder = e_mail_part_list_get_folder (context->part_list);
 		message_uid = e_mail_part_list_get_message_uid (context->part_list);
 		default_charset = e_mail_formatter_get_default_charset (formatter);
@@ -353,7 +366,8 @@ emfe_text_html_format (EMailFormatterExtension *extension,
 			e_mail_part_get_id (part),
 			e_mail_part_get_id (part),
 			e_mail_part_get_frame_security_style (part),
-			g_settings_get_boolean (settings, "preview-unset-html-colors") ? "x-e-unset-colors=\"1\"" : "");
+			unset_html_colors ? "x-e-unset-colors=\"1\"" :
+			(prefer_dark_theme ? "x-e-dark-mode-colors=\"1\"" : ""));
 
 		g_output_stream_write_all (
 			stream, str, strlen (str),

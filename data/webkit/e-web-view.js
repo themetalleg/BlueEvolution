@@ -1177,7 +1177,98 @@ Evo.mailDisplayVCardModeButtonClicked = function(elem)
 	}
 }
 
-Evo.unsetHTMLColorsInCssRule = function(rule)
+Evo.parseRGBColor = function(value)
+{
+	var match = value.match(/^rgba?\(([^)]+)\)$/i);
+	var components;
+	var index;
+
+	if (!match)
+		return null;
+
+	components = match[1].split(/[,\/\s]+/).filter(Boolean);
+	if (components.length < 3)
+		return null;
+
+	for (index = 0; index < components.length; index++) {
+		var component = parseFloat(components[index]);
+
+		if (components[index].endsWith("%"))
+			component = index < 3 ? component * 2.55 : component / 100;
+		else if (index == 3 && component > 1)
+			component /= 255;
+
+		components[index] = component;
+	}
+
+	return {
+		red: components[0],
+		green: components[1],
+		blue: components[2],
+		alpha: components.length > 3 ? components[3] : 1
+	};
+}
+
+Evo.colorLuminance = function(color)
+{
+	var red = color.red / 255;
+	var green = color.green / 255;
+	var blue = color.blue / 255;
+	var linearize = function(value) {
+		return value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+	};
+
+	return 0.2126 * linearize(red) + 0.7152 * linearize(green) + 0.0722 * linearize(blue);
+}
+
+Evo.compositeColor = function(color, background)
+{
+	return {
+		red: color.red * color.alpha + background.red * (1 - color.alpha),
+		green: color.green * color.alpha + background.green * (1 - color.alpha),
+		blue: color.blue * color.alpha + background.blue * (1 - color.alpha),
+		alpha: 1
+	};
+}
+
+Evo.isDarkModeHTMLThemeColor = function(doc, property, value)
+{
+	var parent = doc.body || doc.documentElement;
+	var themeProbe = doc.createElement("span");
+	var themeStyle, themeForeground, themeBackground;
+	var probe, authoredColor, effectiveColor, contrastTarget;
+	var authoredLuminance, targetLuminance;
+
+	if (!parent)
+		return true;
+
+	themeProbe.classList.add("-e-web-view-text-color");
+	themeProbe.classList.add("-e-web-view-background-color");
+	parent.appendChild(themeProbe);
+	themeStyle = doc.defaultView.getComputedStyle(themeProbe);
+	themeForeground = Evo.parseRGBColor(themeStyle.color);
+	themeBackground = Evo.parseRGBColor(themeStyle.backgroundColor);
+	parent.removeChild(themeProbe);
+
+	probe = doc.createElement("span");
+	probe.style.setProperty(property, value, "important");
+	parent.appendChild(probe);
+	authoredColor = Evo.parseRGBColor(doc.defaultView.getComputedStyle(probe).getPropertyValue(property));
+	parent.removeChild(probe);
+
+	if (!themeForeground || !themeBackground || !authoredColor)
+		return true;
+
+	effectiveColor = Evo.compositeColor (authoredColor, themeBackground);
+	contrastTarget = property == "color" ? themeBackground : themeForeground;
+	authoredLuminance = Evo.colorLuminance(effectiveColor);
+	targetLuminance = Evo.colorLuminance(contrastTarget);
+
+	return (Math.max(authoredLuminance, targetLuminance) + 0.05) /
+		(Math.min(authoredLuminance, targetLuminance) + 0.05) < 4.5;
+}
+
+Evo.unsetHTMLColorsInCssRule = function(rule, doc, darkModeOnly)
 {
 	if (!rule)
 		return;
@@ -1186,29 +1277,34 @@ Evo.unsetHTMLColorsInCssRule = function(rule)
 		var ii, isz = rule.cssRules.length;
 
 		for (ii = 0; ii < isz; ii++) {
-			Evo.unsetHTMLColorsInCssRule(rule.cssRules[ii]);
+			Evo.unsetHTMLColorsInCssRule(rule.cssRules[ii], doc, darkModeOnly);
 		}
 	}
 
 	if (!rule.style || !rule.selectorText || rule.selectorText.startsWith(".-e-web-view-") || rule.selectorText.startsWith(".-e-mail-formatter-"))
 		return;
 
-	if (rule.style.color)
+	if (rule.style.color && (!darkModeOnly || Evo.isDarkModeHTMLThemeColor(doc, "color", rule.style.color)))
 		rule.style.removeProperty("color");
 
-	if (rule.style.backgroundColor)
+	if (rule.style.backgroundColor && (!darkModeOnly || Evo.isDarkModeHTMLThemeColor(doc, "background-color", rule.style.backgroundColor)))
 		rule.style.removeProperty("background-color");
 }
 
 Evo.unsetHTMLColors = function(doc)
 {
 	var ii, isz = doc.styleSheets.length;
+	var frameElement = doc.defaultView.frameElement;
+	var darkModeOnly;
 
-	// to change only iframe-s, which are marked as such
-	if (!doc.defaultView.frameElement ||
-	    !doc.defaultView.frameElement.hasAttribute("x-e-unset-colors")) {
+	if (!frameElement)
 		return;
-	}
+
+	darkModeOnly = frameElement.hasAttribute("x-e-dark-mode-colors") &&
+		!frameElement.hasAttribute("x-e-unset-colors");
+
+	if (!darkModeOnly && !frameElement.hasAttribute("x-e-unset-colors"))
+		return;
 
 	for (ii = 0; ii < isz; ii++) {
 		try {
@@ -1225,7 +1321,7 @@ Evo.unsetHTMLColors = function(doc)
 			for (jj = 0; jj < jsz; jj++) {
 				var rule = sheet.cssRules[jj];
 
-				Evo.unsetHTMLColorsInCssRule(rule);
+				Evo.unsetHTMLColorsInCssRule(rule, doc, darkModeOnly);
 			}
 		} catch (err) {
 			// these can be "SecurityError: Not allowed to access cross-origin stylesheet", just ignore them
@@ -1241,18 +1337,20 @@ Evo.unsetHTMLColors = function(doc)
 
 		if (elem.tagName != "HTML" && elem.tagName != "IFRAME" && elem.tagName != "INPUT" && elem.tagName != "BUTTON" && elem.tagName != "IMG") {
 			if (elem.style) {
-				if (elem.style.color)
+				if (elem.style.color && (!darkModeOnly || Evo.isDarkModeHTMLThemeColor(doc, "color", elem.style.color)))
 					elem.style.removeProperty("color");
 
-				if (elem.style.backgroundColor)
+				if (elem.style.backgroundColor && (!darkModeOnly || Evo.isDarkModeHTMLThemeColor(doc, "background-color", elem.style.backgroundColor)))
 					elem.style.removeProperty("background-color");
 
 				if (!elem.style.length)
 					elem.removeAttribute("style");
 			}
 
-			elem.removeAttribute("color");
-			elem.removeAttribute("bgcolor");
+			if (elem.hasAttribute("color") && (!darkModeOnly || Evo.isDarkModeHTMLThemeColor(doc, "color", elem.getAttribute("color"))))
+				elem.removeAttribute("color");
+			if (elem.hasAttribute("bgcolor") && (!darkModeOnly || Evo.isDarkModeHTMLThemeColor(doc, "background-color", elem.getAttribute("bgcolor"))))
+				elem.removeAttribute("bgcolor");
 		}
 	}
 
@@ -1263,11 +1361,16 @@ Evo.unsetHTMLColors = function(doc)
 	for (ii = 0; ii < isz; ii++) {
 		var elem = elems[ii];
 
-		elem.removeAttribute("bgcolor");
-		elem.removeAttribute("text");
-		elem.removeAttribute("link");
-		elem.removeAttribute("alink");
-		elem.removeAttribute("vlink");
+		if (elem.hasAttribute("bgcolor") && (!darkModeOnly || Evo.isDarkModeHTMLThemeColor(doc, "background-color", elem.getAttribute("bgcolor"))))
+			elem.removeAttribute("bgcolor");
+		if (elem.hasAttribute("text") && (!darkModeOnly || Evo.isDarkModeHTMLThemeColor(doc, "color", elem.getAttribute("text"))))
+			elem.removeAttribute("text");
+		if (elem.hasAttribute("link") && (!darkModeOnly || Evo.isDarkModeHTMLThemeColor(doc, "color", elem.getAttribute("link"))))
+			elem.removeAttribute("link");
+		if (elem.hasAttribute("alink") && (!darkModeOnly || Evo.isDarkModeHTMLThemeColor(doc, "color", elem.getAttribute("alink"))))
+			elem.removeAttribute("alink");
+		if (elem.hasAttribute("vlink") && (!darkModeOnly || Evo.isDarkModeHTMLThemeColor(doc, "color", elem.getAttribute("vlink"))))
+			elem.removeAttribute("vlink");
 
 		if (!elem.classList.contains("-e-web-view-text-color"))
 			elem.classList.add("-e-web-view-text-color");

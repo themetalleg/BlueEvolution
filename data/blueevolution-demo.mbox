@@ -75,3 +75,49 @@ Status: R
 The shell keeps existing mail, search, calendar, and contact behavior. Next I will compare the light and dark palettes and adjust any clipped labels or pane spacing.
 
 Noah
+
+From demo.notice@example.invalid Fri Oct 23 10:00:00 2026
+Return-Path: <demo.notice@example.invalid>
+From: Theme Fixture <demo.notice@example.invalid>
+To: Developer <developer@example.invalid>
+Date: Fri, 23 Oct 2026 10:00:00 +0000
+Subject: Theme test - inherited text color
+Message-ID: <demo-theme-inherited-20261023@blueevolution.invalid>
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+<!DOCTYPE html>
+<html>
+<head><meta name="color-scheme" content="light dark"></head>
+<body>
+<p>This synthetic notification has no explicit text or background colors.</p>
+<p>Its text should follow the active application theme.</p>
+</body>
+</html>
+
+From demo.bulletin@example.invalid Mon Oct 19 11:45:00 2026
+Return-Path: <demo.bulletin@example.invalid>
+From: Theme Fixture <demo.bulletin@example.invalid>
+To: Developer <developer@example.invalid>
+Date: Mon, 19 Oct 2026 11:45:00 +0000
+Subject: Theme test - explicit black text
+Message-ID: <demo-theme-explicit-black-20261023@blueevolution.invalid>
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="color-scheme" content="light dark">
+<style>
+body { color: #000000; background-color: #ffffff; font-family: "Times New Roman", serif; }
+.detail { color: rgb(0, 0, 0); }
+</style>
+</head>
+<body style="color: black; background-color: white;">
+<h2 style="color: #000000;">Synthetic newsletter heading</h2>
+<p class="detail" style="color: rgb(0, 0, 0);">This synthetic message carries inline black text that can be hard to read in a dark theme.</p>
+</body>
+</html>

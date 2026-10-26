@@ -6,3 +6,6 @@ _build
 Screenshots/
 screenshots/
 packaging/node_modules/
+/examples/email-samples/*.eml
+/examples/email-samples/*.mbox
+/examples/email-samples/*.msg

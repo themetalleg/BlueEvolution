@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,7 +15,9 @@ test('local preview uses a private installation without replacing signed channel
   const directory = mkdtempSync(join(tmpdir(), 'blueevolution-local-preview-'));
   try {
     const build = join(directory, 'build');
+    const hostRuntime = join(directory, 'host-runtime');
     mkdirSync(join(build, 'app'), { recursive: true });
+    mkdirSync(hostRuntime, { recursive: true });
     writeFileSync(join(build, 'app/metadata'), '[Application]\n');
     const manifest = { 'app-id': 'io.github.themetalleg.BlueEvolution.Beta', branch: 'beta', modules: [
       { name: 'evolution', 'config-opts': ['-DBLUEEVOLUTION_VERSION=0.2.3-dev.1'] }
@@ -33,6 +35,7 @@ test('local preview uses a private installation without replacing signed channel
       env: { ...process.env, BUILD_ROOT: build, BUNDLE_PATH: bundle, BLUEEVOLUTION_PREVIEW_BUILD: 'false', PATH: `${directory}:${process.env.PATH}`,
         GDK_BACKEND: 'x11',
         DISPLAY: ':123',
+        XDG_RUNTIME_DIR: hostRuntime,
         FLATPAK_USER_DIR: join(directory, 'signed-installation'),
         BLUEEVOLUTION_DEV_PROFILE: join(directory, 'profile'), PREVIEW_TEST_LOG: logfile }, encoding: 'utf8'
     });
@@ -62,7 +65,7 @@ test('local preview uses a private installation without replacing signed channel
     }
     assert.deepEqual(JSON.parse(readFileSync(join(build, 'manifest.json'))), manifest);
     assert.ok(commands.at(-1).args.includes('--offline'));
-    assert.equal(commands.at(-1).sessionRuntime, join(directory, 'profile/runtime'));
+    assert.equal(commands.at(-1).sessionRuntime, hostRuntime);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
@@ -93,6 +96,62 @@ test('preview builds try persistent Ninja incrementally before a clean fallback'
   assert.ok(incremental.includes('Build configuration changed; incremental preview is not applicable'));
   assert.match(incremental, /"\$build_dir" \/usr\/bin\/xsltproc --nonet/);
   assert.match(incremental, /"\$build_dir" \/usr\/bin\/xmllint --noout/);
+  assert.ok(preview.includes('prune-flatpak-builder-cache.sh'));
+});
+
+test('preview cache pruning keeps the fullest current app/version build tree', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'blueevolution-builder-cache-'));
+  try {
+    const build = join(directory, 'build');
+    const appId = 'io.github.themetalleg.BlueEvolution.Beta';
+    const version = '0.2.3-dev.1';
+    const makeTree = (name, id, treeVersion, objects) => {
+      const tree = join(build, name);
+      mkdirSync(tree, { recursive: true });
+      writeFileSync(join(tree, 'CMakeCache.txt'), [
+        'CMAKE_INSTALL_PREFIX:PATH=/app',
+        `OVERRIDE_APPLICATION_ID:BOOL=${id}`,
+        `WITH_WMCLASS_OVERRIDE:STRING=${id}`,
+        `BLUEEVOLUTION_VERSION:STRING=${treeVersion}`
+      ].join('\n'));
+      writeFileSync(join(tree, 'build.ninja'), '');
+      for (let index = 0; index < objects; index++) {
+        writeFileSync(join(tree, `object-${index}.o`), 'object');
+      }
+      return tree;
+    };
+    const fuller = makeTree('evolution-6', appId, version, 3);
+    makeTree('evolution-7', appId, version, 1);
+    makeTree('evolution-8', 'io.github.themetalleg.BlueEvolution', '0.2.0', 10);
+    const result = spawnSync('bash', [
+      resolve(root, 'scripts/prune-flatpak-builder-cache.sh'), build, appId, version
+    ], { encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    assert.ok(existsSync(fuller));
+    assert.ok(!existsSync(join(build, 'evolution-7')));
+    assert.ok(!existsSync(join(build, 'evolution-8')));
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('synthetic demo covers inherited and explicit HTML text colors', () => {
+  const demo = readFileSync(resolve(root, 'data/blueevolution-demo.mbox'), 'utf8');
+  const formatter = readFileSync(resolve(root, 'src/em-format/e-mail-formatter-text-html.c'), 'utf8');
+  assert.ok(demo.includes('Theme test - inherited text color'));
+  assert.ok(demo.includes('Theme test - explicit black text'));
+  assert.ok(demo.includes('color: #000000'));
+  assert.match(formatter, /gtk-application-prefer-dark-theme/);
+  assert.match(formatter, /appearance-mode/);
+  assert.match(formatter, /x-e-dark-mode-colors/);
+  const mailBackend = readFileSync(resolve(root, 'src/modules/mail/e-mail-shell-backend.c'), 'utf8');
+  assert.match(mailBackend, /mail_shell_backend_add_missing_demo_theme_messages/);
+  assert.match(mailBackend, /mail_shell_backend_import_example_emails/);
+  assert.match(mailBackend, /Example E-Mails/);
+  const previewLauncher = readFileSync(resolve(root, 'scripts/vscode-blueevolution.sh'), 'utf8');
+  assert.match(previewLauncher, /BLUEEVOLUTION_EXAMPLE_EMAIL_DIR/);
+  assert.match(previewLauncher, /--filesystem="\$example_email_dir:ro"/);
+  const webView = readFileSync(resolve(root, 'data/webkit/e-web-view.js'), 'utf8');
+  assert.match(webView, /Evo\.isDarkModeHTMLThemeColor/);
+  assert.match(webView, /parent\.appendChild\(probe\)/);
 });
 
 test('snapshot assets remain immutable across publications and retries', () => {
