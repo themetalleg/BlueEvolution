@@ -726,32 +726,16 @@ e_mail_shell_view_private_constructed (EMailShellView *mail_shell_view)
 	g_signal_emit_by_name (selection, "changed");
 
 	e_ui_manager_thaw (ui_manager);
-	if (g_strcmp0 (g_getenv ("BLUEEVOLUTION_DEMO_MODE"), "1") == 0) {
+	if (g_strcmp0 (g_getenv ("BLUEEVOLUTION_PREVIEW_MODE"), "1") == 0) {
 		CamelFolder *inbox;
-		CamelFolder *example_folder = NULL;
-		gchar *example_folder_uri = NULL;
-		const gchar *example_email_dir;
 
 		inbox = e_mail_session_get_local_folder (session, E_MAIL_LOCAL_FOLDER_INBOX);
-		example_email_dir = g_getenv ("BLUEEVOLUTION_EXAMPLE_EMAIL_DIR");
-		if (example_email_dir && *example_email_dir) {
-			example_folder_uri = e_mail_folder_uri_build (
-				e_mail_session_get_local_store (session), "Example E-Mails");
-			example_folder = e_mail_session_uri_to_folder_sync (
-				session, example_folder_uri, CAMEL_STORE_FOLDER_CREATE, NULL, NULL);
-		}
-
-		if (example_folder && camel_folder_get_message_count (example_folder) > 0) {
-			em_folder_tree_set_selected (folder_tree, example_folder_uri, FALSE);
-		} else if (inbox) {
+		if (inbox) {
 			gchar *folder_uri = e_mail_folder_uri_from_folder (inbox);
 
 			em_folder_tree_set_selected (folder_tree, folder_uri, FALSE);
 			g_free (folder_uri);
 		}
-
-		g_clear_object (&example_folder);
-		g_free (example_folder_uri);
 	}
 }
 

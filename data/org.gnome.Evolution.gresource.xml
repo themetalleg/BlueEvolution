@@ -2,7 +2,6 @@
 <gresources>
   <gresource prefix="org.gnome.Evolution">
     <file>emoji.data</file>
-    <file>blueevolution-demo.mbox</file>
     <file alias="arrow-down.svg">images/arrow-down.svg</file>
     <file alias="arrow-up.svg">images/arrow-up.svg</file>
     <file alias="empty.svg">images/empty.svg</file>

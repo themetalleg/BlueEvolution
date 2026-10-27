@@ -1284,6 +1284,10 @@ Evo.unsetHTMLColorsInCssRule = function(rule, doc, darkModeOnly)
 	if (!rule.style || !rule.selectorText || rule.selectorText.startsWith(".-e-web-view-") || rule.selectorText.startsWith(".-e-mail-formatter-"))
 		return;
 
+	if (darkModeOnly && /^div$/i.test(rule.selectorText.trim()) &&
+	    rule.style.height && /^\s*\d+(?:\.\d+)?%$/.test(rule.style.height))
+		rule.style.removeProperty("height");
+
 	if (rule.style.color && (!darkModeOnly || Evo.isDarkModeHTMLThemeColor(doc, "color", rule.style.color)))
 		rule.style.removeProperty("color");
 
@@ -1337,6 +1341,10 @@ Evo.unsetHTMLColors = function(doc)
 
 		if (elem.tagName != "HTML" && elem.tagName != "IFRAME" && elem.tagName != "INPUT" && elem.tagName != "BUTTON" && elem.tagName != "IMG") {
 			if (elem.style) {
+				if (darkModeOnly && elem.tagName == "DIV" && elem.style.height &&
+				    /^\s*\d+(?:\.\d+)?%$/.test (elem.style.height))
+					elem.style.removeProperty ("height");
+
 				if (elem.style.color && (!darkModeOnly || Evo.isDarkModeHTMLThemeColor(doc, "color", elem.style.color)))
 					elem.style.removeProperty("color");
 

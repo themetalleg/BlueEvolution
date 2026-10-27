@@ -60,7 +60,7 @@ test('local preview uses a private installation without replacing signed channel
       assert.ok(args.includes('DISPLAY=:123'));
       assert.ok(args.includes('--no-talk-name=org.freedesktop.secrets'));
       assert.ok(args.includes(`XDG_DATA_HOME=${join(directory, 'profile/data')}`));
-      assert.ok(args.includes('BLUEEVOLUTION_DEMO_MODE=1'));
+      assert.ok(args.includes('BLUEEVOLUTION_PREVIEW_MODE=1'));
       assert.ok(!args.includes('install'));
     }
     assert.deepEqual(JSON.parse(readFileSync(join(build, 'manifest.json'))), manifest);
@@ -133,25 +133,29 @@ test('preview cache pruning keeps the fullest current app/version build tree', (
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
-test('synthetic demo covers inherited and explicit HTML text colors', () => {
-  const demo = readFileSync(resolve(root, 'data/blueevolution-demo.mbox'), 'utf8');
+test('preview imports only local example emails and adapts dark HTML colors', () => {
   const formatter = readFileSync(resolve(root, 'src/em-format/e-mail-formatter-text-html.c'), 'utf8');
-  assert.ok(demo.includes('Theme test - inherited text color'));
-  assert.ok(demo.includes('Theme test - explicit black text'));
-  assert.ok(demo.includes('color: #000000'));
   assert.match(formatter, /gtk-application-prefer-dark-theme/);
   assert.match(formatter, /appearance-mode/);
   assert.match(formatter, /x-e-dark-mode-colors/);
   const mailBackend = readFileSync(resolve(root, 'src/modules/mail/e-mail-shell-backend.c'), 'utf8');
-  assert.match(mailBackend, /mail_shell_backend_add_missing_demo_theme_messages/);
   assert.match(mailBackend, /mail_shell_backend_import_example_emails/);
+  assert.match(mailBackend, /mail_shell_backend_remove_legacy_preview_messages/);
+  assert.match(mailBackend, /mail_shell_backend_copy_example_emails_to_inbox/);
+  assert.doesNotMatch(mailBackend, /mail_shell_backend_seed_demo_messages|blueevolution-demo\.mbox/);
   assert.match(mailBackend, /Example E-Mails/);
+  assert.doesNotMatch(readFileSync(resolve(root, 'data/org.gnome.Evolution.gresource.xml'), 'utf8'), /blueevolution-demo\.mbox/);
   const previewLauncher = readFileSync(resolve(root, 'scripts/vscode-blueevolution.sh'), 'utf8');
   assert.match(previewLauncher, /BLUEEVOLUTION_EXAMPLE_EMAIL_DIR/);
+  assert.match(previewLauncher, /BLUEEVOLUTION_PREVIEW_MODE=1/);
+  assert.doesNotMatch(previewLauncher, /BLUEEVOLUTION_DEMO_MODE/);
   assert.match(previewLauncher, /--filesystem="\$example_email_dir:ro"/);
+  const mailShellView = readFileSync(resolve(root, 'src/modules/mail/e-mail-shell-view-private.c'), 'utf8');
+  assert.match(mailShellView, /E_MAIL_LOCAL_FOLDER_INBOX/);
   const webView = readFileSync(resolve(root, 'data/webkit/e-web-view.js'), 'utf8');
   assert.match(webView, /Evo\.isDarkModeHTMLThemeColor/);
   assert.match(webView, /parent\.appendChild\(probe\)/);
+  assert.match(webView, /darkModeOnly && \/\^div\$\/i\.test/);
 });
 
 test('snapshot assets remain immutable across publications and retries', () => {

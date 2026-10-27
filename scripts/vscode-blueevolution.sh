@@ -98,7 +98,7 @@ launch|preview)
 		XDG_CACHE_HOME="$profile_root/cache"
 		GSETTINGS_BACKEND=keyfile
 		GSETTINGS_SCHEMA_DIR=/app/share/glib-2.0/schemas
-		BLUEEVOLUTION_DEMO_MODE=1
+		BLUEEVOLUTION_PREVIEW_MODE=1
 	)
 	if [[ "$action" == preview && -d "$repo_root/examples/email-samples" ]]; then
 		preview_env+=("BLUEEVOLUTION_EXAMPLE_EMAIL_DIR=$repo_root/examples/email-samples")

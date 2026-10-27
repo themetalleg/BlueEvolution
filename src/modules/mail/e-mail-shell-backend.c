@@ -5,7 +5,6 @@
 
 #include "evolution-config.h"
 
-#include <fcntl.h>
 #include <string.h>
 
 #include "e-mail-shell-backend.h"
@@ -1203,104 +1202,6 @@ mail_shell_backend_constructed (GObject *object)
 	g_object_unref (vstore);
 }
 
-static gint
-mail_shell_backend_demo_theme_message_index (const gchar *message_id)
-{
-	if (!message_id)
-		return -1;
-
-	if (strstr (message_id, "demo-theme-inherited-20261023@blueevolution.invalid"))
-		return 0;
-
-	if (strstr (message_id, "demo-theme-explicit-black-20261023@blueevolution.invalid"))
-		return 1;
-
-	return -1;
-}
-
-static void
-mail_shell_backend_add_missing_demo_theme_messages (CamelFolder *inbox,
-						    const gchar *path)
-{
-	CamelMimeParser *parser;
-	GPtrArray *uids;
-	gboolean found[2] = { FALSE, FALSE };
-	gint fd, ii;
-
-	uids = camel_folder_dup_uids (inbox);
-	for (ii = 0; ii < uids->len && !(found[0] && found[1]); ii++) {
-		CamelMimeMessage *message;
-		const gchar *message_id;
-		gint index;
-
-		message = camel_folder_get_message_sync (
-			inbox, uids->pdata[ii], NULL, NULL);
-		if (!message)
-			continue;
-
-		message_id = camel_mime_message_get_message_id (message);
-		index = mail_shell_backend_demo_theme_message_index (message_id);
-		if (index >= 0)
-			found[index] = TRUE;
-
-		g_object_unref (message);
-	}
-	g_ptr_array_unref (uids);
-
-	if (found[0] && found[1])
-		return;
-
-	fd = g_open (path, O_RDONLY | O_BINARY, 0);
-	if (fd == -1)
-		return;
-
-	parser = camel_mime_parser_new ();
-	camel_mime_parser_scan_from (parser, TRUE);
-	if (camel_mime_parser_init_with_fd (parser, fd) == -1) {
-		g_object_unref (parser);
-		return;
-	}
-
-	camel_folder_freeze (inbox);
-	while (camel_mime_parser_step (parser, NULL, NULL) == CAMEL_MIME_PARSER_STATE_FROM) {
-		CamelMimeMessage *message;
-		const gchar *message_id;
-		gint index;
-
-		message = camel_mime_message_new ();
-		if (!camel_mime_part_construct_from_parser_sync (
-			(CamelMimePart *) message, parser, NULL, NULL)) {
-			g_object_unref (message);
-			break;
-		}
-
-		message_id = camel_mime_message_get_message_id (message);
-		index = mail_shell_backend_demo_theme_message_index (message_id);
-		if (index >= 0 && !found[index]) {
-			CamelMessageInfo *info;
-			GError *error = NULL;
-
-			info = camel_message_info_new (NULL);
-			if (camel_folder_append_message_sync (
-				inbox, message, info, NULL, NULL, &error))
-				found[index] = TRUE;
-			else {
-				g_warning (
-					"Failed to add BlueEvolution theme demo message: %s",
-					error ? error->message : "unknown error");
-				g_clear_error (&error);
-			}
-			g_object_unref (info);
-		}
-
-		g_object_unref (message);
-		camel_mime_parser_step (parser, NULL, NULL);
-	}
-	camel_folder_synchronize_sync (inbox, FALSE, NULL, NULL);
-	camel_folder_thaw (inbox);
-	g_object_unref (parser);
-}
-
 static gchar *
 mail_shell_backend_checksum_file (const gchar *path)
 {
@@ -1347,21 +1248,199 @@ mail_shell_backend_is_example_email_file (const gchar *name)
 		g_str_has_suffix (name, ".EML");
 }
 
+static gboolean
+mail_shell_backend_is_legacy_preview_message (const gchar *message_id)
+{
+	static const gchar * const legacy_message_ids[] = {
+		"demo-visual-review-20261021@blueevolution.invalid",
+		"demo-sidebar-spacing-20261021@blueevolution.invalid",
+		"demo-calendar-review-20261020@blueevolution.invalid",
+		"demo-folder-structure-20261020@blueevolution.invalid",
+		"demo-weekly-sync-20261019@blueevolution.invalid",
+		"demo-theme-inherited-20261023@blueevolution.invalid",
+		"demo-theme-explicit-black-20261023@blueevolution.invalid"
+	};
+	const gchar *id;
+	gsize length;
+	guint ii;
+
+	if (!message_id)
+		return FALSE;
+
+	id = message_id[0] == '<' ? message_id + 1 : message_id;
+	length = strcspn (id, ">");
+	for (ii = 0; ii < G_N_ELEMENTS (legacy_message_ids); ii++) {
+		if (strlen (legacy_message_ids[ii]) == length &&
+			strncmp (id, legacy_message_ids[ii], length) == 0)
+			return TRUE;
+	}
+
+	return FALSE;
+}
+
+static void
+mail_shell_backend_remove_legacy_preview_messages (CamelFolder *inbox)
+{
+	GPtrArray *uids;
+	gboolean removed = FALSE;
+	guint ii;
+
+	uids = camel_folder_dup_uids (inbox);
+	camel_folder_freeze (inbox);
+	for (ii = 0; ii < uids->len; ii++) {
+		CamelMimeMessage *message;
+		const gchar *message_id;
+
+		message = camel_folder_get_message_sync (
+			inbox, uids->pdata[ii], NULL, NULL);
+		if (!message)
+			continue;
+
+		message_id = camel_mime_message_get_message_id (message);
+		if (mail_shell_backend_is_legacy_preview_message (message_id)) {
+			camel_folder_set_message_flags (
+				inbox, uids->pdata[ii],
+				CAMEL_MESSAGE_DELETED, CAMEL_MESSAGE_DELETED);
+			removed = TRUE;
+		}
+
+		g_object_unref (message);
+	}
+	camel_folder_thaw (inbox);
+	g_ptr_array_unref (uids);
+
+	if (removed) {
+		camel_folder_synchronize_sync (inbox, FALSE, NULL, NULL);
+		camel_folder_expunge_sync (inbox, NULL, NULL);
+	}
+}
+
+static void
+mail_shell_backend_copy_example_emails_to_inbox (EMailSession *session,
+						 CamelFolder *examples_folder)
+{
+	CamelFolder *inbox;
+	GPtrArray *uids;
+	GHashTable *message_ids;
+	gchar *marker_dir;
+	gboolean inbox_was_empty;
+	gboolean copied = FALSE;
+	guint ii;
+
+	inbox = e_mail_session_get_local_folder (session, E_MAIL_LOCAL_FOLDER_INBOX);
+	if (!inbox)
+		return;
+
+	inbox_was_empty = camel_folder_get_message_count (inbox) == 0;
+	message_ids = g_hash_table_new_full (
+		g_str_hash, g_str_equal, g_free, NULL);
+	uids = camel_folder_dup_uids (inbox);
+	for (ii = 0; ii < uids->len; ii++) {
+		CamelMimeMessage *message;
+		const gchar *message_id;
+
+		message = camel_folder_get_message_sync (
+			inbox, uids->pdata[ii], NULL, NULL);
+		if (!message)
+			continue;
+
+		message_id = camel_mime_message_get_message_id (message);
+		if (message_id)
+			g_hash_table_add (message_ids, g_strdup (message_id));
+
+		g_object_unref (message);
+	}
+	g_ptr_array_unref (uids);
+
+	marker_dir = g_build_filename (
+		g_get_user_cache_dir (), "blueevolution-preview",
+		"copied-example-emails", NULL);
+	g_mkdir_with_parents (marker_dir, 0700);
+
+	uids = camel_folder_dup_uids (examples_folder);
+	camel_folder_freeze (inbox);
+	for (ii = 0; ii < uids->len; ii++) {
+		CamelMimeMessage *message;
+		CamelMessageInfo *source_info, *info;
+		CamelMessageFlags flags = 0;
+		const gchar *message_id;
+		gchar *marker_name = NULL, *marker_path = NULL;
+		GError *error = NULL;
+
+		message = camel_folder_get_message_sync (
+			examples_folder, uids->pdata[ii], NULL, NULL);
+		if (!message)
+			continue;
+
+		message_id = camel_mime_message_get_message_id (message);
+		if (!message_id) {
+			marker_name = g_compute_checksum_for_string (
+				G_CHECKSUM_SHA256, uids->pdata[ii], -1);
+			marker_path = g_build_filename (marker_dir, marker_name, NULL);
+		}
+
+		if ((message_id && g_hash_table_contains (message_ids, message_id)) ||
+			(!message_id && !inbox_was_empty && g_file_test (marker_path, G_FILE_TEST_EXISTS))) {
+			g_free (marker_name);
+			g_free (marker_path);
+			g_object_unref (message);
+			continue;
+		}
+
+		source_info = camel_folder_get_message_info (
+			examples_folder, uids->pdata[ii]);
+		if (source_info) {
+			flags = camel_message_info_get_flags (source_info) &
+				(CAMEL_MESSAGE_SEEN | CAMEL_MESSAGE_FLAGGED | CAMEL_MESSAGE_ANSWERED);
+			g_object_unref (source_info);
+		}
+
+		info = camel_message_info_new (NULL);
+		camel_message_info_set_flags (info, flags, ~0);
+		if (camel_folder_append_message_sync (
+			inbox, message, info, NULL, NULL, &error)) {
+			copied = TRUE;
+			if (message_id)
+				g_hash_table_add (message_ids, g_strdup (message_id));
+			else if (!g_file_set_contents (marker_path, "", 0, &error))
+				g_warning ("Failed to record copied example email: %s", error->message);
+		} else {
+			g_warning ("Failed to copy example email to Inbox: %s", error->message);
+		}
+
+		g_clear_error (&error);
+		g_object_unref (info);
+		g_object_unref (message);
+		g_free (marker_name);
+		g_free (marker_path);
+	}
+	if (copied)
+		camel_folder_synchronize_sync (inbox, FALSE, NULL, NULL);
+	camel_folder_thaw (inbox);
+	g_ptr_array_unref (uids);
+	g_hash_table_unref (message_ids);
+	g_free (marker_dir);
+}
+
 static void
 mail_shell_backend_import_example_emails (EMailSession *session)
 {
 	const gchar *example_email_dir;
-	const gchar *data_dir;
 	GDir *dir;
 	const gchar *name;
+	CamelFolder *inbox;
 	CamelFolder *folder;
 	GError *error = NULL;
 	gchar *folder_uri;
 	gchar *marker_dir;
 	gboolean folder_was_empty;
 
-	if (g_strcmp0 (g_getenv ("BLUEEVOLUTION_DEMO_MODE"), "1") != 0)
+	if (g_strcmp0 (g_getenv ("BLUEEVOLUTION_PREVIEW_MODE"), "1") != 0)
 		return;
+
+	inbox = e_mail_session_get_local_folder (session, E_MAIL_LOCAL_FOLDER_INBOX);
+	if (inbox)
+		mail_shell_backend_remove_legacy_preview_messages (inbox);
 
 	example_email_dir = g_getenv ("BLUEEVOLUTION_EXAMPLE_EMAIL_DIR");
 	if (!example_email_dir || !*example_email_dir)
@@ -1442,67 +1521,12 @@ mail_shell_backend_import_example_emails (EMailSession *session)
 		g_free (path);
 	}
 
+	mail_shell_backend_copy_example_emails_to_inbox (session, folder);
+
 	g_free (marker_dir);
 	g_object_unref (folder);
 	g_dir_close (dir);
 	g_free (folder_uri);
-}
-
-static void
-mail_shell_backend_seed_demo_messages (EMailSession *session)
-{
-	CamelFolder *inbox;
-	GBytes *demo_messages;
-	GError *error = NULL;
-	gconstpointer contents;
-	gsize length;
-	gchar *directory;
-	gchar *path;
-	gboolean inbox_is_empty;
-
-	if (g_strcmp0 (g_getenv ("BLUEEVOLUTION_DEMO_MODE"), "1") != 0)
-		return;
-
-	inbox = e_mail_session_get_local_folder (session, E_MAIL_LOCAL_FOLDER_INBOX);
-	if (!inbox)
-		return;
-	inbox_is_empty = camel_folder_get_message_count (inbox) == 0;
-
-	demo_messages = g_resources_lookup_data (
-		"/org.gnome.Evolution/blueevolution-demo.mbox",
-		G_RESOURCE_LOOKUP_FLAGS_NONE, &error);
-	if (!demo_messages) {
-		g_warning ("Failed to load BlueEvolution demo messages: %s", error->message);
-		g_clear_error (&error);
-		return;
-	}
-
-	contents = g_bytes_get_data (demo_messages, &length);
-	directory = g_build_filename (g_get_user_cache_dir (), "blueevolution-preview", NULL);
-	if (g_mkdir_with_parents (directory, 0700) != 0) {
-		g_warning ("Failed to create BlueEvolution preview cache directory");
-		g_free (directory);
-		g_bytes_unref (demo_messages);
-		return;
-	}
-
-	path = g_build_filename (directory, "demo-mail.mbox", NULL);
-	if (g_file_set_contents (path, contents, length, &error)) {
-		if (inbox_is_empty)
-			mail_importer_import_mbox_sync (session, path, NULL, NULL);
-		else
-			mail_shell_backend_add_missing_demo_theme_messages (inbox, path);
-	}
-	else {
-		g_warning ("Failed to write BlueEvolution demo messages: %s", error->message);
-		g_clear_error (&error);
-	}
-
-	g_remove (path);
-	g_rmdir (directory);
-	g_free (path);
-	g_free (directory);
-	g_bytes_unref (demo_messages);
 }
 
 static void
@@ -1518,7 +1542,6 @@ mail_shell_backend_start (EShellBackend *shell_backend)
 	session = e_mail_backend_get_session (backend);
 	account_store = e_mail_ui_session_get_account_store (
 		E_MAIL_UI_SESSION (session));
-	mail_shell_backend_seed_demo_messages (session);
 	mail_shell_backend_import_example_emails (session);
 
 	/* XXX Should we be calling this unconditionally? */
