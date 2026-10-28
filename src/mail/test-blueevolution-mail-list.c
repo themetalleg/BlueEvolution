@@ -226,6 +226,129 @@ test_reply_preserves_unread_default (void)
 }
 
 static void
+test_note_replacement (void)
+{
+	GError *error = NULL;
+	gchar *directory = g_dir_make_tmp ("blueevolution-note-test-XXXXXX", &error);
+	CamelSession *session;
+	CamelService *service;
+	CamelSettings *settings;
+	CamelFolder *folder;
+	CamelMimeMessage *message;
+	CamelMessageInfo *info;
+	gchar *uid = NULL;
+	guint step;
+
+	g_assert_no_error (error);
+	g_assert_cmpint (camel_init (directory, FALSE), ==, 0);
+	camel_provider_init ();
+	session = g_object_new (thread_test_session_get_type (),
+		"user-data-dir", directory, "user-cache-dir", directory, NULL);
+	service = camel_session_add_service (session, "synthetic-note-test", "mbox", CAMEL_PROVIDER_STORE, &error);
+	g_assert_no_error (error);
+	settings = camel_service_ref_settings (service);
+	g_object_set (settings, "path", directory, NULL);
+	g_object_unref (settings);
+	g_assert_true (camel_service_connect_sync (service, NULL, &error));
+	g_assert_no_error (error);
+	folder = camel_store_get_folder_sync (CAMEL_STORE (service), "INBOX", CAMEL_STORE_FOLDER_CREATE, NULL, &error);
+	g_assert_no_error (error);
+	message = camel_mime_message_new ();
+	camel_mime_message_set_message_id (message, "synthetic-note@example.invalid");
+	camel_mime_message_set_subject (message, "Synthetic note replacement");
+	camel_mime_part_set_content (CAMEL_MIME_PART (message), "Synthetic body", -1, "text/plain");
+	info = camel_message_info_new (NULL);
+	camel_message_info_set_flags (info, CAMEL_MESSAGE_SEEN, CAMEL_MESSAGE_SEEN);
+	g_assert_true (camel_folder_append_message_sync (folder, message, info, &uid, NULL, &error));
+	g_assert_no_error (error);
+	g_object_unref (info);
+
+	for (step = 0; step < 3; step++) {
+		CamelMessageInfo *original = camel_folder_get_message_info (folder, uid);
+		CamelMessageInfo *clone = camel_message_info_clone (original, NULL);
+		CamelMessageInfo *replacement;
+		CamelFolderChangeInfo *changes = camel_folder_change_info_new ();
+		gchar *new_uid = NULL;
+		gchar *found_uid;
+
+		camel_message_info_set_user_flag (clone, E_MAIL_NOTES_USER_FLAG, step < 2);
+		camel_folder_freeze (folder);
+		g_assert_true (camel_folder_append_message_sync (folder, message, clone, &new_uid, NULL, &error));
+		g_assert_no_error (error);
+		camel_message_info_set_flags (original, CAMEL_MESSAGE_DELETED, CAMEL_MESSAGE_DELETED);
+		camel_folder_thaw (folder);
+		camel_folder_change_info_add_uid (changes, new_uid);
+		camel_folder_change_info_change_uid (changes, uid);
+		replacement = camel_folder_get_message_info (folder, new_uid);
+		g_assert_nonnull (replacement);
+		g_assert_true (message_list_is_note_replacement (original, replacement));
+		g_assert_cmpint (camel_message_info_get_user_flag (replacement, E_MAIL_NOTES_USER_FLAG), ==, step < 2);
+		found_uid = message_list_find_note_replacement (folder, changes, uid);
+		g_assert_cmpstr (found_uid, ==, new_uid);
+		g_assert_true (message_list_keep_displayed_message (NULL,
+			camel_message_info_get_flags (replacement), FALSE, FALSE, TRUE));
+		g_assert_true (message_list_keep_displayed_message (
+			"(match-all (not (system-flag \"Seen\")))",
+			camel_message_info_get_flags (replacement), FALSE, FALSE, TRUE));
+		{
+			MessageList selection = { 0 };
+			MessageListPrivate selection_priv = { 0 };
+			const gchar *searches[] = { NULL, "(match-all (not (system-flag \"Seen\")))" };
+			gchar *selected_uid;
+			guint search_index;
+
+			selection.priv = &selection_priv;
+			selection.cursor_uid = g_strdup (uid);
+			g_mutex_init (&selection_priv.regen_lock);
+			selected_uid = message_list_retarget_note_replacement (&selection, folder, changes);
+			g_assert_cmpstr (selected_uid, ==, new_uid);
+			g_assert_cmpstr (selection.cursor_uid, ==, new_uid);
+			g_assert_cmpstr (selection_priv.automatically_seen_uid, ==, new_uid);
+			for (search_index = 0; search_index < G_N_ELEMENTS (searches); search_index++) {
+				GPtrArray *results = g_ptr_array_new_with_free_func ((GDestroyNotify) camel_pstring_free);
+
+				selection.search = (gchar *) searches[search_index];
+				message_list_regen_tweak_search_results (&selection, results, folder, TRUE, FALSE, FALSE);
+				g_assert_cmpuint (results->len, ==, 1);
+				g_assert_cmpstr (results->pdata[0], ==, new_uid);
+				g_ptr_array_unref (results);
+			}
+			g_free (selected_uid);
+			g_free (selection.cursor_uid);
+			g_free (selection_priv.automatically_seen_uid);
+			g_mutex_clear (&selection_priv.regen_lock);
+		}
+		camel_message_info_set_message_id (clone, 0);
+		g_assert_false (message_list_is_note_replacement (original, clone));
+		camel_message_info_set_flags (replacement, CAMEL_MESSAGE_DELETED, CAMEL_MESSAGE_DELETED);
+		g_assert_false (message_list_is_note_replacement (original, replacement));
+		camel_message_info_set_flags (replacement, CAMEL_MESSAGE_DELETED, 0);
+		g_free (found_uid);
+		g_free (uid);
+		uid = new_uid;
+		g_object_unref (replacement);
+		g_object_unref (original);
+		g_object_unref (clone);
+		camel_folder_change_info_free (changes);
+	}
+
+	g_free (uid);
+	g_object_unref (message);
+	g_object_unref (folder);
+	camel_session_remove_services (session);
+	g_object_unref (service);
+	g_object_unref (session);
+	{
+		GFile *file = g_file_new_for_path (directory);
+
+		g_assert_true (e_file_recursive_delete_sync (file, NULL, &error));
+		g_assert_no_error (error);
+		g_object_unref (file);
+	}
+	g_free (directory);
+}
+
+static void
 test_unread_filter_refresh (void)
 {
 	const gchar *unread = "(match-all (not (system-flag \"Seen\")))";
@@ -858,6 +981,7 @@ main (int argument_count, char **argument_values)
 	g_test_add_func ("/blueevolution/mail/thread-expand-default-closed", test_thread_expand_default_closed);
 	g_test_add_func ("/blueevolution/mail/collapsed-thread-latest-message", test_collapsed_thread_latest_message);
 	g_test_add_func ("/blueevolution/mail/unread-filter-refresh", test_unread_filter_refresh);
+	g_test_add_func ("/blueevolution/mail/note-replacement", test_note_replacement);
 	g_test_add_func ("/blueevolution/mail/unread-conversation-search", test_unread_conversation_search);
 	g_test_add_func ("/blueevolution/mail/conversation-adapter-order", test_conversation_adapter_order);
 	g_test_add_func ("/blueevolution/mail/reply-preserves-unread-default", test_reply_preserves_unread_default);

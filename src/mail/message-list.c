@@ -5272,6 +5272,75 @@ message_list_set_automatically_seen_uid (MessageList *message_list,
 		mail_regen_list (message_list, NULL, NULL);
 }
 
+static gboolean
+message_list_is_note_replacement (CamelMessageInfo *original,
+                                  CamelMessageInfo *replacement)
+{
+	guint64 message_id = camel_message_info_get_message_id (original);
+
+	return message_id != 0 &&
+		message_id == camel_message_info_get_message_id (replacement) &&
+		(camel_message_info_get_flags (original) & CAMEL_MESSAGE_DELETED) != 0 &&
+		(camel_message_info_get_flags (replacement) & CAMEL_MESSAGE_DELETED) == 0 &&
+		(camel_message_info_get_user_flag (original, E_MAIL_NOTES_USER_FLAG) ||
+		 camel_message_info_get_user_flag (replacement, E_MAIL_NOTES_USER_FLAG));
+}
+
+static gchar *
+message_list_find_note_replacement (CamelFolder *folder,
+                                    CamelFolderChangeInfo *changes,
+                                    const gchar *uid)
+{
+	CamelMessageInfo *original;
+	gchar *replacement_uid = NULL;
+	guint index;
+
+	if (!uid || !changes->uid_added->len)
+		return NULL;
+
+	original = camel_folder_get_message_info (folder, uid);
+	if (!original)
+		return NULL;
+
+	for (index = 0; index < changes->uid_added->len; index++) {
+		const gchar *added_uid = changes->uid_added->pdata[index];
+		CamelMessageInfo *replacement;
+
+		replacement = camel_folder_get_message_info (folder, added_uid);
+		if (replacement) {
+			if (message_list_is_note_replacement (original, replacement))
+				replacement_uid = g_strdup (added_uid);
+			g_object_unref (replacement);
+		}
+		if (replacement_uid)
+			break;
+	}
+
+	g_object_unref (original);
+	return replacement_uid;
+}
+
+static gchar *
+message_list_retarget_note_replacement (MessageList *message_list,
+                                       CamelFolder *folder,
+                                       CamelFolderChangeInfo *changes)
+{
+	gchar *replacement_uid;
+
+	replacement_uid = message_list_find_note_replacement (
+		folder, changes, message_list->cursor_uid);
+	if (replacement_uid) {
+		g_mutex_lock (&message_list->priv->regen_lock);
+		g_free (message_list->cursor_uid);
+		message_list->cursor_uid = g_strdup (replacement_uid);
+		g_free (message_list->priv->automatically_seen_uid);
+		message_list->priv->automatically_seen_uid = g_strdup (replacement_uid);
+		g_mutex_unlock (&message_list->priv->regen_lock);
+	}
+
+	return replacement_uid;
+}
+
 static void
 message_list_folder_changed (CamelFolder *folder,
 			     CamelFolderChangeInfo *changes,
@@ -5280,6 +5349,7 @@ message_list_folder_changed (CamelFolder *folder,
 	CamelFolderChangeInfo *altered_changes = NULL;
 	gboolean has_regen_task;
 	gboolean need_list_regen = TRUE;
+	gchar *note_replacement_uid;
 
 	g_return_if_fail (CAMEL_IS_FOLDER (folder));
 	g_return_if_fail (changes != NULL);
@@ -5288,6 +5358,8 @@ message_list_folder_changed (CamelFolder *folder,
 	if (message_list->priv->destroyed)
 		return;
 
+	note_replacement_uid = message_list_retarget_note_replacement (
+		message_list, folder, changes);
 	g_mutex_lock (&message_list->priv->regen_lock);
 	has_regen_task = message_list->priv->regen_task != NULL;
 	g_mutex_unlock (&message_list->priv->regen_lock);
@@ -5360,8 +5432,22 @@ message_list_folder_changed (CamelFolder *folder,
 		   the message list to scroll to the cursor position due to the folder_changed = TRUE,
 		   by cancelling the full rebuild request. */
 		mail_regen_list (message_list, NULL, message_list->just_set_folder ? NULL : changes);
+		if (note_replacement_uid) {
+			g_mutex_lock (&message_list->priv->regen_lock);
+			if (message_list->priv->regen_task) {
+				RegenData *regen_data = g_task_get_task_data (message_list->priv->regen_task);
+
+				g_mutex_lock (&regen_data->select_lock);
+				g_free (regen_data->select_uid);
+				regen_data->select_uid = g_strdup (note_replacement_uid);
+				regen_data->select_use_fallback = FALSE;
+				g_mutex_unlock (&regen_data->select_lock);
+			}
+			g_mutex_unlock (&message_list->priv->regen_lock);
+		}
 	}
 
+	g_free (note_replacement_uid);
 	if (altered_changes != NULL)
 		camel_folder_change_info_free (altered_changes);
 }

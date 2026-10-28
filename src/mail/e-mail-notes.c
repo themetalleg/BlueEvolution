@@ -663,6 +663,7 @@ e_mail_notes_replace_message_in_folder_sync (CamelFolder *folder,
 	g_return_val_if_fail (uid != NULL, FALSE);
 	g_return_val_if_fail (CAMEL_IS_MIME_MESSAGE (message), FALSE);
 
+	camel_folder_freeze (folder);
 	mi = camel_folder_get_message_info (folder, uid);
 	if (mi) {
 		CamelMessageInfo *clone;
@@ -686,6 +687,7 @@ e_mail_notes_replace_message_in_folder_sync (CamelFolder *folder,
 		g_set_error_literal (error, CAMEL_ERROR, CAMEL_ERROR_GENERIC, _("Cannot find message in its folder summary"));
 	}
 
+	camel_folder_thaw (folder);
 	return success;
 }
 
