@@ -11,10 +11,189 @@
 #undef properties
 #undef N_PROPS
 #undef PROP_0
+#define PROP_0 PANED_VIEW_PROP_0
+#define N_PROPS PANED_VIEW_N_PROPS
+#define PROP_GROUP_BY_THREADS PANED_VIEW_PROP_GROUP_BY_THREADS
+#define properties paned_view_properties
+#include "e-mail-paned-view.c"
+#undef properties
+#undef PROP_GROUP_BY_THREADS
+#undef N_PROPS
+#undef PROP_0
 #undef _
 #undef Q_
 #undef C_
 #include "em-format/e-mail-formatter-headers.c"
+
+static void
+scroll_test_wait (guint milliseconds)
+{
+	gint64 end = g_get_monotonic_time () + milliseconds * 1000;
+
+	while (g_get_monotonic_time () < end) {
+		while (g_main_context_iteration (NULL, FALSE));
+		g_usleep (1000);
+	}
+}
+
+static void
+test_mouse_wheel_scroll_frames (void)
+{
+	const guint rates[] = { 60, 120 };
+	guint rate, frame;
+
+	for (rate = 0; rate < G_N_ELEMENTS (rates); rate++) {
+		MailListScroll scroll = { 0 };
+		gboolean finished = FALSE;
+		gdouble previous = 0.0;
+
+		scroll.adjustment = gtk_adjustment_new (0, 0, 4000, 20, 200, 400);
+		g_object_ref_sink (scroll.adjustment);
+		scroll.target = 60.0;
+		for (frame = 0; frame < rates[rate] && !finished; frame++) {
+			gdouble value;
+
+			finished = mail_list_scroll_advance (&scroll, previous, 1.0 / rates[rate]);
+			value = gtk_adjustment_get_value (scroll.adjustment);
+			g_assert_cmpfloat (value, >, previous);
+			g_assert_cmpfloat (value, <=, scroll.target);
+			/* No single frame may consume a large part of a wheel notch. */
+			g_assert_cmpfloat (value - previous, <, 60.0 * 0.16);
+			if (frame == 0)
+				g_assert_cmpfloat (value, <, 60.0 * 0.07);
+			previous = value;
+		}
+		g_assert_true (finished);
+		g_assert_cmpfloat (previous, ==, scroll.target);
+		g_object_unref (scroll.adjustment);
+	}
+}
+
+static void
+test_mouse_wheel_scroll (void)
+{
+	GtkWidget *window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+	GtkWidget *scrolled = gtk_scrolled_window_new (NULL, NULL);
+	GtkWidget *content = e_canvas_new ();
+	GtkAdjustment *adjustment;
+	MailListScroll *scroll;
+	GdkEvent *event = gdk_event_new (GDK_SCROLL);
+	GtkSettings *settings = gtk_widget_get_settings (window);
+	gboolean animations, handled;
+	gdouble initial, target, intermediate;
+
+	g_object_get (settings, "gtk-enable-animations", &animations, NULL);
+	g_object_set (settings, "gtk-enable-animations", TRUE, NULL);
+	gnome_canvas_set_scroll_region (GNOME_CANVAS (content), 0, 0, 300, 4000);
+	gtk_window_set_default_size (GTK_WINDOW (window), 400, 400);
+	gtk_container_add (GTK_CONTAINER (scrolled), content);
+	gtk_container_add (GTK_CONTAINER (window), scrolled);
+	mail_list_scroll_setup (scrolled);
+	gtk_widget_show_all (window);
+	scroll_test_wait (100);
+	adjustment = gtk_scrolled_window_get_vadjustment (GTK_SCROLLED_WINDOW (scrolled));
+	scroll = g_object_get_data (G_OBJECT (scrolled), "mail-list-scroll");
+	gdk_event_set_device (event, gdk_seat_get_pointer (gdk_display_get_default_seat (gtk_widget_get_display (window))));
+	event->scroll.window = g_object_ref (gtk_widget_get_window (scrolled));
+	event->scroll.direction = GDK_SCROLL_DOWN;
+
+	initial = gtk_adjustment_get_value (adjustment);
+	g_signal_emit_by_name (scrolled, "scroll-event", event, &handled);
+	g_assert_true (handled);
+	g_assert_cmpfloat (gtk_adjustment_get_value (adjustment), ==, initial);
+	target = scroll->target;
+	g_assert_cmpfloat (target, >, initial);
+	scroll_test_wait (50);
+	intermediate = gtk_adjustment_get_value (adjustment);
+	g_assert_cmpfloat (intermediate, >, initial);
+	g_assert_cmpfloat (intermediate, <, target);
+	scroll_test_wait (500);
+	g_assert_cmpfloat_with_epsilon (gtk_adjustment_get_value (adjustment), target, 0.001);
+	g_assert_cmpuint (scroll->tick_id, ==, 0);
+
+	/* Repeated notches accumulate, but reversal discards the old destination. */
+	g_signal_emit_by_name (scrolled, "scroll-event", event, &handled);
+	target = scroll->target;
+	{
+		gint64 frame_time = scroll->frame_time;
+		gdouble velocity = scroll->velocity;
+
+		g_signal_emit_by_name (scrolled, "scroll-event", event, &handled);
+		g_assert_cmpint (scroll->frame_time, ==, frame_time);
+		g_assert_cmpfloat (scroll->velocity, ==, velocity);
+	}
+	g_assert_cmpfloat (scroll->target, >, target);
+	event->scroll.direction = GDK_SCROLL_UP;
+	g_signal_emit_by_name (scrolled, "scroll-event", event, &handled);
+	g_assert_true (handled);
+	g_assert_cmpfloat (scroll->target, <, gtk_adjustment_get_value (adjustment));
+
+	gtk_adjustment_set_value (adjustment, 1000);
+	g_assert_cmpuint (scroll->tick_id, ==, 0);
+	scroll_test_wait (180);
+	g_assert_cmpfloat (gtk_adjustment_get_value (adjustment), ==, 1000);
+
+	event->scroll.direction = GDK_SCROLL_DOWN;
+	g_signal_emit_by_name (scrolled, "scroll-event", event, &handled);
+	event->scroll.direction = GDK_SCROLL_SMOOTH;
+	event->scroll.delta_y = 0.2;
+	target = scroll->target;
+	g_assert_true (mail_list_scroll_event (scrolled, &event->scroll, scroll));
+	g_assert_cmpfloat (scroll->target, >, target);
+	event->scroll.delta_y = 0.0;
+	g_assert_true (mail_list_scroll_event (scrolled, &event->scroll, scroll));
+	g_assert_cmpuint (scroll->tick_id, !=, 0);
+	{
+		gdouble delta;
+
+		g_assert_false (mail_list_scroll_delta (&event->scroll, GDK_SOURCE_TOUCHPAD, &delta));
+		g_assert_false (mail_list_scroll_delta (&event->scroll, GDK_SOURCE_TOUCHSCREEN, &delta));
+	}
+	event->scroll.delta_x = 0.5;
+	g_assert_false (mail_list_scroll_event (scrolled, &event->scroll, scroll));
+	g_assert_cmpuint (scroll->tick_id, ==, 0);
+	event->scroll.delta_x = 0.0;
+
+	event->scroll.direction = GDK_SCROLL_DOWN;
+	event->scroll.state = GDK_SHIFT_MASK;
+	g_assert_false (mail_list_scroll_event (scrolled, &event->scroll, scroll));
+	event->scroll.state = 0;
+	event->scroll.direction = GDK_SCROLL_LEFT;
+	g_assert_false (mail_list_scroll_event (scrolled, &event->scroll, scroll));
+	event->scroll.direction = GDK_SCROLL_DOWN;
+	g_object_set (settings, "gtk-enable-animations", FALSE, NULL);
+	g_assert_false (mail_list_scroll_event (scrolled, &event->scroll, scroll));
+	g_assert_cmpuint (scroll->tick_id, ==, 0);
+	g_object_set (settings, "gtk-enable-animations", TRUE, NULL);
+
+	gtk_adjustment_set_value (adjustment, gtk_adjustment_get_upper (adjustment) -
+		gtk_adjustment_get_page_size (adjustment) - 1);
+	g_signal_emit_by_name (scrolled, "scroll-event", event, &handled);
+	g_assert_true (handled);
+	scroll_test_wait (500);
+	g_assert_cmpfloat_with_epsilon (gtk_adjustment_get_value (adjustment),
+		gtk_adjustment_get_upper (adjustment) - gtk_adjustment_get_page_size (adjustment), 0.001);
+	g_assert_false (mail_list_scroll_event (scrolled, &event->scroll, scroll));
+
+	gtk_adjustment_set_value (adjustment, 1000);
+	g_signal_emit_by_name (scrolled, "scroll-event", event, &handled);
+	gtk_adjustment_set_upper (adjustment, 5000);
+	g_assert_cmpuint (scroll->tick_id, ==, 0);
+	g_signal_emit_by_name (scrolled, "scroll-event", event, &handled);
+	g_assert_cmpuint (scroll->tick_id, !=, 0);
+	mail_list_scroll_key_press (scrolled, NULL, scroll);
+	g_assert_cmpuint (scroll->tick_id, ==, 0);
+	g_signal_emit_by_name (scrolled, "scroll-event", event, &handled);
+	gtk_widget_hide (window);
+	g_assert_cmpuint (scroll->tick_id, ==, 0);
+	gtk_widget_show_all (window);
+	g_signal_emit_by_name (scrolled, "scroll-event", event, &handled);
+	g_assert_cmpuint (scroll->tick_id, !=, 0);
+	gdk_event_free (event);
+	gtk_widget_destroy (window);
+	scroll_test_wait (180);
+	g_object_set (settings, "gtk-enable-animations", animations, NULL);
+}
 
 typedef struct { CamelSession parent; } ThreadTestSession;
 typedef CamelSessionClass ThreadTestSessionClass;
@@ -976,6 +1155,8 @@ main (int argument_count, char **argument_values)
 		}
 	}
 	g_test_add_func ("/blueevolution/mail/date-width", test_widths);
+	g_test_add_func ("/blueevolution/mail/mouse-wheel-scroll", test_mouse_wheel_scroll);
+	g_test_add_func ("/blueevolution/mail/mouse-wheel-scroll-frames", test_mouse_wheel_scroll_frames);
 	g_test_add_func ("/blueevolution/mail/date-headings-top-level", test_date_headings_only_for_top_level_rows);
 	g_test_add_func ("/blueevolution/mail/older-date-weekday-abbreviated", test_older_dates_use_abbreviated_weekday);
 	g_test_add_func ("/blueevolution/mail/thread-expand-default-closed", test_thread_expand_default_closed);

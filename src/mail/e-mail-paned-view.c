@@ -7,6 +7,7 @@
 #include "evolution-config.h"
 
 #include <glib/gi18n.h>
+#include <math.h>
 
 #include <shell/e-shell-window-actions.h>
 
@@ -71,6 +72,190 @@ G_DEFINE_TYPE_WITH_CODE (EMailPanedView, e_mail_paned_view, E_TYPE_MAIL_VIEW,
 	G_ADD_PRIVATE (EMailPanedView)
 	G_IMPLEMENT_INTERFACE (E_TYPE_MAIL_READER, e_mail_paned_view_reader_init)
 	G_IMPLEMENT_INTERFACE (E_TYPE_EXTENSIBLE, NULL))
+
+typedef struct {
+	GtkAdjustment *adjustment;
+	guint tick_id;
+	gint64 frame_time;
+	gdouble velocity;
+	gdouble target;
+	gboolean updating;
+} MailListScroll;
+
+static void
+mail_list_scroll_stop (GtkWidget *widget,
+                      MailListScroll *scroll)
+{
+	if (scroll->tick_id) {
+		gtk_widget_remove_tick_callback (widget, scroll->tick_id);
+		scroll->tick_id = 0;
+	}
+}
+
+static void
+mail_list_scroll_adjustment_changed (GtkAdjustment *adjustment,
+                                    GtkWidget *widget)
+{
+	MailListScroll *scroll = g_object_get_data (G_OBJECT (widget), "mail-list-scroll");
+
+	if (!scroll->updating)
+		mail_list_scroll_stop (widget, scroll);
+}
+
+static gboolean
+mail_list_scroll_advance (MailListScroll *scroll,
+                         gdouble value,
+                         gdouble elapsed)
+{
+	gdouble offset = value - scroll->target;
+	gdouble decay = exp (-24.0 * elapsed);
+	gdouble step = (scroll->velocity + 24.0 * offset) * elapsed;
+	gboolean finished;
+
+	/* A critically damped spring keeps successive wheel events continuous. */
+	scroll->velocity = (scroll->velocity - 24.0 * step) * decay;
+	value = scroll->target + (offset + step) * decay;
+	finished = fabs (value - scroll->target) < 0.25 && fabs (scroll->velocity) < 5.0;
+	scroll->updating = TRUE;
+	gtk_adjustment_set_value (scroll->adjustment, finished ? scroll->target : value);
+	scroll->updating = FALSE;
+
+	return finished;
+}
+
+static gboolean
+mail_list_scroll_tick (GtkWidget *widget,
+                      GdkFrameClock *clock,
+                      gpointer user_data)
+{
+	MailListScroll *scroll = user_data;
+	gint64 frame_time = gdk_frame_clock_get_frame_time (clock);
+	gdouble elapsed = MAX (0.0, (frame_time - scroll->frame_time) / 1000000.0);
+	gboolean finished;
+
+	scroll->frame_time = frame_time;
+	finished = mail_list_scroll_advance (scroll,
+		gtk_adjustment_get_value (scroll->adjustment), elapsed);
+
+	if (!finished)
+		return G_SOURCE_CONTINUE;
+
+	scroll->tick_id = 0;
+	return G_SOURCE_REMOVE;
+}
+
+static gboolean
+mail_list_scroll_delta (GdkEventScroll *event,
+                       GdkInputSource source,
+                       gdouble *delta)
+{
+	if (source != GDK_SOURCE_MOUSE ||
+	    (event->state & gtk_accelerator_get_default_mod_mask ()))
+		return FALSE;
+
+	switch (event->direction) {
+	case GDK_SCROLL_UP:
+		*delta = -1.0;
+		return TRUE;
+	case GDK_SCROLL_DOWN:
+		*delta = 1.0;
+		return TRUE;
+	case GDK_SCROLL_SMOOTH:
+		*delta = event->delta_y;
+		return event->delta_x == 0.0;
+	default:
+		return FALSE;
+	}
+}
+
+static gboolean
+mail_list_scroll_event (GtkWidget *widget,
+                        GdkEventScroll *event,
+                        gpointer user_data)
+{
+	MailListScroll *scroll = user_data;
+	GdkDevice *device;
+	GdkFrameClock *clock;
+	gdouble value, page_size, distance, base, delta;
+	gboolean animations;
+
+	device = gdk_event_get_source_device ((GdkEvent *) event);
+	clock = gtk_widget_get_frame_clock (widget);
+	g_object_get (gtk_widget_get_settings (widget), "gtk-enable-animations", &animations, NULL);
+
+	if (!animations || !clock ||
+	    !mail_list_scroll_delta (event, device ? gdk_device_get_source (device) : GDK_SOURCE_MOUSE, &delta)) {
+		mail_list_scroll_stop (widget, scroll);
+		return FALSE;
+	}
+
+	/* A high-resolution wheel's stop event must not cancel its last movement. */
+	if (delta == 0.0)
+		return TRUE;
+
+	value = gtk_adjustment_get_value (scroll->adjustment);
+	page_size = gtk_adjustment_get_page_size (scroll->adjustment);
+	/* Keep GTK's wheel distance; only change how we reach it. */
+	distance = delta * MIN (pow (page_size, 2.0 / 3.0), page_size / 2.0);
+
+	base = value;
+	if (scroll->tick_id && (scroll->target - value) * distance > 0.0)
+		base = scroll->target;
+	else
+		scroll->velocity = 0.0;
+
+	scroll->target = CLAMP (base + distance,
+		gtk_adjustment_get_lower (scroll->adjustment),
+		MAX (gtk_adjustment_get_lower (scroll->adjustment),
+			gtk_adjustment_get_upper (scroll->adjustment) - page_size));
+	if (scroll->target == value) {
+		mail_list_scroll_stop (widget, scroll);
+		return FALSE;
+	}
+
+	if (!scroll->tick_id) {
+		scroll->frame_time = gdk_frame_clock_get_frame_time (clock);
+		scroll->tick_id = gtk_widget_add_tick_callback (widget, mail_list_scroll_tick, scroll, NULL);
+	}
+
+	return TRUE;
+}
+
+static gboolean
+mail_list_scroll_key_press (GtkWidget *widget,
+                            GdkEventKey *event,
+                            gpointer user_data)
+{
+	mail_list_scroll_stop (widget, user_data);
+	return FALSE;
+}
+
+static void
+mail_list_scroll_free (gpointer user_data)
+{
+	MailListScroll *scroll = user_data;
+
+	g_object_unref (scroll->adjustment);
+	g_free (scroll);
+}
+
+static void
+mail_list_scroll_setup (GtkWidget *widget)
+{
+	MailListScroll *scroll = g_new0 (MailListScroll, 1);
+
+	scroll->adjustment = g_object_ref (
+		gtk_scrolled_window_get_vadjustment (GTK_SCROLLED_WINDOW (widget)));
+	g_object_set_data_full (G_OBJECT (widget), "mail-list-scroll", scroll, mail_list_scroll_free);
+	g_signal_connect_object (scroll->adjustment, "value-changed",
+		G_CALLBACK (mail_list_scroll_adjustment_changed), widget, 0);
+	g_signal_connect_object (scroll->adjustment, "changed",
+		G_CALLBACK (mail_list_scroll_adjustment_changed), widget, 0);
+	g_signal_connect (widget, "scroll-event", G_CALLBACK (mail_list_scroll_event), scroll);
+	g_signal_connect (widget, "key-press-event", G_CALLBACK (mail_list_scroll_key_press), scroll);
+	g_signal_connect (widget, "unmap", G_CALLBACK (mail_list_scroll_stop), scroll);
+	g_signal_connect (widget, "destroy", G_CALLBACK (mail_list_scroll_stop), scroll);
+}
 
 static void
 mail_paned_view_save_boolean (EMailView *view,
@@ -826,6 +1011,7 @@ mail_paned_view_constructed (GObject *object)
 	gtk_container_add (GTK_CONTAINER (container), widget);
 	self->priv->message_list = g_object_ref (widget);
 	gtk_widget_show (widget);
+	mail_list_scroll_setup (self->priv->scrolled_window);
 
 	self->priv->message_list_built_id = g_signal_connect_swapped (
 		self->priv->message_list, "message-list-built",

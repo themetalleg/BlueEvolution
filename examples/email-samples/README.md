@@ -13,6 +13,13 @@ are preserved. Imported files are tracked by content hash in the private
 preview cache, so relaunching does not duplicate them. These messages stay in
 the local mail store and are not synced to a mail server.
 
+`scroll-test.mbox` contains 20 synthetic, independent messages with numbered
+subjects for the **BlueEvolution: Preview Dark** (or Light) task. Use them to
+compare single wheel notches, rapid scrolling, direction changes, and touch
+scrolling. Wheel notches animate briefly when GTK animations are enabled;
+high-resolution mouse wheels are smoothed as well. Touch input and modified
+wheel gestures retain GTK's native behavior.
+
 For manual imports outside the preview, use **File > Import > Import a single
 file** for `.mbox`, or open an `.eml` with BlueEvolution and choose **Import to
 Folder**.
