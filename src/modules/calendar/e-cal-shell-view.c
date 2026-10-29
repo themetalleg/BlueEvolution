@@ -60,6 +60,11 @@ cal_shell_view_add_action_button (GtkBox *box,
 		button, "tooltip-text",
 		G_BINDING_SYNC_CREATE);
 
+	e_binding_bind_property (
+		action, "tooltip",
+		gtk_widget_get_accessible (button), "accessible-name",
+		G_BINDING_SYNC_CREATE);
+
 	g_signal_connect_object (
 		button, "clicked",
 		G_CALLBACK (cal_shell_view_action_button_clicked_cb), action, 0);
@@ -676,6 +681,16 @@ cal_shell_view_constructed (GObject *object)
 
 	cal_shell_content = cal_shell_view->priv->cal_shell_content;
 	searchbar = e_cal_shell_content_get_searchbar (cal_shell_content);
+
+	widget = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
+	gtk_style_context_add_class (gtk_widget_get_style_context (widget), "linked");
+	cal_shell_view_add_action_button (GTK_BOX (widget), ACTION (CALENDAR_GO_BACK), ui_manager);
+	cal_shell_view_add_action_button (GTK_BOX (widget), ACTION (CALENDAR_GO_TODAY), ui_manager);
+	cal_shell_view_add_action_button (GTK_BOX (widget), ACTION (CALENDAR_GO_FORWARD), ui_manager);
+	gtk_box_pack_start (GTK_BOX (searchbar), widget, FALSE, FALSE, 0);
+	gtk_box_reorder_child (GTK_BOX (searchbar), widget, 1);
+	gtk_widget_show (widget);
+
 	container = e_shell_searchbar_get_search_box (searchbar);
 
 	widget = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);

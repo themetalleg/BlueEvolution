@@ -15,6 +15,10 @@ This is an early development branch, not a finished product. The upstream mail, 
 - The Flatpak application ID and EDS D-Bus service prefix are BlueEvolution-specific. Its application settings use the keyfile backend, and the upstream DConf migration mapping is not enabled.
 - A Flatpak build/export script, build CI workflow, draft release workflow, and scheduled upstream stable-release PR workflow are present.
 - An Outlook-inspired three-pane layout, blue search header, command strip and icon navigation are implemented.
+- Calendar date navigation is also available as previous, today and next icons
+  immediately after the category filter, with translated tooltips and accessible
+  names. Previous/next move by the active view's interval (a week in week view);
+  the existing View menu and keyboard shortcuts remain available.
 - The message list includes sender initials, date sections, measured date widths and muted previews. It remains experimental with large and threaded folders.
 - Bootstrap Icons 1.13.1 are vendored with their MIT license and mapped through an application-private theme; the desktop icon theme, application branding, photos and message images are preserved.
 - Reader backgrounds and standalone viewers follow the app's selected appearance. HTML rendering has changed and still needs broader real-world testing.
