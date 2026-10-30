@@ -204,6 +204,14 @@ npm --prefix packaging test
 BLUEEVOLUTION_TEST_FLATPAK=1 npm --prefix packaging test
 ```
 
+The bundled Evolution Data Server applies
+`flatpak/patches/camel-unread-download-policy.patch` to the pinned upstream
+version. Keep the patch applicable when updating that dependency. The installed
+`test-mail-download-policy` regression executable checks automatic downloads,
+account-setting persistence, and the Receiving Options selector. Both bundle CI
+gates require the extension; tests against an unpatched native Camel skip this
+feature instead.
+
 The release tests need Node.js, `jq`, `xsltproc`, and `xmllint`.
 The integration test additionally needs `flatpak`, `ostree`, and `gpg`. It uses synthetic
 applications, a temporary signing key, and an isolated Flatpak installation.

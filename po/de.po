@@ -20269,6 +20269,22 @@ msgstr "_Automatisch nach neuen E-Mails sehen alle"
 msgid "Receiving Options"
 msgstr "Empfangsoptionen"
 
+#: ../src/mail/e-mail-config-provider-page.c
+msgid "Automatically _download messages:"
+msgstr "Nachrichten automatisch _herunterladen:"
+
+#: ../src/mail/e-mail-config-provider-page.c
+msgid "On demand"
+msgstr "Bei Bedarf"
+
+#: ../src/mail/e-mail-config-provider-page.c
+msgid "Unread messages only"
+msgstr "Nur ungelesene Nachrichten"
+
+#: ../src/mail/e-mail-config-provider-page.c
+msgid "All messages"
+msgstr "Alle Nachrichten"
+
 #: ../src/mail/e-mail-config-receiving-page.c:50
 msgid "Receiving Email"
 msgstr "Abrufen von E-Mails"

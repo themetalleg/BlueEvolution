@@ -51,6 +51,17 @@ Updates views. Restart Discover after installing the backend.
 See [release and update instructions](packaging/README.md) for full procedures,
 existing-installation migration, validation commands, signing, and recovery.
 
+## Mail Downloads
+
+In an account's **Receiving Options**, **Automatically download messages** offers
+**On demand**, **Unread messages only**, and **All messages**. Unread-only mode
+preloads complete messages, including attachments, after folder synchronization
+without marking them read. Existing age limits and explicit per-folder offline
+settings still apply. External images keep their existing privacy controls.
+
+Flatpak builds include the required Camel extension. Native builds against an
+unpatched Evolution Data Server retain the existing synchronization checkbox.
+
 ## Mail Assistant
 
 The Mail Assistant is included in `main`. Its composer sidebar starts closed

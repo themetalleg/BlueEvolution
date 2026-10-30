@@ -43,6 +43,7 @@ jq --arg source "$repo_root" --arg version "$version" --arg channel "$channel" \
 	--arg app_id "$app_id" --arg app_name "$app_name" '
 	walk(if type == "string" then gsub("io\\.github\\.themetalleg\\.BlueEvolution"; $app_id) else . end) |
 	.["app-id"] = $app_id | .branch = $channel |
+	(.modules[] | select(.name == "evolution-data-server") | .sources[] | select(.type == "patch") | .path) |= ($source + "/flatpak/" + .) |
   (.modules[] | select(.name == "evolution") | .sources[0].path) = $source |
 	(.modules[] | select(.name == "evolution") | .["config-opts"]) += [
 		"-DBLUEEVOLUTION_VERSION=" + $version,

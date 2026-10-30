@@ -236,6 +236,9 @@ test('generated manifests separate application, window and EDS service identitie
       assert.ok(evolution['config-opts'].includes(`-DWITH_WMCLASS_OVERRIDE=${metadata.app_id}`));
       assert.ok(evolution['config-opts'].includes(`-DBLUEEVOLUTION_APPLICATION_NAME=${metadata.app_name}`));
       assert.ok(eds['config-opts'].includes(`-DDBUS_SERVICES_PREFIX=${metadata.app_id}`));
+      const policyPatch = eds.sources.find(source => source.type === 'patch');
+      assert.equal(policyPatch.path, resolve(root, 'flatpak/patches/camel-unread-download-policy.patch'));
+      assert.ok(readFileSync(policyPatch.path, 'utf8').includes('download-unread-only'));
       assert.ok(evolution['post-install'].some(command => command.includes(`${metadata.app_id}.metainfo.xml`)));
       const appdata = manifest.modules.find(module => module.name === 'news-to-appdata');
       assert.deepEqual(appdata['build-commands'], [`./update-appdata.sh ${metadata.channel === 'beta' ? 'development' : 'stable'}`]);

@@ -1,0 +1,362 @@
+]633;E;for source in camel-offline-settings.c camel-offline-folder.c camel-folder.c;7646ccdf-3800-455d-baac-33700c923bff]633;C--- a/src/camel/camel-offline-settings.c
++++ b/src/camel/camel-offline-settings.c
+@@ -11,6 +11,7 @@
+ 
+ struct _CamelOfflineSettingsPrivate {
+ 	gboolean stay_synchronized;
++	gboolean download_unread_only;
+ 	gboolean limit_by_age;
+ 	CamelTimeUnit limit_unit;
+ 	gint limit_value;
+@@ -22,6 +23,7 @@
+ 	PROP_LIMIT_BY_AGE,
+ 	PROP_LIMIT_UNIT,
+ 	PROP_LIMIT_VALUE,
++	PROP_DOWNLOAD_UNREAD_ONLY,
+ 	N_PROPS
+ };
+ 
+@@ -38,7 +40,16 @@
+                              const GValue *value,
+                              GParamSpec *pspec)
+ {
++	CamelOfflineSettings *settings = CAMEL_OFFLINE_SETTINGS (object);
++
+ 	switch (property_id) {
++		case PROP_DOWNLOAD_UNREAD_ONLY:
++			if (settings->priv->download_unread_only != g_value_get_boolean (value)) {
++				settings->priv->download_unread_only = g_value_get_boolean (value);
++				g_object_notify_by_pspec (object, properties[PROP_DOWNLOAD_UNREAD_ONLY]);
++			}
++			return;
++
+ 		case PROP_STAY_SYNCHRONIZED:
+ 			camel_offline_settings_set_stay_synchronized (
+ 				CAMEL_OFFLINE_SETTINGS (object),
+@@ -74,6 +85,10 @@
+                              GParamSpec *pspec)
+ {
+ 	switch (property_id) {
++		case PROP_DOWNLOAD_UNREAD_ONLY:
++			g_value_set_boolean (value, CAMEL_OFFLINE_SETTINGS (object)->priv->download_unread_only);
++			return;
++
+ 		case PROP_STAY_SYNCHRONIZED:
+ 			g_value_set_boolean (
+ 				value,
+@@ -173,6 +188,15 @@
+ 			G_PARAM_READWRITE |
+ 			G_PARAM_CONSTRUCT |
+ 			G_PARAM_EXPLICIT_NOTIFY |
++			G_PARAM_STATIC_STRINGS);
++
++	properties[PROP_DOWNLOAD_UNREAD_ONLY] =
++		g_param_spec_boolean (
++			"download-unread-only", NULL, NULL,
++			FALSE,
++			G_PARAM_READWRITE |
++			G_PARAM_CONSTRUCT |
++			G_PARAM_EXPLICIT_NOTIFY |
+ 			G_PARAM_STATIC_STRINGS);
+ 
+ 	g_object_class_install_properties (object_class, N_PROPS, properties);
+--- a/src/camel/camel-offline-folder.c
++++ b/src/camel/camel-offline-folder.c
+@@ -167,6 +167,48 @@
+ 	return limit_time;
+ }
+ 
++static gboolean
++offline_folder_download_unread_only (CamelFolder *folder)
++{
++	CamelStore *store = camel_folder_get_parent_store (folder);
++	CamelSettings *settings;
++	gboolean unread_only = FALSE;
++
++	if (!store || camel_offline_folder_get_offline_sync (CAMEL_OFFLINE_FOLDER (folder)) != CAMEL_THREE_STATE_INCONSISTENT)
++		return FALSE;
++
++	settings = camel_service_ref_settings (CAMEL_SERVICE (store));
++	if (CAMEL_IS_OFFLINE_SETTINGS (settings) &&
++	    !camel_offline_settings_get_stay_synchronized (CAMEL_OFFLINE_SETTINGS (settings)))
++		g_object_get (settings, "download-unread-only", &unread_only, NULL);
++	g_clear_object (&settings);
++
++	return unread_only;
++}
++
++static gboolean
++offline_folder_should_download (CamelFolder *folder,
++				const gchar *uid,
++				gint64 limit_time)
++{
++	CamelMessageInfo *info;
++	gboolean download;
++	gboolean unread_only = offline_folder_download_unread_only (folder);
++
++	if (limit_time <= 0 && !unread_only)
++		return TRUE;
++
++	info = camel_folder_get_message_info (folder, uid);
++	if (!info)
++		return FALSE;
++
++	download = (limit_time <= 0 || camel_message_info_get_date_sent (info) > limit_time) &&
++		(!unread_only || !(camel_message_info_get_flags (info) & (CAMEL_MESSAGE_SEEN | CAMEL_MESSAGE_DELETED | CAMEL_MESSAGE_JUNK)));
++	g_object_unref (info);
++
++	return download;
++}
++
+ static void
+ offline_folder_downsync_background (CamelSession *session,
+                                     GCancellable *cancellable,
+@@ -174,6 +216,12 @@
+                                     GError **error)
+ {
+ 	gint64 limit_time;
++	CamelStore *store = camel_folder_get_parent_store (data->folder);
++
++	if (!store || !camel_session_get_online (session) ||
++	    !camel_offline_store_get_online (CAMEL_OFFLINE_STORE (store)) ||
++	    !camel_offline_folder_can_downsync (CAMEL_OFFLINE_FOLDER (data->folder)))
++		return;
+ 
+ 	camel_operation_push_message (
+ 		/* Translators: The first “%s” is replaced with an account name and the second “%s”
+@@ -190,33 +238,28 @@
+ 		gboolean success = TRUE;
+ 		gint ii;
+ 
+-		uid_added = data->changes->uid_added;
++		uid_added = camel_folder_dup_uncached_uids (data->folder, data->changes->uid_added, NULL);
++		if (!uid_added) {
++			camel_operation_pop_message (cancellable);
++			return;
++		}
+ 
+-		for (ii = 0; success && ii < uid_added->len; ii++) {
++		for (ii = 0; success && ii < uid_added->len && !g_cancellable_is_cancelled (cancellable); ii++) {
+ 			GError *local_error = NULL;
+ 			const gchar *uid;
+ 			gint percent;
+ 
++			if (!camel_session_get_online (session) ||
++			    !camel_offline_folder_can_downsync (CAMEL_OFFLINE_FOLDER (data->folder)))
++				break;
++
+ 			percent = ii * 100 / uid_added->len;
+ 			uid = g_ptr_array_index (uid_added, ii);
+ 
+ 			camel_operation_progress (cancellable, percent);
+ 
+-			if (limit_time > 0) {
+-				CamelMessageInfo *mi;
+-				gboolean download;
+-
+-				mi = camel_folder_get_message_info (data->folder, uid);
+-				if (!mi)
+-					continue;
+-
+-				download = camel_message_info_get_date_sent (mi) > limit_time;
+-
+-				g_clear_object (&mi);
+-
+-				if (!download)
+-					continue;
+-			}
++			if (!offline_folder_should_download (data->folder, uid, limit_time))
++				continue;
+ 
+ 			success = offline_folder_synchronize_message_wrapper_sync (data->folder, uid, cancellable, &local_error);
+ 
+@@ -240,6 +283,7 @@
+ 			/* Do not bother the user with background for-offline download errors */
+ 			g_clear_error (&local_error);
+ 		}
++		g_ptr_array_unref (uid_added);
+ 	} else {
+ 		gchar *expression = NULL;
+ 		gboolean success;
+@@ -286,7 +330,11 @@
+ 	if (!session)
+ 		return;
+ 
+-	if (changes && changes->uid_added->len > 0 && camel_offline_folder_can_downsync (CAMEL_OFFLINE_FOLDER (folder))) {
++	if (changes &&
++	    (changes->uid_added->len > 0 ||
++	     (changes->uid_changed->len > 0 && offline_folder_download_unread_only (folder))) &&
++	    camel_session_get_online (session) && camel_offline_store_get_online (CAMEL_OFFLINE_STORE (store)) &&
++	    camel_offline_folder_can_downsync (CAMEL_OFFLINE_FOLDER (folder))) {
+ 		OfflineDownsyncData *data;
+ 		gchar *description;
+ 
+@@ -295,6 +343,13 @@
+ 		camel_folder_change_info_cat (data->changes, changes);
+ 		data->folder = g_object_ref (folder);
+ 
++		if (offline_folder_download_unread_only (folder)) {
++			guint index;
++
++			for (index = 0; index < changes->uid_changed->len; index++)
++				camel_folder_change_info_add_uid (data->changes, changes->uid_changed->pdata[index]);
++		}
++
+ 		/* Translators: The first “%s” is replaced with an account name and the second “%s”
+ 		   is replaced with a full path name. The spaces around “:” are intentional, as
+ 		   the whole “%s : %s” is meant as an absolute identification of the folder. */
+@@ -451,9 +506,9 @@
+ 
+ 	for (i = 0; i < uncached_uids->len && !g_cancellable_is_cancelled (cancellable); i++) {
+ 		const gchar *uid = uncached_uids->pdata[i];
+-		gboolean download = limit_time <= 0;
++		gboolean download = offline_folder_should_download (folder, uid, limit_time);
+ 
+-		if (limit_time > 0) {
++		if (download && limit_time > 0) {
+ 			CamelMessageInfo *mi;
+ 
+ 			mi = camel_folder_get_message_info (folder, uid);
+@@ -629,6 +684,7 @@
+ 	CamelStore *parent_store;
+ 	CamelThreeState sync_folder;
+ 	gboolean sync_store;
++	gboolean unread_only = FALSE;
+ 
+ 	g_return_val_if_fail (CAMEL_IS_OFFLINE_FOLDER (folder), FALSE);
+ 
+@@ -640,12 +696,13 @@
+ 	settings = camel_service_ref_settings (service);
+ 
+ 	sync_store = camel_offline_settings_get_stay_synchronized (CAMEL_OFFLINE_SETTINGS (settings));
++	g_object_get (settings, "download-unread-only", &unread_only, NULL);
+ 
+ 	g_object_unref (settings);
+ 
+ 	sync_folder = camel_offline_folder_get_offline_sync (CAMEL_OFFLINE_FOLDER (folder));
+ 
+-	return sync_folder == CAMEL_THREE_STATE_ON || (sync_store && sync_folder == CAMEL_THREE_STATE_INCONSISTENT);
++	return sync_folder == CAMEL_THREE_STATE_ON || ((sync_store || unread_only) && sync_folder == CAMEL_THREE_STATE_INCONSISTENT);
+ }
+ 
+ /**
+--- a/src/camel/camel-folder.c
++++ b/src/camel/camel-folder.c
+@@ -46,6 +46,8 @@
+ #include "camel-mempool.h"
+ #include "camel-mime-message.h"
+ #include "camel-network-service.h"
++#include "camel-offline-folder.h"
++#include "camel-offline-settings.h"
+ #include "camel-offline-store.h"
+ #include "camel-operation.h"
+ #include "camel-session.h"
+@@ -74,6 +76,7 @@
+ 	gint frozen;
+ 	CamelFolderChangeInfo *changed_frozen; /* queues changed events */
+ 	gboolean skip_folder_lock;
++	gboolean unread_downsync_pending;
+ 
+ 	/* Changes to be emitted from an idle callback. */
+ 	CamelFolderChangeInfo *pending_changes;
+@@ -3948,6 +3951,90 @@
+ 	return g_task_propagate_boolean (G_TASK (result), error);
+ }
+ 
++static void
++folder_download_unread_done_cb (GObject *source_object,
++				GAsyncResult *result,
++				gpointer user_data)
++{
++	CamelFolder *folder = CAMEL_FOLDER (source_object);
++	GError *error = NULL;
++
++	g_task_propagate_boolean (G_TASK (result), &error);
++	g_clear_error (&error);
++	g_mutex_lock (&folder->priv->change_lock);
++	folder->priv->unread_downsync_pending = FALSE;
++	g_mutex_unlock (&folder->priv->change_lock);
++}
++
++static gboolean
++folder_download_unread_allowed (CamelFolder *folder)
++{
++	CamelStore *store = camel_folder_get_parent_store (folder);
++	CamelSettings *settings;
++	CamelSession *session;
++	gboolean unread_only = FALSE;
++	gboolean online;
++
++	if (!CAMEL_IS_OFFLINE_FOLDER (folder) || !CAMEL_IS_OFFLINE_STORE (store) ||
++	    !camel_offline_store_get_online (CAMEL_OFFLINE_STORE (store)) ||
++	    !camel_offline_folder_can_downsync (CAMEL_OFFLINE_FOLDER (folder)))
++		return FALSE;
++
++	settings = camel_service_ref_settings (CAMEL_SERVICE (store));
++	g_object_get (settings, "download-unread-only", &unread_only, NULL);
++	if (camel_offline_settings_get_stay_synchronized (CAMEL_OFFLINE_SETTINGS (settings)))
++		unread_only = FALSE;
++	g_object_unref (settings);
++	if (!unread_only)
++		return FALSE;
++
++	session = camel_service_ref_session (CAMEL_SERVICE (store));
++	online = session && camel_session_get_online (session);
++	g_clear_object (&session);
++	return online;
++}
++
++static void
++folder_download_unread_thread (GTask *task,
++			      gpointer source_object,
++			      gpointer task_data,
++			      GCancellable *cancellable)
++{
++	GError *error = NULL;
++	gboolean success = TRUE;
++
++	if (folder_download_unread_allowed (CAMEL_FOLDER (source_object)))
++		success = camel_offline_folder_downsync_sync (CAMEL_OFFLINE_FOLDER (source_object),
++			"(match-all (not (system-flag \"Seen\")))", cancellable, &error);
++	if (error)
++		g_task_return_error (task, error);
++	else
++		g_task_return_boolean (task, success);
++}
++
++static void
++folder_download_unread_after_refresh (CamelFolder *folder,
++				     GCancellable *cancellable)
++{
++	GTask *task;
++
++	if (!folder_download_unread_allowed (folder))
++		return;
++
++	g_mutex_lock (&folder->priv->change_lock);
++	if (folder->priv->unread_downsync_pending) {
++		g_mutex_unlock (&folder->priv->change_lock);
++		return;
++	}
++	folder->priv->unread_downsync_pending = TRUE;
++	g_mutex_unlock (&folder->priv->change_lock);
++
++	task = g_task_new (folder, cancellable, folder_download_unread_done_cb, NULL);
++	g_task_set_priority (task, G_PRIORITY_LOW);
++	g_task_run_in_thread (task, folder_download_unread_thread);
++	g_object_unref (task);
++}
++
+ /**
+  * camel_folder_refresh_info_sync:
+  * @folder: a #CamelFolder
+@@ -4001,6 +4088,9 @@
+ 
+ 	camel_folder_unlock (folder);
+ 
++	if (success)
++		folder_download_unread_after_refresh (folder, cancellable);
++
+ 	return success;
+ }
+ 

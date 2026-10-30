@@ -90,6 +90,68 @@ mail_config_provider_page_add_section (GtkBox *main_box,
 }
 
 static void
+mail_config_provider_page_download_policy_notify_cb (GObject *settings,
+						     GParamSpec *pspec,
+						     GtkComboBox *combo)
+{
+	gboolean all_messages = FALSE, unread_only = FALSE;
+	gint active;
+
+	g_object_get (settings,
+		"stay-synchronized", &all_messages,
+		"download-unread-only", &unread_only, NULL);
+	active = all_messages ? 2 : (unread_only ? 1 : 0);
+	if (gtk_combo_box_get_active (combo) != active)
+		gtk_combo_box_set_active (combo, active);
+}
+
+static void
+mail_config_provider_page_download_policy_changed_cb (GtkComboBox *combo,
+						      CamelSettings *settings)
+{
+	gint active = gtk_combo_box_get_active (combo);
+
+	if (active < 0)
+		return;
+
+	g_object_freeze_notify (G_OBJECT (settings));
+	g_object_set (settings,
+		"stay-synchronized", active == 2,
+		"download-unread-only", active == 1, NULL);
+	g_object_thaw_notify (G_OBJECT (settings));
+}
+
+static void
+mail_config_provider_page_add_download_policy (GtkBox *main_box,
+					      CamelSettings *settings)
+{
+	GtkWidget *row, *label, *combo;
+
+	row = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
+	gtk_widget_set_margin_start (row, STANDARD_MARGIN);
+	label = gtk_label_new_with_mnemonic (_("Automatically _download messages:"));
+	gtk_label_set_xalign (GTK_LABEL (label), 0.0);
+	gtk_label_set_line_wrap (GTK_LABEL (label), TRUE);
+	combo = gtk_combo_box_text_new ();
+	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), _("On demand"));
+	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), _("Unread messages only"));
+	gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (combo), _("All messages"));
+	gtk_label_set_mnemonic_widget (GTK_LABEL (label), combo);
+	gtk_box_pack_start (GTK_BOX (row), label, FALSE, FALSE, 0);
+	gtk_box_pack_start (GTK_BOX (row), combo, FALSE, FALSE, 0);
+	gtk_box_pack_start (main_box, row, FALSE, FALSE, 0);
+
+	mail_config_provider_page_download_policy_notify_cb (G_OBJECT (settings), NULL, GTK_COMBO_BOX (combo));
+	g_signal_connect_object (combo, "changed",
+		G_CALLBACK (mail_config_provider_page_download_policy_changed_cb), settings, 0);
+	g_signal_connect_object (settings, "notify::stay-synchronized",
+		G_CALLBACK (mail_config_provider_page_download_policy_notify_cb), combo, 0);
+	g_signal_connect_object (settings, "notify::download-unread-only",
+		G_CALLBACK (mail_config_provider_page_download_policy_notify_cb), combo, 0);
+	gtk_widget_show_all (row);
+}
+
+static void
 mail_config_provider_page_add_checkbox (GtkBox *main_box,
 					CamelSettings *settings,
 					CamelProviderConfEntry *entry)
@@ -97,6 +159,12 @@ mail_config_provider_page_add_checkbox (GtkBox *main_box,
 	GtkWidget *widget;
 
 	g_return_if_fail (entry->text != NULL);
+
+	if (g_strcmp0 (entry->name, "stay-synchronized") == 0 &&
+	    g_object_class_find_property (G_OBJECT_GET_CLASS (settings), "download-unread-only")) {
+		mail_config_provider_page_add_download_policy (main_box, settings);
+		return;
+	}
 
 	widget = gtk_check_button_new_with_mnemonic (entry->text);
 	gtk_widget_set_margin_start (widget, STANDARD_MARGIN);
