@@ -850,6 +850,6 @@ static void e_integrations_class_init (EIntegrationsClass *class)
 G_MODULE_EXPORT void e_module_load (GTypeModule *module)
 {
 	e_integrations_register_type (module);
-	tracking_reader_register_type (module);
+	e_tracking_reader_register_type (module);
 }
 G_MODULE_EXPORT void e_module_unload (GTypeModule *module) {}
