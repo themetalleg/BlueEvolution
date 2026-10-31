@@ -821,7 +821,7 @@ tracking_reader_class_init (ETrackingReaderClass *class)
 }
 
 static void
-tracking_reader_class_finalize (ETrackingReaderClass *class)
+e_tracking_reader_class_finalize (ETrackingReaderClass *class)
 {
 }
 
