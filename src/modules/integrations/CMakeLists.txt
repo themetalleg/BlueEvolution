@@ -1,4 +1,7 @@
-set(extra_deps evolution-shell)
+set(extra_deps
+	evolution-mail
+	evolution-shell
+)
 set(sources evolution-integrations.c)
 set(extra_defines)
 set(extra_cflags)

@@ -33358,3 +33358,156 @@ msgstr "Importiertes Zertifikat"
 
 #~ msgid "Summary:"
 #~ msgstr "Zusammenfassung:"
+
+msgid "Enter an HTTPS WordPress home URL without credentials, query, or fragment."
+msgstr "Geben Sie eine HTTPS-URL der WordPress-Startseite ohne Zugangsdaten, Abfrage oder Fragment ein."
+
+msgid "Enter a project ID containing exactly 10 ASCII letters or digits."
+msgstr "Geben Sie eine Projekt-ID mit genau 10 ASCII-Buchstaben oder Ziffern ein."
+
+msgid "The project API key has an invalid format."
+msgstr "Das Format des Projekt-API-Schlüssels ist ungültig."
+
+msgid "Store a valid project API key in Integrations settings first."
+msgstr "Speichern Sie zuerst einen gültigen Projekt-API-Schlüssel in den Integrationseinstellungen."
+
+msgid "The WordPress API URL is invalid."
+msgstr "Die WordPress-API-URL ist ungültig."
+
+msgid "WordPress returned an invalid response."
+msgstr "WordPress hat eine ungültige Antwort zurückgegeben."
+
+msgid "WordPress returned a tracking URL outside the configured project."
+msgstr "WordPress hat eine Tracking-URL außerhalb des konfigurierten Projekts zurückgegeben."
+
+msgid "WordPress returned a mismatched project or external email ID."
+msgstr "WordPress hat eine abweichende Projekt- oder externe E-Mail-ID zurückgegeben."
+
+msgid "WordPress returned a summary for a different project."
+msgstr "WordPress hat eine Zusammenfassung für ein anderes Projekt zurückgegeben."
+
+msgid "WordPress returned an invalid opening count."
+msgstr "WordPress hat eine ungültige Anzahl von Bildabrufen zurückgegeben."
+
+msgid "WordPress summary check failed (HTTP %u)."
+msgstr "Die WordPress-Zusammenfassungsprüfung ist fehlgeschlagen (HTTP %u)."
+
+msgid "WordPress token resolver check failed (HTTP %u)."
+msgstr "Die Prüfung der WordPress-Tokenauflösung ist fehlgeschlagen (HTTP %u)."
+
+msgid "WordPress request failed (HTTP %u)."
+msgstr "Die WordPress-Anfrage ist fehlgeschlagen (HTTP %u)."
+
+msgid "Complete the HTTPS site URL, project ID, and email ID in Integrations settings."
+msgstr "Vervollständigen Sie in den Integrationseinstellungen die HTTPS-Website-URL, Projekt-ID und E-Mail-ID."
+
+msgid "WordPress did not register a tracking pixel for this message."
+msgstr "WordPress hat für diese Nachricht kein Tracking-Pixel registriert."
+
+msgid "WordPress registration returned without an email ID."
+msgstr "Die WordPress-Registrierung wurde ohne E-Mail-ID zurückgegeben."
+
+msgid "The WordPress site or project changed after pixel registration. Review the settings and retry."
+msgstr "Die WordPress-Website oder das Projekt wurde nach der Pixelregistrierung geändert. Prüfen Sie die Einstellungen und versuchen Sie es erneut."
+
+msgid "Tracking pixels require an HTML message. Switch to HTML or turn off tracking."
+msgstr "Tracking-Pixel benötigen eine HTML-Nachricht. Wechseln Sie zu HTML oder deaktivieren Sie das Tracking."
+
+msgid "The tracking pixel could not be added to the HTML message."
+msgstr "Das Tracking-Pixel konnte der HTML-Nachricht nicht hinzugefügt werden."
+
+msgid "Tracking cannot be combined with a digitally signed or encrypted message. Turn off tracking to preserve message security."
+msgstr "Tracking kann nicht mit einer digital signierten oder verschlüsselten Nachricht kombiniert werden. Deaktivieren Sie das Tracking, um die Nachrichtensicherheit zu erhalten."
+
+msgid "WordPress Email Tracking"
+msgstr "WordPress-E-Mail-Tracking"
+
+msgid "Project API key"
+msgstr "Projekt-API-Schlüssel"
+
+msgid "WordPress email tracking settings saved."
+msgstr "Die WordPress-E-Mail-Tracking-Einstellungen wurden gespeichert."
+
+msgid "WordPress email tracking is disabled."
+msgstr "Das WordPress-E-Mail-Tracking ist deaktiviert."
+
+msgid "Testing WordPress connection and resolver…"
+msgstr "WordPress-Verbindung und Tokenauflösung werden getestet …"
+
+msgid "Saved WordPress API key removed; tracking disabled."
+msgstr "Der gespeicherte WordPress-API-Schlüssel wurde entfernt; Tracking ist deaktiviert."
+
+msgid "Registering the tracking pixel before sending…"
+msgstr "Das Tracking-Pixel wird vor dem Senden registriert …"
+
+msgid "No request recorded"
+msgstr "Kein Abruf erfasst"
+
+msgid "Track Email _Openings"
+msgstr "E-Mail-Öffnungen _verfolgen"
+
+msgid "Add a WordPress tracking pixel to this message"
+msgstr "Fügt dieser Nachricht ein WordPress-Tracking-Pixel hinzu"
+
+msgid "Register a unique tracking pixel for each outgoing email. Image requests do not prove that a person read the message."
+msgstr "Registriert für jede ausgehende E-Mail ein eigenes Tracking-Pixel. Bildabrufe beweisen nicht, dass eine Person die Nachricht gelesen hat."
+
+msgid "WordPress Tracking Pixel releases"
+msgstr "WordPress-Tracking-Pixel-Versionen"
+
+msgid "_WordPress home URL (HTTPS):"
+msgstr "_WordPress-Startseiten-URL (HTTPS):"
+
+msgid "Project _ID:"
+msgstr "Projekt-_ID:"
+
+msgid "Project _API key:"
+msgstr "Projekt-_API-Schlüssel:"
+
+msgid "_Enable WordPress tracking"
+msgstr "WordPress-Tracking _aktivieren"
+
+msgid "Track email openings _by default"
+msgstr "E-Mail-Öffnungen _standardmäßig verfolgen"
+
+msgid "_Remove saved API key"
+msgstr "Gespeicherten API-Schlüssel _entfernen"
+
+msgid "_Save Settings"
+msgstr "Einstellungen _speichern"
+
+msgid "_Test Connection"
+msgstr "Verbindung _testen"
+
+msgid "Remove _Key"
+msgstr "Schlüssel _entfernen"
+
+msgid "The WordPress API key could not be stored securely."
+msgstr "Der WordPress-API-Schlüssel konnte nicht sicher gespeichert werden."
+
+msgid "The saved WordPress API key could not be removed."
+msgstr "Der gespeicherte WordPress-API-Schlüssel konnte nicht entfernt werden."
+
+msgid "Store a WordPress project API key before enabling tracking."
+msgstr "Speichern Sie einen WordPress-Projekt-API-Schlüssel, bevor Sie das Tracking aktivieren."
+
+msgid "WordPress connection and token resolver are available."
+msgstr "Die WordPress-Verbindung und Tokenauflösung sind verfügbar."
+
+msgid "No WordPress project API key configured."
+msgstr "Kein WordPress-Projekt-API-Schlüssel konfiguriert."
+
+msgid "WordPress email tracking could not continue."
+msgstr "Das WordPress-E-Mail-Tracking konnte nicht fortgesetzt werden."
+
+msgid "WordPress recorded {0} image requests for this email."
+msgstr "WordPress hat {0} Bildabrufe für diese E-Mail erfasst."
+
+msgid "First request: {1}"
+msgstr "Erster Abruf: {1}"
+
+msgid "Most recent request: {2}"
+msgstr "Letzter Abruf: {2}"
+
+msgid "Image requests do not confirm that a person read the email."
+msgstr "Bildabrufe bestätigen nicht, dass eine Person die E-Mail gelesen hat."

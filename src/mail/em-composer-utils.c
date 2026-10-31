@@ -1098,6 +1098,122 @@ composer_wait_for_attachment_load_cancelled_cb (GCancellable *cancellable,
 	async_context_free (async_context);
 }
 
+typedef struct {
+	EWordPressTrackingManager *manager;
+	GCancellable *cancellable;
+	GtkWidget *progress_dialog;
+	gchar *external_id;
+	gboolean registering;
+	gboolean registered;
+	gboolean closed;
+} ComposerTrackingState;
+
+static void
+composer_tracking_close_progress (ComposerTrackingState *state)
+{
+	if (state->progress_dialog) {
+		GtkWidget *dialog = state->progress_dialog;
+		state->progress_dialog = NULL;
+		g_object_remove_weak_pointer (G_OBJECT (dialog), (gpointer *) &state->progress_dialog);
+		gtk_widget_destroy (dialog);
+	}
+}
+
+static void
+composer_tracking_state_free (gpointer data)
+{
+	ComposerTrackingState *state = data;
+	state->closed = TRUE;
+	if (state->cancellable)
+		g_cancellable_cancel (state->cancellable);
+	composer_tracking_close_progress (state);
+	g_clear_object (&state->cancellable);
+	g_clear_object (&state->manager);
+	g_free (state->external_id);
+	g_free (state);
+}
+
+static void
+composer_tracking_dialog_response_cb (GtkDialog *dialog,
+				      gint response_id,
+				      ComposerTrackingState *state)
+{
+	if (response_id == GTK_RESPONSE_CANCEL && state->registering) {
+		state->registering = FALSE;
+		if (state->cancellable)
+			g_cancellable_cancel (state->cancellable);
+	}
+	composer_tracking_close_progress (state);
+}
+
+static void
+composer_tracking_registration_done (GObject *source_object,
+					GAsyncResult *result,
+					gpointer user_data)
+{
+	EMsgComposer *composer = user_data;
+	ComposerTrackingState *state = g_object_get_data (G_OBJECT (composer), "blueevolution-wordpress-tracking");
+	GError *error = NULL;
+	gchar *tracking_url = e_wordpress_tracking_manager_register_finish (
+		E_WORDPRESS_TRACKING_MANAGER (source_object), result, &error);
+	if (state && !state->closed) {
+		state->registering = FALSE;
+		composer_tracking_close_progress (state);
+		e_ui_action_set_sensitive (E_COMPOSER_ACTION_SEND (composer), TRUE);
+		if (!tracking_url) {
+			if (!g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
+				e_alert_run_dialog_for_args (GTK_WINDOW (composer), "mail:wordpress-tracking-error",
+					error ? error->message : _("The tracking pixel could not be registered."), NULL);
+		} else {
+			state->registered = TRUE;
+			if (e_ui_action_get_active (E_COMPOSER_ACTION_TRACK_OPENINGS (composer)))
+				e_msg_composer_send (composer);
+		}
+	}
+	g_clear_error (&error);
+	g_free (tracking_url);
+	g_object_unref (composer);
+}
+
+static void
+composer_tracking_destroy_cb (GtkWidget *widget,
+			      ComposerTrackingState *state)
+{
+	state->closed = TRUE;
+	if (state->cancellable)
+		g_cancellable_cancel (state->cancellable);
+	composer_tracking_close_progress (state);
+}
+
+static gboolean
+composer_tracking_presend_cb (EMsgComposer *composer,
+			      ComposerTrackingState *state)
+{
+	GtkWidget *dialog;
+	if (!e_ui_action_get_active (E_COMPOSER_ACTION_TRACK_OPENINGS (composer)))
+		return TRUE;
+	if (state->registered)
+		return TRUE;
+	if (state->registering)
+		return FALSE;
+	if (!state->external_id)
+		state->external_id = e_wordpress_tracking_manager_generate_external_id ();
+	g_clear_object (&state->cancellable);
+	state->cancellable = g_cancellable_new ();
+	state->registering = TRUE;
+	e_ui_action_set_sensitive (E_COMPOSER_ACTION_SEND (composer), FALSE);
+	dialog = gtk_message_dialog_new (GTK_WINDOW (composer), GTK_DIALOG_DESTROY_WITH_PARENT,
+		GTK_MESSAGE_INFO, GTK_BUTTONS_NONE, "%s", _("Registering the tracking pixel before sending…"));
+	gtk_dialog_add_button (GTK_DIALOG (dialog), _("_Cancel"), GTK_RESPONSE_CANCEL);
+	g_object_add_weak_pointer (G_OBJECT (dialog), (gpointer *) &state->progress_dialog);
+	state->progress_dialog = dialog;
+	g_signal_connect (dialog, "response", G_CALLBACK (composer_tracking_dialog_response_cb), state);
+	gtk_widget_show (dialog);
+	e_wordpress_tracking_manager_register_async (state->manager, state->external_id,
+		state->cancellable, composer_tracking_registration_done, g_object_ref (composer));
+	return FALSE;
+}
+
 static void
 em_utils_composer_send_cb (EMsgComposer *composer,
                            CamelMimeMessage *message,
@@ -1108,6 +1224,19 @@ em_utils_composer_send_cb (EMsgComposer *composer,
 	GCancellable *cancellable;
 	EAttachmentView *view;
 	EAttachmentStore *store;
+	EWordPressTrackingManager *tracking_manager;
+	GError *tracking_error = NULL;
+	gboolean track_openings;
+
+	tracking_manager = g_object_get_data (G_OBJECT (composer), "blueevolution-wordpress-tracking-manager");
+	track_openings = e_ui_action_get_active (E_COMPOSER_ACTION_TRACK_OPENINGS (composer));
+	if (tracking_manager && !e_wordpress_tracking_manager_prepare_message (
+		tracking_manager, message, track_openings, &tracking_error)) {
+		e_alert_run_dialog_for_args (GTK_WINDOW (composer), "mail:wordpress-tracking-error",
+			tracking_error ? tracking_error->message : _("The tracking pixel could not be added to this message."), NULL);
+		g_clear_error (&tracking_error);
+		return;
+	}
 
 	view = e_msg_composer_get_attachment_view (composer);
 	store = e_attachment_view_get_store (view);
@@ -5288,6 +5417,7 @@ em_configure_new_composer (EMsgComposer *composer,
 	EComposerHeaderTable *table;
 	EComposerHeaderType header_type;
 	EComposerHeader *header;
+	ComposerTrackingState *tracking_state;
 
 	g_return_if_fail (E_IS_MSG_COMPOSER (composer));
 	g_return_if_fail (E_IS_MAIL_SESSION (session));
@@ -5295,6 +5425,16 @@ em_configure_new_composer (EMsgComposer *composer,
 	header_type = E_COMPOSER_HEADER_POST_TO;
 	table = e_msg_composer_get_header_table (composer);
 	header = e_composer_header_table_get_header (table, header_type);
+
+	tracking_state = g_new0 (ComposerTrackingState, 1);
+	tracking_state->manager = e_wordpress_tracking_manager_new ();
+	tracking_state->cancellable = g_cancellable_new ();
+	g_object_set_data_full (G_OBJECT (composer), "blueevolution-wordpress-tracking",
+		tracking_state, composer_tracking_state_free);
+	g_object_set_data_full (G_OBJECT (composer), "blueevolution-wordpress-tracking-manager",
+		g_object_ref (tracking_state->manager), g_object_unref);
+	g_signal_connect (composer, "destroy", G_CALLBACK (composer_tracking_destroy_cb), tracking_state);
+	g_signal_connect (composer, "presend", G_CALLBACK (composer_tracking_presend_cb), tracking_state);
 
 	g_signal_connect (
 		composer, "presend",

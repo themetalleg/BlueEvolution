@@ -718,4 +718,16 @@ This option is set for each mail account separately. You can find it in the Secu
     <button response="GTK_RESPONSE_REJECT" _label="_Never"></button>
     <button response="GTK_RESPONSE_CANCEL" _label="_Cancel"/>
   </error>
+
+  <error id="wordpress-tracking-error" type="error">
+    <_primary>WordPress email tracking could not continue.</_primary>
+    <_secondary xml:space="preserve">{0}</_secondary>
+  </error>
+
+  <error id="wordpress-tracking-summary" type="info">
+    <_primary>WordPress recorded {0} image requests for this email.</_primary>
+    <_secondary xml:space="preserve">First request: {1}
+Most recent request: {2}
+Image requests do not confirm that a person read the email.</_secondary>
+  </error>
 </error-list>
