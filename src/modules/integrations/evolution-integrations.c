@@ -811,7 +811,7 @@ tracking_reader_dispose (GObject *object)
 }
 
 static void
-tracking_reader_class_init (ETrackingReaderClass *class)
+e_tracking_reader_class_init (ETrackingReaderClass *class)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (class);
 	EExtensionClass *extension_class = E_EXTENSION_CLASS (class);
@@ -826,7 +826,7 @@ e_tracking_reader_class_finalize (ETrackingReaderClass *class)
 }
 
 static void
-tracking_reader_init (ETrackingReader *self)
+e_tracking_reader_init (ETrackingReader *self)
 {
 }
 
