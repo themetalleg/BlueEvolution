@@ -522,7 +522,7 @@ tracking_task_thread (GTask *task,
 			summary->count = count_value;
 			summary->first_request = g_strdup (tracking_json_string (object, "first_request"));
 			summary->latest_request = g_strdup (tracking_json_string (object, "latest_request"));
-			g_task_return_pointer (task, summary, e_wordpress_tracking_summary_free);
+			g_task_return_pointer (task, summary, tracking_summary_free);
 		}
 	} else {
 		gchar *probe_url = g_strconcat (base_url, "/summary", NULL);
