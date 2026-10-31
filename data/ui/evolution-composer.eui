@@ -76,6 +76,7 @@
       <item action='request-read-receipt' text_only='true'/>
       <item action='delivery-status-notification' text_only='true'/>
       <item action='prioritize-message' text_only='true'/>
+      <item action='track-openings' text_only='true'/>
       <separator/>
       <item action='EMsgComposer::charset-menu'/>
     </submenu>

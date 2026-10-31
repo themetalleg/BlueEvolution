@@ -185,6 +185,7 @@ set(SOURCES
 	e-name-selector.c
 	e-online-button.c
 	e-openai-manager.c
+	e-wordpress-tracking-manager.c
 	e-paned.c
 	e-passwords.c
 	e-photo-cache.c
@@ -466,6 +467,8 @@ set(HEADERS
 	e-name-selector.h
 	e-online-button.h
 	e-openai-manager.h
+	e-wordpress-tracking-manager.h
+	e-wordpress-tracking-manager.h
 	e-paned.h
 	e-passwords.h
 	e-photo-cache.h

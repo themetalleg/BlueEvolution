@@ -250,6 +250,7 @@ src/e-util/e-name-selector-entry.c
 src/e-util/e-name-selector-list.c
 src/e-util/e-online-button.c
 src/e-util/e-openai-manager.c
+src/e-util/e-wordpress-tracking-manager.c
 src/e-util/e-paned.c
 src/e-util/e-passwords.c
 src/e-util/e-plugin.c

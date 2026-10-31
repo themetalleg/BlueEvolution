@@ -655,6 +655,13 @@ e_composer_actions_init (EMsgComposer *composer)
 		  N_("Use _Theme Colors"),
 		  NULL,
 		  N_("Use theme colors in the editor without including them in the sent message"),
+		  NULL, NULL, "false", (EUIActionFunc) e_ui_action_set_state },
+
+		{ "track-openings",
+		  NULL,
+		  N_("Track Email _Openings"),
+		  NULL,
+		  N_("Add a WordPress tracking pixel to this message"),
 		  NULL, NULL, "false", (EUIActionFunc) e_ui_action_set_state }
 	};
 
@@ -714,6 +721,13 @@ e_composer_actions_init (EMsgComposer *composer)
 	#undef init_toolbar_option
 
 	settings = e_util_ref_settings ("org.gnome.evolution.mail");
+	{
+		GSettings *tracking_settings = e_util_ref_settings ("io.github.themetalleg.BlueEvolution");
+		action = e_ui_manager_get_action (ui_manager, "track-openings");
+		e_ui_action_set_active (action, g_settings_get_boolean (tracking_settings, "mail-tracking-default"));
+		e_ui_action_set_sensitive (action, g_settings_get_boolean (tracking_settings, "mail-tracking-enabled"));
+		g_object_unref (tracking_settings);
+	}
 
 	action = ACTION (TOOLBAR_SHOW_MAIN);
 	g_settings_bind (
