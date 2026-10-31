@@ -176,7 +176,7 @@ jobs:
 
           GitHub provides the corresponding source archives with this release.
           EOF
-          if [[ "$VERSION" == "0.2.0-beta.1" ]]; then
+          if [[ "$CHANNEL" == "beta" ]]; then
             printf '\n' >> "$RUNNER_TEMP/release-notes.md"
             cat RELEASE_NOTES.md >> "$RUNNER_TEMP/release-notes.md"
           fi
