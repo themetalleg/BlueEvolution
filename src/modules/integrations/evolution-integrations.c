@@ -366,6 +366,15 @@ static void
 tracking_page_busy (TrackingPage *page,
 		    gboolean busy)
 {
+	gchar *site_url = e_wordpress_tracking_manager_dup_site_url (page->manager);
+	gchar *project_id = e_wordpress_tracking_manager_dup_project_id (page->manager);
+	gboolean saved = page->key_saved &&
+		g_strcmp0 (site_url, gtk_entry_get_text (GTK_ENTRY (page->site_url))) == 0 &&
+		g_strcmp0 (project_id, gtk_entry_get_text (GTK_ENTRY (page->project_id))) == 0 &&
+		!*gtk_entry_get_text (GTK_ENTRY (page->api_key)) &&
+		!gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (page->clear_key));
+	g_free (site_url);
+	g_free (project_id);
 	page->busy = busy;
 	gtk_widget_set_sensitive (page->site_url, !busy);
 	gtk_widget_set_sensitive (page->project_id, !busy);
@@ -375,12 +384,20 @@ tracking_page_busy (TrackingPage *page,
 		gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (page->enabled)));
 	gtk_widget_set_sensitive (page->clear_key, !busy && page->key_saved);
 	gtk_widget_set_sensitive (page->save, !busy);
-	gtk_widget_set_sensitive (page->test, !busy);
-	gtk_widget_set_sensitive (page->remove, !busy);
+	gtk_widget_set_sensitive (page->test, !busy && saved);
+	gtk_widget_set_sensitive (page->remove, !busy && page->key_saved);
 	if (busy)
 		gtk_spinner_start (GTK_SPINNER (page->spinner));
 	else
 		gtk_spinner_stop (GTK_SPINNER (page->spinner));
+}
+
+static void
+tracking_page_changed (GtkWidget *widget,
+		       TrackingPage *page)
+{
+	gtk_image_clear (GTK_IMAGE (page->feedback));
+	tracking_page_busy (page, page->busy);
 }
 
 static void
@@ -435,11 +452,12 @@ tracking_save_clicked (GtkButton *button,
 	e_wordpress_tracking_manager_set_default (page->manager, track_by_default);
 	gtk_entry_set_text (GTK_ENTRY (page->api_key), "");
 	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (page->clear_key), FALSE);
-	gtk_entry_set_placeholder_text (GTK_ENTRY (page->api_key), *api_key || (has_key && !clear_key) ?
+	gtk_entry_set_placeholder_text (GTK_ENTRY (page->api_key), page->key_saved ?
 		_("API key saved (hidden). Enter a new key to replace it.") : _("Project API key"));
 	gtk_label_set_text (GTK_LABEL (page->status), enabled ?
 		_("WordPress email tracking settings saved.") : _("WordPress email tracking is disabled."));
 	gtk_image_set_from_icon_name (GTK_IMAGE (page->feedback), "emblem-ok-symbolic", GTK_ICON_SIZE_BUTTON);
+	tracking_page_busy (page, FALSE);
 }
 
 static void
@@ -494,6 +512,7 @@ tracking_remove_clicked (GtkButton *button,
 	gtk_entry_set_placeholder_text (GTK_ENTRY (page->api_key), _("Project API key"));
 	gtk_image_clear (GTK_IMAGE (page->feedback));
 	gtk_label_set_text (GTK_LABEL (page->status), _("Saved WordPress API key removed; tracking disabled."));
+	tracking_page_busy (page, FALSE);
 }
 
 static GtkWidget *
@@ -527,6 +546,8 @@ tracking_page_new (EPreferencesWindow *window)
 	label = gtk_label_new_with_mnemonic (_("_WordPress home URL (HTTPS):"));
 	gtk_widget_set_halign (label, GTK_ALIGN_START);
 	page->site_url = gtk_entry_new ();
+	gtk_entry_set_width_chars (GTK_ENTRY (page->site_url), 48);
+	gtk_widget_set_hexpand (page->site_url, TRUE);
 	gtk_entry_set_placeholder_text (GTK_ENTRY (page->site_url), "https://example.com/wordpress");
 	gtk_label_set_mnemonic_widget (GTK_LABEL (label), page->site_url);
 	gtk_grid_attach (GTK_GRID (grid), label, 0, 0, 1, 1);
@@ -534,6 +555,7 @@ tracking_page_new (EPreferencesWindow *window)
 	label = gtk_label_new_with_mnemonic (_("Project _ID:"));
 	gtk_widget_set_halign (label, GTK_ALIGN_START);
 	page->project_id = gtk_entry_new ();
+	gtk_widget_set_hexpand (page->project_id, TRUE);
 	gtk_entry_set_max_length (GTK_ENTRY (page->project_id), 10);
 	gtk_label_set_mnemonic_widget (GTK_LABEL (label), page->project_id);
 	gtk_grid_attach (GTK_GRID (grid), label, 0, 1, 1, 1);
@@ -541,6 +563,8 @@ tracking_page_new (EPreferencesWindow *window)
 	label = gtk_label_new_with_mnemonic (_("Project _API key:"));
 	gtk_widget_set_halign (label, GTK_ALIGN_START);
 	page->api_key = gtk_entry_new ();
+	gtk_entry_set_width_chars (GTK_ENTRY (page->api_key), 48);
+	gtk_widget_set_hexpand (page->api_key, TRUE);
 	gtk_entry_set_visibility (GTK_ENTRY (page->api_key), FALSE);
 	gtk_entry_set_input_purpose (GTK_ENTRY (page->api_key), GTK_INPUT_PURPOSE_PASSWORD);
 	gtk_entry_set_max_length (GTK_ENTRY (page->api_key), 90);
@@ -598,8 +622,12 @@ tracking_page_new (EPreferencesWindow *window)
 		gtk_label_set_text (GTK_LABEL (page->status), error ? error->message : _("No WordPress project API key configured."));
 	}
 	g_clear_error (&error);
-	gtk_widget_set_sensitive (page->default_enabled, e_wordpress_tracking_manager_get_enabled (page->manager));
-	gtk_widget_set_sensitive (page->test, has_key);
+	g_signal_connect (page->site_url, "changed", G_CALLBACK (tracking_page_changed), page);
+	g_signal_connect (page->project_id, "changed", G_CALLBACK (tracking_page_changed), page);
+	g_signal_connect (page->api_key, "changed", G_CALLBACK (tracking_page_changed), page);
+	g_signal_connect (page->enabled, "toggled", G_CALLBACK (tracking_page_changed), page);
+	g_signal_connect (page->clear_key, "toggled", G_CALLBACK (tracking_page_changed), page);
+	tracking_page_busy (page, FALSE);
 	gtk_widget_show_all (box);
 	return box;
 }

@@ -5,6 +5,8 @@ mailbox and the WordPress Tracking Pixel plugin before using it with live mail.
 
 ## Changes
 
+- Saving the first WordPress API key now enables connection testing immediately. Tracking controls also refresh after changing options or removing a key, and testing is disabled while connection details are unsaved.
+- WordPress URL, project ID, and API-key fields now expand across the settings page; URL and key fields have a wider baseline.
 - Configure an HTTPS WordPress site, project ID, and project API key under Settings > Integrations > Email Tracking. The key is stored in the desktop keyring.
 - Enable tracking globally and choose whether new messages track by default; each message can override that choice in the composer Options menu.
 - Review recorded image-request totals and first/latest request times in the preview of a tracked sent message.

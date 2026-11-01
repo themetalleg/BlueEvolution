@@ -1,6 +1,28 @@
 #include "e-util/e-util.h"
 
 static guint saved_keys;
+static gboolean tracking_key_saved;
+
+gboolean
+e_wordpress_tracking_manager_has_key (EWordPressTrackingManager *manager, GError **error)
+{
+	return tracking_key_saved;
+}
+
+gboolean
+e_wordpress_tracking_manager_store_key (EWordPressTrackingManager *manager, const gchar *key, GError **error)
+{
+	g_assert_cmpstr (key, ==, "synthetic-tracking-key");
+	tracking_key_saved = TRUE;
+	return TRUE;
+}
+
+gboolean
+e_wordpress_tracking_manager_remove_key (EWordPressTrackingManager *manager, GError **error)
+{
+	tracking_key_saved = FALSE;
+	return TRUE;
+}
 
 void
 e_openai_manager_request (EOpenAIManager *manager, EOpenAIRequest kind,
@@ -28,6 +50,58 @@ e_openai_manager_set_key (EOpenAIManager *manager, const gchar *key, gboolean co
 }
 
 #include "evolution-integrations.c"
+
+static void
+test_tracking_settings_controls (void)
+{
+	GtkWidget *window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+	GtkWidget *widget = tracking_page_new (NULL);
+	TrackingPage *page = tracking_page_from_widget (widget);
+	gtk_container_add (GTK_CONTAINER (window), widget);
+	gtk_window_set_default_size (GTK_WINDOW (window), 1100, 650);
+	gtk_widget_show_all (window);
+	while (g_main_context_iteration (NULL, FALSE));
+	g_assert_cmpint (gtk_widget_get_allocated_width (page->site_url), >=, 500);
+	g_assert_cmpint (gtk_widget_get_allocated_width (page->api_key), >=, 500);
+	g_assert_cmpint (gtk_widget_get_allocated_width (page->project_id), ==,
+		gtk_widget_get_allocated_width (page->site_url));
+	g_assert_false (gtk_widget_get_sensitive (page->test));
+	g_assert_false (gtk_widget_get_sensitive (page->remove));
+	g_assert_true (gtk_widget_get_hexpand (page->site_url));
+	g_assert_true (gtk_widget_get_hexpand (page->project_id));
+	g_assert_true (gtk_widget_get_hexpand (page->api_key));
+	g_assert_cmpint (gtk_entry_get_width_chars (GTK_ENTRY (page->site_url)), >=, 48);
+	g_assert_cmpint (gtk_entry_get_width_chars (GTK_ENTRY (page->api_key)), >=, 48);
+	gtk_entry_set_text (GTK_ENTRY (page->site_url), "https://tracking.example.test/wordpress");
+	gtk_entry_set_text (GTK_ENTRY (page->project_id), "Ab3dE7fG9h");
+	gtk_entry_set_text (GTK_ENTRY (page->api_key), "synthetic-tracking-key");
+	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (page->enabled), TRUE);
+	g_assert_true (gtk_widget_get_sensitive (page->default_enabled));
+	g_assert_false (gtk_widget_get_sensitive (page->test));
+	gtk_button_clicked (GTK_BUTTON (page->save));
+	g_assert_true (gtk_widget_get_sensitive (page->test));
+	g_assert_true (gtk_widget_get_sensitive (page->remove));
+	g_assert_cmpstr (gtk_entry_get_text (GTK_ENTRY (page->api_key)), ==, "");
+	g_assert_cmpstr (gtk_entry_get_placeholder_text (GTK_ENTRY (page->api_key)), ==,
+		_("API key saved (hidden). Enter a new key to replace it."));
+	gtk_entry_set_text (GTK_ENTRY (page->site_url), "https://unsaved.example.test/");
+	g_assert_false (gtk_widget_get_sensitive (page->test));
+	gtk_entry_set_text (GTK_ENTRY (page->site_url), "https://tracking.example.test/wordpress");
+	g_assert_true (gtk_widget_get_sensitive (page->test));
+	tracking_page_busy (page, TRUE);
+	g_assert_false (gtk_widget_get_sensitive (page->test));
+	tracking_page_busy (page, FALSE);
+	g_assert_true (gtk_widget_get_sensitive (page->test));
+	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (page->clear_key), TRUE);
+	g_assert_false (gtk_widget_get_sensitive (page->test));
+	gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (page->clear_key), FALSE);
+	g_assert_true (gtk_widget_get_sensitive (page->test));
+	gtk_button_clicked (GTK_BUTTON (page->remove));
+	g_assert_false (gtk_widget_get_sensitive (page->test));
+	g_assert_false (gtk_widget_get_sensitive (page->remove));
+	g_assert_false (gtk_widget_get_sensitive (page->default_enabled));
+	gtk_widget_destroy (window);
+}
 
 static void
 test_tracking_ids_and_pixel_cleanup (void)
@@ -231,6 +305,7 @@ int main (int argc, char **argv)
 	}
 	g_test_init (&argc, &argv, NULL);
 	g_test_add_func ("/openai/settings/consent-and-feedback", test_key_controls);
+	g_test_add_func ("/wordpress-tracking/settings/save-and-controls", test_tracking_settings_controls);
 	g_test_add_func ("/wordpress-tracking/mime/strip-inherited-pixel", test_tracking_ids_and_pixel_cleanup);
 	g_test_add_func ("/wordpress-tracking/mime/reject-signed-message", test_tracking_rejects_signed_messages);
 	return g_test_run ();
