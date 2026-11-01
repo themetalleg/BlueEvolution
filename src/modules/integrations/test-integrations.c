@@ -1,4 +1,88 @@
 #include "e-util/e-util.h"
+#include <json-glib/json-glib.h>
+#include <libsoup/soup.h>
+#include <libsecret/secret.h>
+#include <glib/gstdio.h>
+
+typedef struct {
+	const gchar *name, *site;
+	gboolean wrong_project, wrong_external, read_only, missing_resolver;
+} TrackingProbeCase;
+
+static const TrackingProbeCase *tracking_probe_case;
+static guint tracking_probe_registrations;
+static gboolean tracking_history_test, tracking_history_fail;
+static guint tracking_history_requests;
+
+gchar *
+secret_password_lookup_sync (const SecretSchema *schema, GCancellable *cancellable, GError **error, ...)
+{
+	return g_strdup ("synthetic-probe-key");
+}
+
+void
+soup_message_set_request_body_from_bytes (SoupMessage *message, const gchar *content_type, GBytes *bytes)
+{
+	g_object_set_data_full (G_OBJECT (message), "test-body", g_bytes_ref (bytes), (GDestroyNotify) g_bytes_unref);
+}
+
+SoupStatus
+soup_message_get_status (SoupMessage *message)
+{
+	return GPOINTER_TO_UINT (g_object_get_data (G_OBJECT (message), "test-status"));
+}
+
+GBytes *
+soup_session_send_and_read (SoupSession *session, SoupMessage *message, GCancellable *cancellable, GError **error)
+{
+	const gchar *path = g_uri_get_path (soup_message_get_uri (message));
+	gchar *response;
+	guint status = 200;
+	g_assert_nonnull (tracking_probe_case);
+	if (tracking_history_test)
+		tracking_history_requests++;
+	if (tracking_history_fail) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_HOST_UNREACHABLE, "Synthetic API failure");
+		return NULL;
+	}
+	if (g_str_has_suffix (path, "/summary")) {
+		response = g_strdup (tracking_history_test ?
+			"{\"project_id\":\"Ab3dE7fG9h\",\"count\":2,\"first_request\":\"2026-11-01T10:00:00Z\",\"latest_request\":\"2026-11-01T11:00:00Z\"}" :
+			"{\"project_id\":\"Ab3dE7fG9h\",\"count\":0}");
+	} else if (g_str_has_suffix (path, "/events")) {
+		GHashTable *params = g_uri_parse_params (g_uri_get_query (soup_message_get_uri (message)), -1, "&", G_URI_PARAMS_NONE, NULL);
+		const gchar *external = g_hash_table_lookup (params, "external_id");
+		g_assert_nonnull (g_hash_table_lookup (params, "to"));
+		response = g_strdup_printf ("{\"project_id\":\"Ab3dE7fG9h\",\"events\":[{\"id\":2,\"external_id\":\"%s\",\"requested_at\":\"2026-11-01T11:00:00Z\"},{\"id\":1,\"external_id\":\"%s\",\"requested_at\":\"2026-11-01T10:00:00Z\"}]}", external, external);
+		g_hash_table_unref (params);
+	} else if (g_str_has_suffix (path, "/messages/resolve")) {
+		status = 404;
+		response = g_strdup (tracking_probe_case->missing_resolver ?
+			"{\"code\":\"rest_no_route\"}" : "{\"code\":\"wtp_message_not_found\"}");
+	} else {
+		JsonParser *parser = json_parser_new ();
+		GBytes *body = g_object_get_data (G_OBJECT (message), "test-body");
+		gsize length;
+		const gchar *text = g_bytes_get_data (body, &length);
+		const gchar *external_id;
+		gchar *token = g_strnfill (64, 'T');
+		g_assert_true (g_str_has_suffix (path, "/messages"));
+		g_assert_cmpstr (soup_message_get_method (message), ==, "POST");
+		g_assert_true (json_parser_load_from_data (parser, text, length, NULL));
+		external_id = json_object_get_string_member (json_node_get_object (json_parser_get_root (parser)), "external_id");
+		g_assert_cmpuint (strlen (external_id), ==, 128);
+		g_assert_true (g_str_has_prefix (external_id, "BlueEvolutionConnectionTest"));
+		tracking_probe_registrations++;
+		status = tracking_probe_case->read_only ? 401 : 200;
+		response = g_strdup_printf ("{\"project_id\":\"%s\",\"external_id\":\"%s\",\"tracking_url\":\"%s/?wtp_pixel=Ab3dE7fG9h.%s\"}",
+			tracking_probe_case->wrong_project ? "OtherPrj01" : "Ab3dE7fG9h",
+			tracking_probe_case->wrong_external ? "wrong" : external_id, tracking_probe_case->site, token);
+		g_free (token);
+		g_object_unref (parser);
+	}
+	g_object_set_data (G_OBJECT (message), "test-status", GUINT_TO_POINTER (status));
+	return g_bytes_new_take (response, strlen (response));
+}
 
 static guint saved_keys;
 static gboolean tracking_key_saved;
@@ -52,11 +136,131 @@ e_openai_manager_set_key (EOpenAIManager *manager, const gchar *key, gboolean co
 #include "evolution-integrations.c"
 
 static void
+tracking_probe_done (GObject *source, GAsyncResult *result, gpointer data)
+{
+	GAsyncResult **completed = data;
+	*completed = g_object_ref (result);
+}
+
+static void
+test_tracking_connection_probe (gconstpointer data)
+{
+	EWordPressTrackingManager *manager = e_wordpress_tracking_manager_new ();
+	GAsyncResult *result = NULL;
+	GError *error = NULL;
+	gboolean success;
+	tracking_probe_case = data;
+	tracking_probe_registrations = 0;
+	e_wordpress_tracking_manager_set_site_url (manager, "https://tracking.example.test/wordpress");
+	e_wordpress_tracking_manager_set_project_id (manager, "Ab3dE7fG9h");
+	e_wordpress_tracking_manager_test_async (manager, NULL, tracking_probe_done, &result);
+	while (!result)
+		g_main_context_iteration (NULL, TRUE);
+	success = e_wordpress_tracking_manager_test_finish (manager, result, &error);
+	if (g_str_equal (tracking_probe_case->name, "matching-url")) {
+		g_assert_true (success);
+		g_assert_no_error (error);
+	} else {
+		g_assert_false (success);
+		g_assert_nonnull (error);
+	}
+	g_assert_cmpuint (tracking_probe_registrations, ==, tracking_probe_case->missing_resolver ? 0 : 1);
+	g_clear_error (&error);
+	g_object_unref (result);
+	g_object_unref (manager);
+	tracking_probe_case = NULL;
+}
+
+static void
+test_tracking_history_offline (void)
+{
+	static const TrackingProbeCase fixture = { "history", "https://tracking.example.test/wordpress", FALSE, FALSE, FALSE, FALSE };
+	EWordPressTrackingManager *manager = e_wordpress_tracking_manager_new ();
+	EWordPressTrackingSummary *summary;
+	GAsyncResult *result = NULL;
+	GError *error = NULL;
+	gchar *external = g_strnfill (128, 'H');
+	gchar *digest, *filename, *path, *contents = NULL;
+	GStatBuf statbuf;
+	tracking_probe_case = &fixture;
+	tracking_history_test = TRUE;
+	tracking_history_requests = 0;
+	e_wordpress_tracking_manager_set_site_url (manager, fixture.site);
+	e_wordpress_tracking_manager_set_project_id (manager, "Ab3dE7fG9h");
+	e_wordpress_tracking_manager_summary_async (manager, external, NULL, tracking_probe_done, &result);
+	while (!result)
+		g_main_context_iteration (NULL, TRUE);
+	summary = e_wordpress_tracking_manager_summary_finish (manager, result, &error);
+	g_assert_no_error (error);
+	g_assert_nonnull (summary);
+	g_assert_cmpuint (e_wordpress_tracking_summary_get_count (summary), ==, 2);
+	g_assert_cmpuint (e_wordpress_tracking_summary_get_request_times (summary)->len, ==, 2);
+	g_assert_true (e_wordpress_tracking_summary_get_history_complete (summary));
+	e_wordpress_tracking_summary_free (summary);
+	g_clear_object (&result);
+	g_object_unref (manager);
+	manager = e_wordpress_tracking_manager_new ();
+	summary = e_wordpress_tracking_manager_load_history (manager, external, &error);
+	g_assert_no_error (error);
+	g_assert_nonnull (summary);
+	g_assert_cmpuint (e_wordpress_tracking_summary_get_count (summary), ==, 2);
+	g_assert_cmpstr (g_ptr_array_index (e_wordpress_tracking_summary_get_request_times (summary), 0), ==, "2026-11-01T11:00:00Z");
+	e_wordpress_tracking_summary_free (summary);
+	digest = g_compute_checksum_for_string (G_CHECKSUM_SHA256, "https://tracking.example.test/wordpress\nAb3dE7fG9h", -1);
+	filename = g_strconcat (external, ".json", NULL);
+	path = g_build_filename (g_get_user_data_dir (), "blueevolution", "tracking-history", digest, filename, NULL);
+	g_assert_cmpint (g_stat (path, &statbuf), ==, 0);
+	g_assert_cmpuint (statbuf.st_mode & 0777, ==, 0600);
+	g_assert_true (g_file_get_contents (path, &contents, NULL, &error));
+	g_assert_no_error (error);
+	g_assert_null (strstr (contents, "synthetic-probe-key"));
+	g_assert_null (strstr (contents, "wtp_pixel"));
+	tracking_history_fail = TRUE;
+	e_wordpress_tracking_manager_summary_async (manager, external, NULL, tracking_probe_done, &result);
+	while (!result)
+		g_main_context_iteration (NULL, TRUE);
+	summary = e_wordpress_tracking_manager_summary_finish (manager, result, &error);
+	g_assert_null (summary);
+	g_assert_error (error, G_IO_ERROR, G_IO_ERROR_HOST_UNREACHABLE);
+	g_clear_error (&error);
+	g_assert_cmpuint (tracking_history_requests, ==, 3);
+	summary = e_wordpress_tracking_manager_load_history (manager, external, &error);
+	g_assert_no_error (error);
+	g_assert_nonnull (summary);
+	g_assert_cmpuint (e_wordpress_tracking_summary_get_count (summary), ==, 2);
+	e_wordpress_tracking_summary_free (summary);
+	e_wordpress_tracking_manager_set_site_url (manager, "https://other.example.test/");
+	g_assert_null (e_wordpress_tracking_manager_load_history (manager, external, &error));
+	g_assert_no_error (error);
+	e_wordpress_tracking_manager_set_site_url (manager, fixture.site);
+	g_assert_true (g_file_set_contents (path, "{}", -1, &error));
+	g_assert_null (e_wordpress_tracking_manager_load_history (manager, external, &error));
+	g_assert_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA);
+	g_clear_error (&error);
+	g_remove (path);
+	g_free (contents);
+	g_free (path);
+	g_free (filename);
+	g_free (digest);
+	g_free (external);
+	g_object_unref (manager);
+	g_object_unref (result);
+	tracking_history_test = FALSE;
+	tracking_history_fail = FALSE;
+	tracking_probe_case = NULL;
+}
+
+static void
 test_tracking_settings_controls (void)
 {
 	GtkWidget *window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
 	GtkWidget *widget = tracking_page_new (NULL);
 	TrackingPage *page = tracking_page_from_widget (widget);
+	GtkWidget *hint = gtk_grid_get_child_at (GTK_GRID (gtk_widget_get_parent (page->site_url)), 1, 1);
+	g_assert_true (GTK_IS_LABEL (hint));
+	g_assert_cmpstr (gtk_label_get_text (GTK_LABEL (hint)), ==,
+		_("Use the exact HTTPS Site Address (URL) from WordPress Settings > General, including www, port, and any subdirectory. The connection test also checks the generated pixel URL."));
+	g_assert_true (gtk_label_get_line_wrap (GTK_LABEL (hint)));
 	gtk_container_add (GTK_CONTAINER (window), widget);
 	gtk_window_set_default_size (GTK_WINDOW (window), 1100, 650);
 	gtk_widget_show_all (window);
@@ -296,6 +500,22 @@ test_key_controls (void)
 
 int main (int argc, char **argv)
 {
+	static const TrackingProbeCase probe_cases[] = {
+		{ "matching-url", "https://tracking.example.test/wordpress", FALSE, FALSE, FALSE, FALSE },
+		{ "www-mismatch", "https://www.tracking.example.test/wordpress", FALSE, FALSE, FALSE, FALSE },
+		{ "port-mismatch", "https://tracking.example.test:444/wordpress", FALSE, FALSE, FALSE, FALSE },
+		{ "path-mismatch", "https://tracking.example.test/other", FALSE, FALSE, FALSE, FALSE },
+		{ "http-url", "http://tracking.example.test/wordpress", FALSE, FALSE, FALSE, FALSE },
+		{ "project-mismatch", "https://tracking.example.test/wordpress", TRUE, FALSE, FALSE, FALSE },
+		{ "external-mismatch", "https://tracking.example.test/wordpress", FALSE, TRUE, FALSE, FALSE },
+		{ "read-only-key", "https://tracking.example.test/wordpress", FALSE, FALSE, TRUE, FALSE },
+		{ "missing-resolver", "https://tracking.example.test/wordpress", FALSE, FALSE, FALSE, TRUE }
+	};
+	guint index;
+	gchar *test_data_dir = g_dir_make_tmp ("blueevolution-tracking-tests-XXXXXX", NULL);
+	g_assert_nonnull (test_data_dir);
+	g_setenv ("XDG_DATA_HOME", test_data_dir, TRUE);
+	g_free (test_data_dir);
 	gtk_init (&argc, &argv);
 	if (g_getenv ("BLUEEVOLUTION_TEST_LOCALEDIR")) {
 		bindtextdomain (GETTEXT_PACKAGE, g_getenv ("BLUEEVOLUTION_TEST_LOCALEDIR"));
@@ -306,6 +526,12 @@ int main (int argc, char **argv)
 	g_test_init (&argc, &argv, NULL);
 	g_test_add_func ("/openai/settings/consent-and-feedback", test_key_controls);
 	g_test_add_func ("/wordpress-tracking/settings/save-and-controls", test_tracking_settings_controls);
+	g_test_add_func ("/wordpress-tracking/history/offline-snapshot", test_tracking_history_offline);
+	for (index = 0; index < G_N_ELEMENTS (probe_cases); index++) {
+		gchar *path = g_strconcat ("/wordpress-tracking/connection/", probe_cases[index].name, NULL);
+		g_test_add_data_func (path, &probe_cases[index], test_tracking_connection_probe);
+		g_free (path);
+	}
 	g_test_add_func ("/wordpress-tracking/mime/strip-inherited-pixel", test_tracking_ids_and_pixel_cleanup);
 	g_test_add_func ("/wordpress-tracking/mime/reject-signed-message", test_tracking_rejects_signed_messages);
 	return g_test_run ();

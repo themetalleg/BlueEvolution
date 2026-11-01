@@ -106,6 +106,10 @@ gboolean	e_mail_display_get_skip_insecure_parts
 void		e_mail_display_schedule_iframes_height_update
 						(EMailDisplay *mail_display);
 
+void e_mail_display_set_tracking_info (EMailDisplay *display, const gchar *label, const gchar *tooltip);
+const gchar *e_mail_display_get_tracking_label (EMailDisplay *display);
+const gchar *e_mail_display_get_tracking_tooltip (EMailDisplay *display);
+
 G_END_DECLS
 
 #endif /* E_MAIL_DISPLAY_H */

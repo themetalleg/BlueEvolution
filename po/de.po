@@ -33449,14 +33449,64 @@ msgstr "E-Mail-Öffnungen _verfolgen"
 msgid "Add a WordPress tracking pixel to this message"
 msgstr "Fügt dieser Nachricht ein WordPress-Tracking-Pixel hinzu"
 
-msgid "Register a unique tracking pixel for each outgoing email. Image requests do not prove that a person read the message."
-msgstr "Registriert für jede ausgehende E-Mail ein eigenes Tracking-Pixel. Bildabrufe beweisen nicht, dass eine Person die Nachricht gelesen hat."
+msgid "Register a unique tracking pixel for each outgoing email."
+msgstr "Registriert für jede ausgehende E-Mail ein eigenes Tracking-Pixel."
 
 msgid "WordPress Tracking Pixel releases"
 msgstr "WordPress-Tracking-Pixel-Versionen"
 
 msgid "_WordPress home URL (HTTPS):"
 msgstr "_WordPress-Startseiten-URL (HTTPS):"
+
+msgid "Use the exact HTTPS Site Address (URL) from WordPress Settings > General, including www, port, and any subdirectory. The connection test also checks the generated pixel URL."
+msgstr "Verwenden Sie exakt die HTTPS-Website-Adresse (URL) aus WordPress unter Einstellungen > Allgemein, einschließlich www, Port und Unterverzeichnis. Der Verbindungstest prüft auch die erzeugte Pixel-URL."
+
+msgid "WordPress connection, registration, and tracking URL checks succeeded."
+msgstr "WordPress-Verbindung, Registrierung und Tracking-URL wurden erfolgreich geprüft."
+
+msgid "Testing WordPress connection, registration, and tracking URL…"
+msgstr "WordPress-Verbindung, Registrierung und Tracking-URL werden geprüft…"
+
+msgid "Registers one reusable test message per project without sending mail or loading its pixel."
+msgstr "Registriert eine wiederverwendbare Testnachricht pro Projekt, ohne eine E-Mail zu senden oder deren Pixel zu laden."
+
+msgid "Tracking history could not be saved locally."
+msgstr "Der Tracking-Verlauf konnte nicht lokal gespeichert werden."
+
+msgid "WordPress returned invalid tracking history."
+msgstr "WordPress hat einen ungültigen Tracking-Verlauf zurückgegeben."
+
+msgid "Saved tracking history is invalid."
+msgstr "Der gespeicherte Tracking-Verlauf ist ungültig."
+
+msgid "Tracking: %s image request"
+msgid_plural "Tracking: %s image requests"
+msgstr[0] "Tracking: %s Bildabruf"
+msgstr[1] "Tracking: %s Bildabrufe"
+
+msgid "Saved locally. Last refreshed: %s"
+msgstr "Lokal gespeichert. Zuletzt aktualisiert: %s"
+
+msgid "Refreshing tracking history…"
+msgstr "Tracking-Verlauf wird aktualisiert…"
+
+msgid "Refresh failed. Showing saved tracking history."
+msgstr "Aktualisierung fehlgeschlagen. Der gespeicherte Tracking-Verlauf wird angezeigt."
+
+msgid "The timestamp list is incomplete."
+msgstr "Die Liste der Zeitstempel ist unvollständig."
+
+msgid "Tracking: checking…"
+msgstr "Tracking: wird geprüft…"
+
+msgid "Tracking: unavailable"
+msgstr "Tracking: nicht verfügbar"
+
+msgid "Loading tracking history…"
+msgstr "Tracking-Verlauf wird geladen…"
+
+msgid "Tracking history could not be refreshed."
+msgstr "Der Tracking-Verlauf konnte nicht aktualisiert werden."
 
 msgid "Project _ID:"
 msgstr "Projekt-_ID:"

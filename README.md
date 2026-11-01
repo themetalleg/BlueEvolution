@@ -128,16 +128,27 @@ loopback mock server and synthetic messages; they never call live providers.
 ## Email Tracking
 
 Configure **Settings > Integrations > Email Tracking** with an HTTPS WordPress
-home URL, project ID, and project API key. The key is stored in the desktop
+Site Address from **WordPress Settings > General > Site Address (URL)**,
+project ID, and project API key. Match HTTPS, `www`, any explicit port, and
+subdirectory exactly. The key is stored in the desktop
 keyring. Enable tracking globally and choose whether new messages track by
 default; the **Track Email Openings** option in the composer can override the
 default for each message.
 
+**Test Connection** verifies API access, resolver availability, write permissions,
+and the generated pixel URL using one reusable synthetic registration per project.
+It does not send a message or fetch a pixel.
+
 BlueEvolution registers the message before sending. A registration failure
 blocks that send. Tracking requires an HTML body and is not combined with
 digitally signed or encrypted mail. In the preview of a tracked sent message,
-BlueEvolution shows recorded image-request totals and first/latest request
-times. These requests are not proof that a person read the email; mail providers
+BlueEvolution shows a compact image-request count beneath the remote-content
+control, with individual local-time timestamps in a tooltip rather than a banner.
+Labels follow the application language. Successful request totals and timestamps
+are saved privately in the channel's local data directory. Each message opening
+still requests fresh API data; failures retain the last saved snapshot and are
+identified in its tooltip. Up to the latest 10,000 timestamps are listed, with
+incomplete histories marked. These requests are not proof that a person read the email; mail providers
 and privacy proxies may fetch or cache images. The WordPress plugin is available
 from the [release page](https://github.com/themetalleg/wordpress-tracking-pixel/releases/).
 

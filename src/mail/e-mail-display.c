@@ -71,6 +71,8 @@ struct _EMailDisplayPrivate {
 	GSList *insecure_part_ids;
 
 	GSettings *settings;
+	gchar *tracking_label;
+	gchar *tracking_tooltip;
 
 	guint scheduled_reload;
 	guint iframes_height_update_id;
@@ -1397,6 +1399,9 @@ mail_display_content_loaded_cb (EWebView *web_view,
 	g_list_free_full (attachments, g_object_unref);
 
 	initialize_web_view_colors (mail_display, iframe_id);
+	e_web_view_jsc_run_script (WEBKIT_WEB_VIEW (web_view), e_web_view_get_cancellable (web_view),
+		"Evo.MailDisplaySetTrackingInfo(%s, %s, %s);", iframe_id,
+		mail_display->priv->tracking_label, mail_display->priv->tracking_tooltip);
 
 	if (!iframe_id || !*iframe_id) {
 		e_web_view_register_element_clicked (web_view, "attachment-expander",
@@ -1714,6 +1719,8 @@ mail_display_finalize (GObject *object)
 	EMailDisplay *self = E_MAIL_DISPLAY (object);
 
 	g_clear_pointer (&self->priv->old_settings, g_hash_table_destroy);
+	g_free (self->priv->tracking_label);
+	g_free (self->priv->tracking_tooltip);
 
 	g_mutex_lock (&self->priv->remote_content_lock);
 	g_clear_pointer (&self->priv->skipped_remote_content_sites, g_hash_table_destroy);
@@ -3195,6 +3202,34 @@ e_mail_display_new (EMailRemoteContent *remote_content,
 		"remote-content", remote_content,
 		"mail-reader", mail_reader,
 		NULL);
+}
+
+void
+e_mail_display_set_tracking_info (EMailDisplay *display,
+				 const gchar *label,
+				 const gchar *tooltip)
+{
+	g_return_if_fail (E_IS_MAIL_DISPLAY (display));
+	g_free (display->priv->tracking_label);
+	g_free (display->priv->tracking_tooltip);
+	display->priv->tracking_label = g_strdup (label);
+	display->priv->tracking_tooltip = g_strdup (tooltip);
+	e_web_view_jsc_run_script (WEBKIT_WEB_VIEW (display), e_web_view_get_cancellable (E_WEB_VIEW (display)),
+		"Evo.MailDisplaySetTrackingInfo(%s, %s, %s);", "*", label, tooltip);
+}
+
+const gchar *
+e_mail_display_get_tracking_label (EMailDisplay *display)
+{
+	g_return_val_if_fail (E_IS_MAIL_DISPLAY (display), NULL);
+	return display->priv->tracking_label;
+}
+
+const gchar *
+e_mail_display_get_tracking_tooltip (EMailDisplay *display)
+{
+	g_return_val_if_fail (E_IS_MAIL_DISPLAY (display), NULL);
+	return display->priv->tracking_tooltip;
 }
 
 EMailReader *

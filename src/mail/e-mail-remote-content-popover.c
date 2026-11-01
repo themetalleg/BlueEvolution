@@ -398,6 +398,21 @@ e_mail_remote_content_popover_run (EMailReader *reader,
 		NULL);
 	gtk_box_pack_start (GTK_BOX (vbox), widget, FALSE, FALSE, 0);
 
+	{
+		EMailDisplay *display = e_mail_reader_get_mail_display (reader);
+		const gchar *label = e_mail_display_get_tracking_label (display);
+		if (label && *label) {
+			GtkWidget *frame = gtk_frame_new (NULL);
+			GtkWidget *count = gtk_label_new (label);
+			gtk_label_set_line_wrap (GTK_LABEL (count), TRUE);
+			gtk_label_set_xalign (GTK_LABEL (count), 0);
+			gtk_container_set_border_width (GTK_CONTAINER (count), 6);
+			gtk_widget_set_tooltip_text (frame, e_mail_display_get_tracking_tooltip (display));
+			gtk_container_add (GTK_CONTAINER (frame), count);
+			gtk_box_pack_start (GTK_BOX (vbox), frame, FALSE, FALSE, 0);
+		}
+	}
+
 	gtk_widget_show_all (hbox);
 
 	g_object_set_data_full (G_OBJECT (reader), REMOTE_CONTENT_KEY_POPOVER, popover, (GDestroyNotify) gtk_widget_destroy);

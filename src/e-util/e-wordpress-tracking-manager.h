@@ -70,6 +70,12 @@ guint64 e_wordpress_tracking_summary_get_count (const EWordPressTrackingSummary 
 const gchar *e_wordpress_tracking_summary_get_first_request (const EWordPressTrackingSummary *summary);
 const gchar *e_wordpress_tracking_summary_get_latest_request (const EWordPressTrackingSummary *summary);
 void e_wordpress_tracking_summary_free (EWordPressTrackingSummary *summary);
+EWordPressTrackingSummary *e_wordpress_tracking_manager_load_history (EWordPressTrackingManager *self,
+                                                                    const gchar *external_id,
+                                                                    GError **error);
+const GPtrArray *e_wordpress_tracking_summary_get_request_times (const EWordPressTrackingSummary *summary);
+const gchar *e_wordpress_tracking_summary_get_updated_at (const EWordPressTrackingSummary *summary);
+gboolean e_wordpress_tracking_summary_get_history_complete (const EWordPressTrackingSummary *summary);
 
 G_END_DECLS
 

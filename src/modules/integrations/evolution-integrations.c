@@ -14,7 +14,8 @@ G_DEFINE_DYNAMIC_TYPE (EIntegrations, e_integrations, E_TYPE_EXTENSION)
 typedef struct {
 	EExtension parent;
 	EWordPressTrackingManager *manager;
-	EAlert *alert;
+	EWordPressTrackingSummary *summary;
+	guint generation;
 	gchar *current_message_uid;
 } ETrackingReader;
 typedef struct { EExtensionClass parent; } ETrackingReaderClass;
@@ -474,7 +475,7 @@ tracking_test_done (GObject *source,
 		gtk_image_set_from_icon_name (GTK_IMAGE (page->feedback),
 			success ? "emblem-ok-symbolic" : "dialog-error-symbolic", GTK_ICON_SIZE_BUTTON);
 		gtk_label_set_text (GTK_LABEL (page->status), error ? error->message :
-			_("WordPress connection and token resolver are available."));
+			_("WordPress connection, registration, and tracking URL checks succeeded."));
 		tracking_page_busy (page, FALSE);
 	}
 	g_clear_error (&error);
@@ -488,7 +489,7 @@ tracking_test_clicked (GtkButton *button,
 	TrackingPage *page = tracking_page_from_widget (widget);
 	tracking_page_busy (page, TRUE);
 	gtk_image_clear (GTK_IMAGE (page->feedback));
-	gtk_label_set_text (GTK_LABEL (page->status), _("Testing WordPress connection and resolver…"));
+	gtk_label_set_text (GTK_LABEL (page->status), _("Testing WordPress connection, registration, and tracking URL…"));
 	e_wordpress_tracking_manager_test_async (page->manager, NULL, tracking_test_done, g_object_ref (widget));
 }
 
@@ -535,7 +536,7 @@ tracking_page_new (EPreferencesWindow *window)
 	gtk_style_context_add_class (gtk_widget_get_style_context (label), "heading");
 	gtk_widget_set_halign (label, GTK_ALIGN_START);
 	gtk_box_pack_start (GTK_BOX (box), label, FALSE, FALSE, 0);
-	label = gtk_label_new (_("Register a unique tracking pixel for each outgoing email. Image requests do not prove that a person read the message."));
+	label = gtk_label_new (_("Register a unique tracking pixel for each outgoing email."));
 	gtk_label_set_line_wrap (GTK_LABEL (label), TRUE);
 	gtk_label_set_xalign (GTK_LABEL (label), 0);
 	gtk_box_pack_start (GTK_BOX (box), label, FALSE, FALSE, 0);
@@ -552,14 +553,19 @@ tracking_page_new (EPreferencesWindow *window)
 	gtk_label_set_mnemonic_widget (GTK_LABEL (label), page->site_url);
 	gtk_grid_attach (GTK_GRID (grid), label, 0, 0, 1, 1);
 	gtk_grid_attach (GTK_GRID (grid), page->site_url, 1, 0, 1, 1);
+	label = gtk_label_new (_("Use the exact HTTPS Site Address (URL) from WordPress Settings > General, including www, port, and any subdirectory. The connection test also checks the generated pixel URL."));
+	gtk_label_set_line_wrap (GTK_LABEL (label), TRUE);
+	gtk_label_set_max_width_chars (GTK_LABEL (label), 60);
+	gtk_label_set_xalign (GTK_LABEL (label), 0);
+	gtk_grid_attach (GTK_GRID (grid), label, 1, 1, 1, 1);
 	label = gtk_label_new_with_mnemonic (_("Project _ID:"));
 	gtk_widget_set_halign (label, GTK_ALIGN_START);
 	page->project_id = gtk_entry_new ();
 	gtk_widget_set_hexpand (page->project_id, TRUE);
 	gtk_entry_set_max_length (GTK_ENTRY (page->project_id), 10);
 	gtk_label_set_mnemonic_widget (GTK_LABEL (label), page->project_id);
-	gtk_grid_attach (GTK_GRID (grid), label, 0, 1, 1, 1);
-	gtk_grid_attach (GTK_GRID (grid), page->project_id, 1, 1, 1, 1);
+	gtk_grid_attach (GTK_GRID (grid), label, 0, 2, 1, 1);
+	gtk_grid_attach (GTK_GRID (grid), page->project_id, 1, 2, 1, 1);
 	label = gtk_label_new_with_mnemonic (_("Project _API key:"));
 	gtk_widget_set_halign (label, GTK_ALIGN_START);
 	page->api_key = gtk_entry_new ();
@@ -570,8 +576,8 @@ tracking_page_new (EPreferencesWindow *window)
 	gtk_entry_set_max_length (GTK_ENTRY (page->api_key), 90);
 	gtk_entry_set_placeholder_text (GTK_ENTRY (page->api_key), _("Project API key"));
 	gtk_label_set_mnemonic_widget (GTK_LABEL (label), page->api_key);
-	gtk_grid_attach (GTK_GRID (grid), label, 0, 2, 1, 1);
-	gtk_grid_attach (GTK_GRID (grid), page->api_key, 1, 2, 1, 1);
+	gtk_grid_attach (GTK_GRID (grid), label, 0, 3, 1, 1);
+	gtk_grid_attach (GTK_GRID (grid), page->api_key, 1, 3, 1, 1);
 	gtk_box_pack_start (GTK_BOX (box), grid, FALSE, FALSE, 0);
 	page->enabled = gtk_check_button_new_with_mnemonic (_("_Enable WordPress tracking"));
 	page->default_enabled = gtk_check_button_new_with_mnemonic (_("Track email openings _by default"));
@@ -583,6 +589,7 @@ tracking_page_new (EPreferencesWindow *window)
 	page->save = gtk_button_new_with_mnemonic (_("_Save Settings"));
 	gtk_button_set_image (GTK_BUTTON (page->save), gtk_image_new_from_icon_name ("document-save-symbolic", GTK_ICON_SIZE_BUTTON));
 	page->test = gtk_button_new_with_mnemonic (_("_Test Connection"));
+	gtk_widget_set_tooltip_text (page->test, _("Registers one reusable test message per project without sending mail or loading its pixel."));
 	gtk_button_set_image (GTK_BUTTON (page->test), gtk_image_new_from_icon_name ("system-run-symbolic", GTK_ICON_SIZE_BUTTON));
 	page->remove = gtk_button_new_with_mnemonic (_("Remove _Key"));
 	gtk_button_set_image (GTK_BUTTON (page->remove), gtk_image_new_from_icon_name ("edit-delete-symbolic", GTK_ICON_SIZE_BUTTON));
@@ -635,6 +642,7 @@ tracking_page_new (EPreferencesWindow *window)
 typedef struct {
 	ETrackingReader *extension;
 	gchar *message_uid;
+	guint generation;
 } TrackingSummaryRequest;
 
 static void
@@ -647,11 +655,11 @@ tracking_summary_request_free (gpointer data)
 }
 
 static void
-tracking_reader_clear_alert (ETrackingReader *self)
+tracking_reader_clear_info (ETrackingReader *self)
 {
-	if (self->alert) {
-		e_alert_response (self->alert, GTK_RESPONSE_CLOSE);
-		g_clear_object (&self->alert);
+	if (self->summary) {
+		e_wordpress_tracking_summary_free (self->summary);
+		self->summary = NULL;
 	}
 }
 
@@ -673,24 +681,48 @@ tracking_format_time (const gchar *value)
 }
 
 static void
-tracking_reader_show_alert (ETrackingReader *self,
-			    EMailReader *reader,
-			    const gchar *tag,
-			    const gchar *arg0,
-			    const gchar *arg1,
-			    const gchar *arg2)
+tracking_reader_show_info (ETrackingReader *self,
+			   EMailReader *reader,
+			   gboolean refreshing,
+			   const gchar *error)
 {
-	EPreviewPane *preview = e_mail_reader_get_preview_pane (reader);
-	EAlert *alert;
-	if (!preview)
+	EMailDisplay *display = e_mail_reader_get_mail_display (reader);
+	GString *tooltip = g_string_new (NULL);
+	gchar *label;
+	if (!display) {
+		g_string_free (tooltip, TRUE);
 		return;
-	alert = e_alert_new (tag, arg0 ? arg0 : "", arg1 ? arg1 : "", arg2 ? arg2 : "", NULL);
-	if (!alert)
-		return;
-	tracking_reader_clear_alert (self);
-	e_alert_sink_submit_alert (E_ALERT_SINK (preview), alert);
-	self->alert = g_object_ref (alert);
-	g_object_unref (alert);
+	}
+	if (self->summary) {
+		guint64 total = e_wordpress_tracking_summary_get_count (self->summary);
+		gchar *count = g_strdup_printf ("%" G_GUINT64_FORMAT, total);
+		const GPtrArray *times = e_wordpress_tracking_summary_get_request_times (self->summary);
+		gchar *updated = tracking_format_time (e_wordpress_tracking_summary_get_updated_at (self->summary));
+		guint index;
+		label = g_strdup_printf (ngettext ("Tracking: %s image request", "Tracking: %s image requests", total), count);
+		g_string_append_printf (tooltip, _("Saved locally. Last refreshed: %s"), updated);
+		if (refreshing)
+			g_string_append_printf (tooltip, "\n%s", _("Refreshing tracking history…"));
+		if (error)
+			g_string_append_printf (tooltip, "\n%s\n%s", _("Refresh failed. Showing saved tracking history."), error);
+		if (!times || !times->len)
+			g_string_append_printf (tooltip, "\n%s", _("No request recorded"));
+		for (index = 0; times && index < times->len; index++) {
+			gchar *time = tracking_format_time (g_ptr_array_index (times, index));
+			g_string_append_printf (tooltip, "\n%s", time);
+			g_free (time);
+		}
+		if (!e_wordpress_tracking_summary_get_history_complete (self->summary))
+			g_string_append_printf (tooltip, "\n%s", _("The timestamp list is incomplete."));
+		g_free (count);
+		g_free (updated);
+	} else {
+		label = g_strdup (refreshing ? _("Tracking: checking…") : _("Tracking: unavailable"));
+		g_string_append (tooltip, error ? error : _("Loading tracking history…"));
+	}
+	e_mail_display_set_tracking_info (display, label, tooltip->str);
+	g_free (label);
+	g_string_free (tooltip, TRUE);
 }
 
 static void
@@ -703,27 +735,20 @@ tracking_summary_done (GObject *source_object,
 	EMailReader *reader = E_MAIL_READER (e_extension_get_extensible (E_EXTENSION (self)));
 	EWordPressTrackingSummary *summary;
 	GError *error = NULL;
-	const gchar *current_uid = self->current_message_uid;
-	if (!current_uid || g_strcmp0 (current_uid, request->message_uid) != 0)
-		goto exit;
 	summary = e_wordpress_tracking_manager_summary_finish (
 		E_WORDPRESS_TRACKING_MANAGER (source_object), result, &error);
-	if (!summary) {
-		if (error && !g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
-			tracking_reader_show_alert (self, reader, "mail:wordpress-tracking-error", error->message, NULL, NULL);
+	if (!self->current_message_uid || self->generation != request->generation) {
+		if (summary)
+			e_wordpress_tracking_summary_free (summary);
 		goto exit;
 	}
-	{
-		gchar *count = g_strdup_printf ("%" G_GUINT64_FORMAT,
-			e_wordpress_tracking_summary_get_count (summary));
-		gchar *first = tracking_format_time (e_wordpress_tracking_summary_get_first_request (summary));
-		gchar *latest = tracking_format_time (e_wordpress_tracking_summary_get_latest_request (summary));
-		tracking_reader_show_alert (self, reader, "mail:wordpress-tracking-summary", count, first, latest);
-		g_free (count);
-		g_free (first);
-		g_free (latest);
+	if (!summary) {
+		tracking_reader_show_info (self, reader, FALSE, error ? error->message : _("Tracking history could not be refreshed."));
+		goto exit;
 	}
-	e_wordpress_tracking_summary_free (summary);
+	tracking_reader_clear_info (self);
+	self->summary = summary;
+	tracking_reader_show_info (self, reader, FALSE, NULL);
 exit:
 	g_clear_error (&error);
 	tracking_summary_request_free (request);
@@ -797,7 +822,13 @@ tracking_reader_message_loaded_cb (EMailReader *reader,
 	const gchar *header = camel_medium_get_header (CAMEL_MEDIUM (message), "X-MiPipe-Tracking");
 	gchar *project = NULL, *external = NULL, *configured_project = NULL;
 	TrackingSummaryRequest *request;
-	tracking_reader_clear_alert (self);
+	tracking_reader_clear_info (self);
+	self->generation++;
+	{
+		EMailDisplay *display = e_mail_reader_get_mail_display (reader);
+		if (display)
+			e_mail_display_set_tracking_info (display, NULL, NULL);
+	}
 	g_free (self->current_message_uid);
 	self->current_message_uid = g_strdup (message_uid);
 	if (!tracking_parse_header (header, &project, &external))
@@ -805,9 +836,12 @@ tracking_reader_message_loaded_cb (EMailReader *reader,
 	configured_project = e_wordpress_tracking_manager_dup_project_id (self->manager);
 	if (g_strcmp0 (project, configured_project) != 0)
 		goto exit;
+	self->summary = e_wordpress_tracking_manager_load_history (self->manager, external, NULL);
+	tracking_reader_show_info (self, reader, TRUE, NULL);
 	request = g_new0 (TrackingSummaryRequest, 1);
 	request->extension = g_object_ref (self);
 	request->message_uid = g_strdup (message_uid);
+	request->generation = self->generation;
 	e_wordpress_tracking_manager_summary_async (self->manager, external, NULL, tracking_summary_done, request);
 exit:
 	g_free (project);
@@ -832,7 +866,7 @@ static void
 tracking_reader_dispose (GObject *object)
 {
 	ETrackingReader *self = (ETrackingReader *) object;
-	tracking_reader_clear_alert (self);
+	tracking_reader_clear_info (self);
 	g_clear_object (&self->manager);
 	g_clear_pointer (&self->current_message_uid, g_free);
 	G_OBJECT_CLASS (e_tracking_reader_parent_class)->dispose (object);

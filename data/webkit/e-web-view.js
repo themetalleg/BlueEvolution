@@ -833,6 +833,38 @@ Evo.MailDisplayUpdateIFramesHeight = function()
 	window.requestAnimationFrame(Evo.mailDisplayUpdateIFramesHeightCB);
 }
 
+Evo.MailDisplaySetTrackingInfo = function(iframe_id, label, tooltip)
+{
+	Evo.runTraversarForIFrameId(iframe_id, {
+		exec: function(doc) {
+			for (const size of ["small", "large"]) {
+				const anchor = doc.getElementById("__evo-remote-content-img-" + size);
+				if (!anchor)
+					continue;
+				let box = doc.getElementById("__evo-tracking-info-" + size);
+				if (!label) {
+					if (box)
+						box.remove();
+					continue;
+				}
+				if (!box) {
+					box = doc.createElement("div");
+					box.id = "__evo-tracking-info-" + size;
+					box.setAttribute("role", "status");
+					box.tabIndex = 0;
+					box.style.cssText = "border:1px solid currentColor;border-radius:4px;padding:6px;margin-top:6px;max-width:220px;font-size:0.9em;white-space:normal;overflow-wrap:anywhere;";
+					anchor.parentElement.appendChild(box);
+				}
+				box.textContent = label;
+				box.title = tooltip || "";
+				box.setAttribute("aria-label", label + "\n" + (tooltip || ""));
+			}
+			return true;
+		}
+	});
+	Evo.MailDisplayUpdateIFramesHeight();
+}
+
 if (this instanceof Window && this.document) {
 	this.document.onload = function() { Evo.initializeAndPostContentLoaded(this); };
 
