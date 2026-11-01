@@ -13,6 +13,24 @@
       <default>{'openai': 'gpt-4.1-mini', 'gemini': 'gemini-2.5-flash', 'claude': 'claude-haiku-4-5'}</default>
       <_summary>Mail assistant models by provider</_summary>
     </key>
+    <key name="mail-tracking-enabled" type="b">
+      <default>false</default>
+      <_summary>Enable WordPress email tracking</_summary>
+      <_description>Register and add a WordPress tracking pixel to outgoing messages when tracking is selected.</_description>
+    </key>
+    <key name="mail-tracking-default" type="b">
+      <default>false</default>
+      <_summary>Track openings by default</_summary>
+      <_description>Enable the tracking option by default for each new outgoing message.</_description>
+    </key>
+    <key name="mail-tracking-site-url" type="s">
+      <default>''</default>
+      <_summary>WordPress home URL for email tracking</_summary>
+    </key>
+    <key name="mail-tracking-project-id" type="s">
+      <default>''</default>
+      <_summary>WordPress tracking project ID</_summary>
+    </key>
     <key name="appearance-mode" type="s">
       <default>'system'</default>
       <choices>

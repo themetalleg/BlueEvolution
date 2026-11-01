@@ -1,39 +1,19 @@
-# 0.2.0-beta.1
+# Beta Release Notes
 
-This is an early beta for evaluation, not a production-ready replacement
-for GNOME Evolution. Back up existing mail data and use a separate test account.
+This beta adds optional WordPress email tracking. Evaluate it with a test
+mailbox and the WordPress Tracking Pixel plugin before using it with live mail.
 
 ## Changes
 
-- Consistent BlueEvolution application and taskbar identity, including backup/restore.
-- New BlueEvolution logo in the launcher, window frame and About dialog.
-- The provided BlueEvolution SVG is used for the window frame and taskbar; the header shows the product name once.
-- Expanded conversations display the latest-message date used to sort them, with date headings on conversations rather than replies.
-- Outlook-inspired three-pane mail layout, blue search header and command strip.
-- Bootstrap Icons 1.13.1 throughout the application, with its MIT license included.
-- Sender initials, quieter previews, row separators and local-calendar date sections.
-- Measured date widths that remain visible as the message-list pane narrows.
-- App-specific System, Light and Dark modes, including standalone message viewers.
-- Theme-safe reader backgrounds, disclosure chevrons and window-control icons.
-- HTML email text without an explicit color follows the selected theme; authored colors are preserved.
-- Offline VS Code previews with a private profile and five synthetic emails.
-- Permanent regression coverage for date allocation, calendar/DST boundaries,
-  toolbar labels, UI definitions, rendered theme precedence and Bootstrap icon resolution.
+- Configure an HTTPS WordPress site, project ID, and project API key under Settings > Integrations > Email Tracking. The key is stored in the desktop keyring.
+- Enable tracking globally and choose whether new messages track by default; each message can override that choice in the composer Options menu.
+- Review recorded image-request totals and first/latest request times in the preview of a tracked sent message.
+- Registration failures stop sending. Tracking is unavailable for digitally signed or encrypted mail and requires an HTML body.
 
-## Known Limitations
+## Privacy and Limitations
 
-- No in-app updater or published Flatpak update repository; updates are manual.
-- The integrity section above states whether this release has a publisher
-  signature. SHA-256 checksums verify file integrity, not publisher identity.
-- Authentication, sending/receiving, attachments and server synchronization have
-  not been re-certified against live accounts for this beta. CI uses no accounts.
-- Native non-Flatpak installation is not supported for side-by-side use.
-- The mail-list redesign remains experimental, especially with large/threaded
-  folders and unusual message content. Light/dark HTML rendering needs broader
-  real-world testing.
-- GTK window decorations and desktop integration can vary between compositors.
+- Image requests are not proof that a person read a message. Mail providers and privacy proxies can fetch or cache images independently of a recipient.
+- Use a WordPress Tracking Pixel release that supports the project message resolver. See https://github.com/themetalleg/wordpress-tracking-pixel/releases/.
+- Review message content and recipient expectations before enabling tracking.
 
-The upstream baseline remains Evolution, Evolution Data Server and Evolution EWS
-3.62.1. Upstream credits and license files are preserved. Bootstrap's license is
-installed with the private icon theme. This project is not affiliated with Microsoft
-or GNOME.
+This project is not affiliated with Microsoft or GNOME.

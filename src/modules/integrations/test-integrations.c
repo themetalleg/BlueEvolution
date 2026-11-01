@@ -29,6 +29,120 @@ e_openai_manager_set_key (EOpenAIManager *manager, const gchar *key, gboolean co
 
 #include "evolution-integrations.c"
 
+static void
+test_tracking_ids_and_pixel_cleanup (void)
+{
+	EWordPressTrackingManager *manager = e_wordpress_tracking_manager_new ();
+	CamelMimeMessage *message = camel_mime_message_new ();
+	CamelMultipart *alternative = camel_multipart_new ();
+	CamelMultipart *mixed = camel_multipart_new ();
+	CamelMimePart *body_part = camel_mime_part_new ();
+	CamelMimePart *attachment = camel_mime_part_new ();
+	CamelMimePart *plain = camel_mime_part_new ();
+	CamelMimePart *html = camel_mime_part_new ();
+	CamelStream *stream;
+	GByteArray *decoded;
+	GError *error = NULL;
+	const gchar *body;
+	gchar *external_id, *result, *token, *html_body, *attachment_body;
+	gchar *parsed_project = NULL, *parsed_external = NULL, *header;
+
+	external_id = e_wordpress_tracking_manager_generate_external_id ();
+	g_assert_cmpuint (strlen (external_id), ==, 128);
+	for (body = external_id; *body; body++)
+		g_assert_true (g_ascii_isalnum (*body));
+	header = g_strdup_printf ("v=1; project=Ab3dE7fG9h; external=%s", external_id);
+	g_assert_true (tracking_parse_header (header, &parsed_project, &parsed_external));
+	g_assert_cmpstr (parsed_project, ==, "Ab3dE7fG9h");
+	g_assert_cmpstr (parsed_external, ==, external_id);
+	g_free (parsed_project);
+	g_free (parsed_external);
+	parsed_project = NULL;
+	parsed_external = NULL;
+	g_free (header);
+	{
+		gchar *other_external = g_strdup (external_id);
+		other_external[0] = other_external[0] == 'A' ? 'B' : 'A';
+		header = g_strdup_printf ("v=1; project=Ab3dE7fG9h; external=%s; external=%s",
+			external_id, other_external);
+		g_assert_false (tracking_parse_header (header, &parsed_project, &parsed_external));
+		g_assert_null (parsed_project);
+		g_assert_null (parsed_external);
+		g_free (other_external);
+		g_free (header);
+	}
+	g_free (external_id);
+
+	camel_data_wrapper_set_mime_type (CAMEL_DATA_WRAPPER (alternative), "multipart/alternative");
+	camel_mime_part_set_content (plain, "Hello", -1, "text/plain; charset=utf-8");
+	token = g_strnfill (64, 'T');
+	html_body = g_strdup_printf ("<p>Hello</p><img src=\"cid:logo\"><img src=\"https://old.example/?wtp_pixel=Ab3dE7fG9h.%s\">", token);
+	attachment_body = g_strdup_printf ("<p>Attached</p><img src=\"https://old.example/?wtp_pixel=Ab3dE7fG9h.%s\">", token);
+	g_free (token);
+	camel_mime_part_set_content (html, html_body, -1, "text/html; charset=utf-8");
+	g_free (html_body);
+	camel_mime_part_set_content (attachment, attachment_body, -1, "text/html; charset=utf-8");
+	g_free (attachment_body);
+	camel_mime_part_set_disposition (attachment, "attachment");
+	camel_multipart_add_part (alternative, plain);
+	camel_multipart_add_part (alternative, html);
+	camel_medium_set_content (CAMEL_MEDIUM (body_part), CAMEL_DATA_WRAPPER (alternative));
+	camel_data_wrapper_set_mime_type (CAMEL_DATA_WRAPPER (mixed), "multipart/mixed");
+	camel_multipart_add_part (mixed, body_part);
+	camel_multipart_add_part (mixed, attachment);
+	camel_medium_set_content (CAMEL_MEDIUM (message), CAMEL_DATA_WRAPPER (mixed));
+
+	g_assert_true (e_wordpress_tracking_manager_prepare_message (manager, message, FALSE, &error));
+	g_assert_no_error (error);
+	stream = camel_stream_mem_new ();
+	g_assert_cmpint (camel_data_wrapper_decode_to_stream_sync (
+		camel_medium_get_content (CAMEL_MEDIUM (html)), stream, NULL, &error), >=, 0);
+	g_assert_no_error (error);
+	decoded = camel_stream_mem_get_byte_array (CAMEL_STREAM_MEM (stream));
+	result = g_strndup ((const gchar *) decoded->data, decoded->len);
+	g_assert_null (strstr (result, "wtp_pixel="));
+	g_assert_nonnull (strstr (result, "src=\"cid:logo\""));
+	g_assert_nonnull (strstr (result, "<p>Hello</p>"));
+	g_free (result);
+	g_object_unref (stream);
+	stream = camel_stream_mem_new ();
+	g_assert_cmpint (camel_data_wrapper_decode_to_stream_sync (
+		camel_medium_get_content (CAMEL_MEDIUM (attachment)), stream, NULL, &error), >=, 0);
+	g_assert_no_error (error);
+	decoded = camel_stream_mem_get_byte_array (CAMEL_STREAM_MEM (stream));
+	result = g_strndup ((const gchar *) decoded->data, decoded->len);
+	g_assert_nonnull (strstr (result, "wtp_pixel="));
+	g_assert_nonnull (strstr (result, "<p>Attached</p>"));
+	g_free (result);
+	g_object_unref (stream);
+	g_object_unref (plain);
+	g_object_unref (html);
+	g_object_unref (body_part);
+	g_object_unref (attachment);
+	g_object_unref (alternative);
+	g_object_unref (mixed);
+	g_object_unref (message);
+	g_object_unref (manager);
+}
+
+static void
+test_tracking_rejects_signed_messages (void)
+{
+	EWordPressTrackingManager *manager = e_wordpress_tracking_manager_new ();
+	CamelMimeMessage *message = camel_mime_message_new ();
+	CamelMultipart *signed_content = camel_multipart_new ();
+	GError *error = NULL;
+
+	camel_data_wrapper_set_mime_type (CAMEL_DATA_WRAPPER (signed_content), "multipart/signed");
+	camel_medium_set_content (CAMEL_MEDIUM (message), CAMEL_DATA_WRAPPER (signed_content));
+	g_assert_false (e_wordpress_tracking_manager_prepare_message (manager, message, TRUE, &error));
+	g_assert_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED);
+	g_clear_error (&error);
+	g_object_unref (signed_content);
+	g_object_unref (message);
+	g_object_unref (manager);
+}
+
 static gboolean
 respond_to_consent (gpointer response)
 {
@@ -117,5 +231,7 @@ int main (int argc, char **argv)
 	}
 	g_test_init (&argc, &argv, NULL);
 	g_test_add_func ("/openai/settings/consent-and-feedback", test_key_controls);
+	g_test_add_func ("/wordpress-tracking/mime/strip-inherited-pixel", test_tracking_ids_and_pixel_cleanup);
+	g_test_add_func ("/wordpress-tracking/mime/reject-signed-message", test_tracking_rejects_signed_messages);
 	return g_test_run ();
 }

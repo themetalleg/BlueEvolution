@@ -155,6 +155,7 @@
 #include <e-util/e-name-selector.h>
 #include <e-util/e-online-button.h>
 #include <e-util/e-openai-manager.h>
+#include <e-util/e-wordpress-tracking-manager.h>
 #include <e-util/e-paned.h>
 #include <e-util/e-passwords.h>
 #include <e-util/e-photo-cache.h>
