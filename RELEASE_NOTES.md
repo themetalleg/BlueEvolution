@@ -1,6 +1,6 @@
-# Beta Release Notes
+# BlueEvolution 0.2.10 Release Notes
 
-This beta adds optional WordPress email tracking. Evaluate it with a test
+This release adds optional WordPress email tracking. Evaluate it with a test
 mailbox and the WordPress Tracking Pixel plugin before using it with live mail.
 
 ## Changes
