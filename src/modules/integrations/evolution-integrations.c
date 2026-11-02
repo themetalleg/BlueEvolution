@@ -699,7 +699,7 @@ tracking_reader_show_info (ETrackingReader *self,
 		const GPtrArray *times = e_wordpress_tracking_summary_get_request_times (self->summary);
 		gchar *updated = tracking_format_time (e_wordpress_tracking_summary_get_updated_at (self->summary));
 		guint index;
-		label = g_strdup_printf (ngettext ("Tracking: %s image request", "Tracking: %s image requests", total), count);
+		label = count;
 		g_string_append_printf (tooltip, _("Saved locally. Last refreshed: %s"), updated);
 		if (refreshing)
 			g_string_append_printf (tooltip, "\n%s", _("Refreshing tracking history…"));
@@ -714,10 +714,9 @@ tracking_reader_show_info (ETrackingReader *self,
 		}
 		if (!e_wordpress_tracking_summary_get_history_complete (self->summary))
 			g_string_append_printf (tooltip, "\n%s", _("The timestamp list is incomplete."));
-		g_free (count);
 		g_free (updated);
 	} else {
-		label = g_strdup (refreshing ? _("Tracking: checking…") : _("Tracking: unavailable"));
+		label = NULL;
 		g_string_append (tooltip, error ? error : _("Loading tracking history…"));
 	}
 	e_mail_display_set_tracking_info (display, label, tooltip->str);

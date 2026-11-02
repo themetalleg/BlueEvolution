@@ -5,6 +5,7 @@ mailbox and the WordPress Tracking Pixel plugin before using it with live mail.
 
 ## Changes
 
+- The tracking box now shows only the numeric count. All details remain in its tooltip; the box stays hidden until a count is available.
 - Connection testing now validates a generated pixel URL and write permissions as well as the API and resolver. It reuses one synthetic registration per project without sending mail or loading its pixel.
 - Settings document WordPress's exact Site Address requirement, including `www`, port, and subdirectory matching.
 - Replaced tracking banners with a compact count box beneath the remote-content control and a multiline timestamp tooltip. The visible image-request disclaimer was removed; privacy limitations remain documented below.
