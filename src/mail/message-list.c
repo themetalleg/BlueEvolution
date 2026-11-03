@@ -5076,9 +5076,17 @@ build_subtree (MessageList *message_list,
 		message_list_collect_thread_messages (c, messages);
 		g_ptr_array_sort (messages, message_list_thread_message_compare);
 		for (index = 0; index < messages->len; index++) {
-			GNode *node = ml_uid_nodemap_insert (message_list, g_ptr_array_index (messages, index),
-				index == 0 ? parent : conversation, -1);
-			if (index == 0)
+			CamelMessageInfo *info = g_ptr_array_index (messages, index);
+			
+			/* Filter out read messages if the search hides read messages */
+			if (message_list_search_hides_read (message_list->search) &&
+			    (camel_message_info_get_flags (info) & CAMEL_MESSAGE_SEEN)) {
+				continue;
+			}
+			
+			GNode *node = ml_uid_nodemap_insert (message_list, info,
+				index == 0 && conversation == NULL ? parent : conversation, -1);
+			if (index == 0 || conversation == NULL)
 				conversation = node;
 		}
 		g_ptr_array_unref (messages);
