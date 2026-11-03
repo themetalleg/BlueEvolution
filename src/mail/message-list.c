@@ -5232,7 +5232,12 @@ message_list_search_hides_read (const gchar *search)
 	if (!search)
 		return FALSE;
 	normalized = g_ascii_strdown (search, -1);
+	/* Check for unread search pattern: "(not (system-flag "seen"))"
+	   This is case-insensitive and must contain the exact pattern. */
 	hides_read = strstr (normalized, "(not (system-flag \"seen\"))") != NULL;
+	/* Also check for the pattern with "Seen" in the original search before lowercasing */
+	if (!hides_read)
+		hides_read = strstr (search, "(not (system-flag \"Seen\"))") != NULL;
 	g_free (normalized);
 	return hides_read;
 }
