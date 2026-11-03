@@ -5076,17 +5076,9 @@ build_subtree (MessageList *message_list,
 		message_list_collect_thread_messages (c, messages);
 		g_ptr_array_sort (messages, message_list_thread_message_compare);
 		for (index = 0; index < messages->len; index++) {
-			CamelMessageInfo *info = g_ptr_array_index (messages, index);
-			
-			/* Filter out read messages if the search hides read messages */
-			if (message_list_search_hides_read (message_list->search) &&
-			    (camel_message_info_get_flags (info) & CAMEL_MESSAGE_SEEN)) {
-				continue;
-			}
-			
-			GNode *node = ml_uid_nodemap_insert (message_list, info,
-				index == 0 && conversation == NULL ? parent : conversation, -1);
-			if (index == 0 || conversation == NULL)
+			GNode *node = ml_uid_nodemap_insert (message_list, g_ptr_array_index (messages, index),
+				index == 0 ? parent : conversation, -1);
+			if (index == 0)
 				conversation = node;
 		}
 		g_ptr_array_unref (messages);
@@ -6619,6 +6611,34 @@ message_list_regen_thread (GTask *task,
 
 	camel_folder_sort_uids (folder, uids);
 
+	/* Filter out read messages if the search hides read messages.
+	   This must be done before building threads to ensure read messages
+	   don't appear as single-message threads. */
+	if (message_list_search_hides_read (regen_data->search)) {
+		GPtrArray *filtered_uids = g_ptr_array_new ();
+		guint ii;
+
+		camel_folder_summary_prepare_fetch_all (camel_folder_get_folder_summary (folder), NULL);
+
+		for (ii = 0; ii < uids->len; ii++) {
+			const gchar *uid = g_ptr_array_index (uids, ii);
+			CamelMessageInfo *msg_info = camel_folder_get_message_info (folder, uid);
+			
+			if (msg_info != NULL) {
+				if (!(camel_message_info_get_flags (msg_info) & CAMEL_MESSAGE_SEEN)) {
+					g_ptr_array_add (filtered_uids, (gpointer) uid);
+				}
+				g_object_unref (msg_info);
+			}
+		}
+
+		/* Replace the original uids array with the filtered one */
+		if (searchuids != NULL)
+			g_ptr_array_unref (searchuids);
+		searchuids = uids;
+		uids = filtered_uids;
+	}
+
 	/* update/build a new tree */
 	if (regen_data->group_by_threads) {
 		CamelFolderThread *thread_tree;
@@ -6649,13 +6669,7 @@ message_list_regen_thread (GTask *task,
 			uid = g_ptr_array_index (uids, ii);
 			info = camel_folder_get_message_info (folder, uid);
 			if (info != NULL) {
-				/* Filter out read messages if the search hides read messages */
-				if (message_list_search_hides_read (regen_data->search) &&
-				    (camel_message_info_get_flags (info) & CAMEL_MESSAGE_SEEN)) {
-					g_object_unref (info);
-				} else {
-					g_ptr_array_add (regen_data->summary, info);
-				}
+				g_ptr_array_add (regen_data->summary, info);
 			}
 		}
 	}
