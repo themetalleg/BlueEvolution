@@ -6640,8 +6640,15 @@ message_list_regen_thread (GTask *task,
 
 			uid = g_ptr_array_index (uids, ii);
 			info = camel_folder_get_message_info (folder, uid);
-			if (info != NULL)
-				g_ptr_array_add (regen_data->summary, info);
+			if (info != NULL) {
+				/* Filter out read messages if the search hides read messages */
+				if (message_list_search_hides_read (regen_data->search) &&
+				    (camel_message_info_get_flags (info) & CAMEL_MESSAGE_SEEN)) {
+					g_object_unref (info);
+				} else {
+					g_ptr_array_add (regen_data->summary, info);
+				}
+			}
 		}
 	}
 
