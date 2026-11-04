@@ -2,7 +2,7 @@
   "schema": 1,
   "latest_tag": "blueevolution-v0.2.12",
   "signing_fingerprint": "734676590FD2ADF649082D5A73DDAD99CC28243C",
-  "archive_name": "BlueEvolution-updates-41801744947-1.tar.gz",
+  "archive_name": "BlueEvolution-updates-41804321191-1.tar.gz",
   "channels": {
     "stable": {
       "version": "0.2.12",
@@ -13,5 +13,5 @@
       "tag": "blueevolution-v0.2.11-beta.4"
     }
   },
-  "archive_sha256": "76d5e60bcfcee7d450585e592bbf91f67be1b456d6f4eb1f0c9babd1cc1393fa"
+  "archive_sha256": "8864c441a21b05ddba6ad525989f588ba49438c25f527229a2e2802136857f02"
 }
