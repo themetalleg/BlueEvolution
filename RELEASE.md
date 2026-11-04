@@ -143,6 +143,40 @@ git show origin/flatpak-state:state.json | jq '.latest_tag'
 # Should show: "blueevolution-v0.x.y"
 ```
 
+### 5a. CRITICAL: Verify Discover Visibility
+
+**This step is essential!** Discover only shows published releases marked as "Latest". Drafts are invisible.
+
+```bash
+# 1. Confirm release is published (not Draft)
+gh release list | grep 0.x.y
+# Should show: BlueEvolution 0.x.y [with "Latest" label if this is newest]
+
+# 2. Confirm it's not marked Pre-release
+gh release view blueevolution-v0.x.y --json isDraft,isPrerelease
+# Should output: {"isDraft":false,"isPrerelease":false}
+
+# 3. Confirm version number in release
+gh release view blueevolution-v0.x.y --json body | jq '.body' | grep "0.x.y"
+
+# 4. Confirm metadata is correct
+# (Run this after 30 seconds for GitHub to index)
+curl -s https://themetalleg.github.io/BlueEvolution/index.html | grep -o '<Title.*</Title>'
+# Should include BlueEvolution with 0.x.y
+
+# 5. Wait for Discover update (2-4 hours typical)
+# Users can force refresh:
+# flatpak update --appstream
+# flatpak update io.github.themetalleg.BlueEvolution
+```
+
+**If Discover still doesn't show the update:**
+- Verify release is "Latest" (not overridden by newer beta)
+- Check GitHub release page directly - is it there?
+- Verify no draft with same version exists (drafts block published releases)
+- Wait up to 24 hours for Flatpak catalog indexing
+- Check `flatpak remotes` - ensure flathub is enabled if using secondary repos
+
 ### 6. Announce Release
 
 ```bash
@@ -150,6 +184,119 @@ git show origin/flatpak-state:state.json | jq '.latest_tag'
 # - GitHub Releases page
 # - User documentation
 # - Flatpak catalog (auto-indexed)
+```
+
+## Common Pitfalls (Discover Visibility)
+
+These mistakes prevent Discover from showing your release:
+
+### ❌ Pitfall 1: Version Number Not Incremented
+
+**Problem**: Released v0.2.11 again instead of v0.2.12
+- Flatpak sees same version → ignores update
+- Discover has no new version to show
+
+**Prevention**:
+```bash
+# ALWAYS increment version before release
+sed -i 's/0.2.11/0.2.12/' CMakeLists.txt
+grep "BLUEEVOLUTION_VERSION" CMakeLists.txt
+# Verify change before commit!
+```
+
+### ❌ Pitfall 2: Draft Release Not Published
+
+**Problem**: Build succeeds, creates draft, but you forget to publish
+- Draft releases are invisible to Discover
+- User sees "Latest" from 2 weeks ago
+
+**Prevention**:
+```bash
+# Verify it's PUBLISHED, not Draft
+gh release view blueevolution-v0.x.y --json isDraft
+# Must show: {"isDraft":false}
+
+# Do NOT just create a draft and assume users see it
+```
+
+### ❌ Pitfall 3: Old Drafts Block New Releases
+
+**Problem**: v0.2.12 draft exists, then you try to release v0.2.13
+- Build workflow refuses to create v0.2.13 draft (says already published)
+- Actual error: old draft is blocking creation
+- v0.2.13 never gets published
+
+**Prevention**:
+```bash
+# Clean up old drafts BEFORE new release
+gh release list | grep Draft
+# If any exist, delete them:
+gh release delete blueevolution-v0.x.y --yes
+
+# Then start fresh release process
+```
+
+### ❌ Pitfall 4: Prerelease Flag Set
+
+**Problem**: Mark as "Pre-release" when should be stable
+- Discover shows as beta, not available for auto-update
+- Users don't see it as an available update
+
+**Prevention**:
+```bash
+# Verify isPrerelease is FALSE for stable releases
+gh release view blueevolution-v0.x.y --json isPrerelease
+# Should show: {"isPrerelease":false}
+
+# If wrong, fix it:
+gh release edit blueevolution-v0.x.y --prerelease=false
+```
+
+### ❌ Pitfall 5: Tag Name Format Wrong
+
+**Problem**: Created tag `v0.2.13` instead of `blueevolution-v0.2.13`
+- Release workflow doesn't trigger (wrong tag name pattern)
+- No build happens
+- No release created
+
+**Prevention**:
+```bash
+# MUST use exact format:
+git tag -a blueevolution-v0.2.13 -m "..."  # ✓ Correct
+# NOT:
+git tag -a v0.2.13 -m "..."                # ✗ Wrong
+git tag -a 0.2.13 -m "..."                 # ✗ Wrong
+
+# Verify before push:
+git tag | grep v0.2.13
+# Should show: blueevolution-v0.2.13
+```
+
+### ✅ Verification Checklist
+
+Before claiming release is done:
+
+```bash
+# 1. Release exists and is published
+gh release view blueevolution-v0.x.y
+# Shows: "✓ BlueEvolution 0.x.y (published)"
+
+# 2. Not marked as Draft
+gh release view blueevolution-v0.x.y --json isDraft,isPrerelease
+# Shows: {"isDraft":false,"isPrerelease":false}
+
+# 3. Version in release notes matches tag
+gh release view blueevolution-v0.x.y --json body | grep "0.x.y"
+
+# 4. Repository updated
+curl -s https://themetalleg.github.io/BlueEvolution/index.html | grep "0.x.y"
+
+# 5. No conflicting drafts exist
+gh release list | grep Draft | grep "0.x.y"
+# Should return NOTHING
+
+# 6. Only if all 5 pass: Mark as complete
+echo "✅ Release 0.x.y is complete and Discover-visible"
 ```
 
 ## Troubleshooting
