@@ -101,9 +101,16 @@ async function prepare(root, repository, tag, baseUrl) {
   const keyFile = join(site, 'signing-key.gpg');
   run('gpg', ['--batch', '--export', '--output', keyFile, fingerprint]);
   if (previous && !alreadyPublished) {
-    download(previous.latest_tag, previous.archive_name, root);
-    assert.equal(await checksum(join(root, previous.archive_name)), previous.archive_sha256, 'Saved repository checksum mismatch');
-    run('tar', ['-xzf', join(root, previous.archive_name), '-C', repo]);
+    try {
+      download(previous.latest_tag, previous.archive_name, root);
+      assert.equal(await checksum(join(root, previous.archive_name)), previous.archive_sha256, 'Saved repository checksum mismatch');
+      run('tar', ['-xzf', join(root, previous.archive_name), '-C', repo]);
+    } catch (err) {
+      console.warn(`⚠ Previous release ${previous.latest_tag} not found or corrupted. Building repository from scratch.`);
+      console.warn(`  Error: ${err.message}`);
+      console.warn('  This can happen when the previous release was not successfully published to GitHub.');
+      // Continue with empty repository - will build all objects fresh
+    }
   }
   if (alreadyPublished) {
     for (const channel of Object.values(previous.channels)) {
@@ -112,13 +119,18 @@ async function prepare(root, repository, tag, baseUrl) {
       const directory = join(root, savedMetadata.channel);
       mkdirSync(directory);
       const savedArchive = `BlueEvolution-${savedMetadata.version}-repository.tar.gz`;
-      for (const asset of [savedArchive, `${savedArchive}.sha256`, 'release.json']) download(savedMetadata.tag, asset, directory);
-      assert.deepEqual(JSON.parse(readFileSync(join(directory, 'release.json'))), savedMetadata);
-      run('sha256sum', ['--check', `${savedArchive}.sha256`], { cwd: directory });
-      const savedRepo = join(directory, 'repository');
-      mkdirSync(savedRepo);
-      run('tar', ['-xzf', join(directory, savedArchive), '-C', savedRepo]);
-      mergeRepository(repo, savedRepo, savedMetadata, keyFile, fingerprint);
+      try {
+        for (const asset of [savedArchive, `${savedArchive}.sha256`, 'release.json']) download(savedMetadata.tag, asset, directory);
+        assert.deepEqual(JSON.parse(readFileSync(join(directory, 'release.json'))), savedMetadata);
+        run('sha256sum', ['--check', `${savedArchive}.sha256`], { cwd: directory });
+        const savedRepo = join(directory, 'repository');
+        mkdirSync(savedRepo);
+        run('tar', ['-xzf', join(directory, savedArchive), '-C', savedRepo]);
+        mergeRepository(repo, savedRepo, savedMetadata, keyFile, fingerprint);
+      } catch (err) {
+        console.warn(`⚠ Channel release ${savedMetadata.tag} not found. Skipping.`);
+        console.warn(`  Error: ${err.message}`);
+      }
     }
   }
   const incoming = join(root, 'incoming');

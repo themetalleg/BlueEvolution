@@ -199,12 +199,45 @@ jobs:
               exit 1
             fi
             gh release upload "$TAG" "$BUNDLE" "$BUNDLE.sha256" "$REPOSITORY" "$REPOSITORY.sha256" "$METADATA" --clobber
-            gh release edit "$TAG" --draft --prerelease="$PRERELEASE" \
-              --title "BlueEvolution $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" --target "$GITHUB_SHA"
+            if [[ "$PRERELEASE" == "true" ]]; then
+              gh release edit "$TAG" --draft --prerelease \
+                --title "BlueEvolution $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" --target "$GITHUB_SHA"
+            else
+              gh release edit "$TAG" --prerelease=false \
+                --title "BlueEvolution $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" --target "$GITHUB_SHA"
+            fi
             exit 0
           fi
-          args=("$TAG" "$BUNDLE" "$BUNDLE.sha256" "$REPOSITORY" "$REPOSITORY.sha256" "$METADATA" --draft --title "BlueEvolution $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" --target "$GITHUB_SHA")
+          args=("$TAG" "$BUNDLE" "$BUNDLE.sha256" "$REPOSITORY" "$REPOSITORY.sha256" "$METADATA" --title "BlueEvolution $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" --target "$GITHUB_SHA")
           if [[ "$PRERELEASE" == "true" ]]; then
-            args+=(--prerelease)
+            args+=(--prerelease --draft)
           fi
           gh release create "${args[@]}"
+
+      - name: Verify release was published
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          TAG: ${{ steps.release.outputs.tag }}
+          PRERELEASE: ${{ steps.release.outputs.prerelease }}
+        shell: bash
+        run: |
+          sleep 2  # Give GitHub time to update
+          is_draft=$(gh release view "$TAG" --json isDraft --jq .isDraft)
+          is_latest=$(gh release list --limit=1 | grep -q "$TAG" && echo "true" || echo "false")
+          
+          echo "Release Status:"
+          echo "  Tag: $TAG"
+          echo "  Version: $VERSION"
+          echo "  isDraft: $is_draft"
+          echo "  is Latest: $is_latest"
+          
+          if [[ "$PRERELEASE" != "true" && "$is_draft" == "true" ]]; then
+            echo "ERROR: Stable release should not be draft!"
+            exit 1
+          fi
+          
+          if [[ "$is_draft" == "false" ]]; then
+            echo "✓ Release successfully published"
+          else
+            echo "ℹ Release is pre-release/draft as expected"
+          fi
