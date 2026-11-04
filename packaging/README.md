@@ -57,7 +57,7 @@ even if a locally installed development version was labelled beta.
 
 ### Settings Preservation
 
-Stable 0.2.14 introduces the locked settings backend. Each channel keeps its
+Stable 0.2.15 introduces the locked settings backend. Each channel keeps its
 existing `$XDG_CONFIG_HOME/glib-2.0/settings/keyfile`
 inside its Flatpak profile. The `blueevolution-keyfile` GIO backend uses the same
 GLib keyfile format and location; no settings, account, or keyring migration is

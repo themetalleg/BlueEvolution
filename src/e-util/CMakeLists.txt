@@ -721,7 +721,7 @@ if(UNIX)
 	target_include_directories(test-settings-persistence PRIVATE ${SETTINGS_GIO_INCLUDE_DIRS})
 	target_link_libraries(test-settings-persistence ${SETTINGS_GIO_LDFLAGS})
 	add_dependencies(test-settings-persistence blueevolutionsettings)
-	install(TARGETS test-settings-persistence DESTINATION ${privlibexecdir}/tests)
+	install(TARGETS test-settings-persistence DESTINATION ${LIBEXEC_INSTALL_DIR}/blueevolution/tests)
 endif(UNIX)
 
 # Private gsettings module

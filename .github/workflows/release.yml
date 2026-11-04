@@ -204,18 +204,18 @@ jobs:
               gh release edit "$TAG" --draft --prerelease \
                 --title "BlueEvolution $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" --target "$GITHUB_SHA"
             else
-              gh release edit "$TAG" --prerelease=false \
+              gh release edit "$TAG" --draft --prerelease=false \
                 --title "BlueEvolution $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" --target "$GITHUB_SHA"
             fi
             exit 0
           fi
-          args=("$TAG" "$BUNDLE" "$BUNDLE.sha256" "$REPOSITORY" "$REPOSITORY.sha256" "$METADATA" --title "BlueEvolution $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" --target "$GITHUB_SHA")
+          args=("$TAG" "$BUNDLE" "$BUNDLE.sha256" "$REPOSITORY" "$REPOSITORY.sha256" "$METADATA" --draft --title "BlueEvolution $VERSION" --notes-file "$RUNNER_TEMP/release-notes.md" --target "$GITHUB_SHA")
           if [[ "$PRERELEASE" == "true" ]]; then
-            args+=(--prerelease --draft)
+            args+=(--prerelease)
           fi
           gh release create "${args[@]}"
 
-      - name: Verify release was published
+      - name: Verify draft is ready for review
         env:
           VERSION: ${{ steps.release.outputs.version }}
           TAG: ${{ steps.release.outputs.tag }}
@@ -224,21 +224,15 @@ jobs:
         run: |
           sleep 2  # Give GitHub time to update
           is_draft=$(gh release view "$TAG" --json isDraft --jq .isDraft)
-          is_latest=$(gh release list --limit=1 | grep -q "$TAG" && echo "true" || echo "false")
           
           echo "Release Status:"
           echo "  Tag: $TAG"
           echo "  Version: $VERSION"
           echo "  isDraft: $is_draft"
-          echo "  is Latest: $is_latest"
           
-          if [[ "$PRERELEASE" != "true" && "$is_draft" == "true" ]]; then
-            echo "ERROR: Stable release should not be draft!"
+          if [[ "$is_draft" != "true" ]]; then
+            echo "ERROR: Release must remain a draft until it is reviewed!"
             exit 1
           fi
           
-          if [[ "$is_draft" == "false" ]]; then
-            echo "✓ Release successfully published"
-          else
-            echo "ℹ Release is pre-release/draft as expected"
-          fi
+          echo "Draft release is ready for review and publication."

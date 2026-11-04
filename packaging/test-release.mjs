@@ -259,6 +259,21 @@ test('generated manifests separate application, window and EDS service identitie
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
+test('release candidates stay drafts and the persistent regression uses its installed path', () => {
+  const workflow = YAML.parse(readFileSync(resolve(root, '.github/workflows/release.yml'), 'utf8'));
+  const steps = workflow.jobs['draft-release'].steps;
+  const create = steps.find(step => step.name === 'Create or replace draft release').run;
+  assert.match(create, /args=\([^\n]* --draft /);
+  assert.match(create, /gh release edit "\$TAG" --draft --prerelease=false/);
+  assert.ok(steps.some(step => step.name === 'Verify draft is ready for review'));
+  const cmake = readFileSync(resolve(root, 'src/e-util/CMakeLists.txt'), 'utf8');
+  assert.ok(cmake.includes('install(TARGETS test-settings-persistence DESTINATION ${LIBEXEC_INSTALL_DIR}/blueevolution/tests)'));
+  for (const name of ['ci.yml', 'release.yml']) {
+    assert.ok(readFileSync(resolve(root, '.github/workflows', name), 'utf8')
+      .includes('/app/libexec/blueevolution/tests/test-settings-persistence'));
+  }
+});
+
 test('CI and publication workflow YAML and embedded shell scripts are valid', () => {
   for (const filename of ['ci.yml', 'release.yml', 'publish.yml']) {
     const workflow = YAML.parse(readFileSync(resolve(root, '.github/workflows', filename), 'utf8'));
