@@ -52,9 +52,40 @@ export function mergeRepository(repository, incoming, metadata, publicKey, finge
   run('ostree', ['pull-local', `--repo=${repository}`, '--remote=release', '--gpg-verify', '--untrusted', incoming, metadata.ref]);
   run('ostree', ['refs', `--repo=${repository}`, '--force', `--create=${metadata.ref}`, `release:${metadata.ref}`]);
   run('ostree', ['remote', 'delete', `--repo=${repository}`, 'release']);
-  run('flatpak', ['build-update-repo', '--title=BlueEvolution', '--default-branch=stable',
-    `--gpg-import=${publicKey}`, `--gpg-sign=${fingerprint}`, '--prune', '--prune-depth=3', repository]);
+  
+  // Extract and prepare appdata/appstream metadata directory for Discover integration
+  const xmlDir = join(repository, 'metadata');
+  mkdirSync(xmlDir, { recursive: true });
+  try {
+    // Extract appdata from the app's metadata
+    run('ostree', ['checkout', `--repo=${repository}`, '--user-mode', `--union`,
+      `${metadata.ref}:/usr/share/metainfo`, join(xmlDir, 'metainfo')]);
+    run('ostree', ['checkout', `--repo=${repository}`, '--user-mode', `--union`,
+      `${metadata.ref}:/usr/share/appdata`, join(xmlDir, 'appdata')]);
+  } catch (err) {
+    console.warn(`⚠ Could not extract appdata from ${metadata.ref}. Discover will show limited information.`);
+  }
+  
+  const updateRepoArgs = ['build-update-repo', '--title=BlueEvolution', '--default-branch=stable',
+    `--gpg-import=${publicKey}`, `--gpg-sign=${fingerprint}`, '--prune', '--prune-depth=3'];
+  
+  // Include appstream metadata if directory exists and has content
+  if (hasXmlMetadata(xmlDir)) {
+    updateRepoArgs.push(`--xml-dir=${xmlDir}`);
+  }
+  updateRepoArgs.push(repository);
+  
+  run('flatpak', updateRepoArgs);
   run('ostree', ['fsck', `--repo=${repository}`]);
+}
+
+function hasXmlMetadata(directory) {
+  try {
+    const files = run('find', [directory, '-maxdepth', '2', '-name', '*.xml', '-type', 'f']);
+    return files.trim().length > 0;
+  } catch (err) {
+    return false;
+  }
 }
 
 function stateHead(repository) {
