@@ -6620,7 +6620,7 @@ message_list_regen_thread (GTask *task,
 	   This must be done before building threads to ensure read messages
 	   don't appear as single-message threads. */
 	if (message_list_search_hides_read (regen_data->search)) {
-		GPtrArray *filtered_uids = g_ptr_array_new_with_free_func (NULL);
+		GPtrArray *filtered_uids = g_ptr_array_new_with_free_func (g_free);
 		guint ii;
 
 		camel_folder_summary_prepare_fetch_all (camel_folder_get_folder_summary (folder), NULL);
@@ -6631,16 +6631,15 @@ message_list_regen_thread (GTask *task,
 			
 			if (msg_info != NULL) {
 				if (!(camel_message_info_get_flags (msg_info) & CAMEL_MESSAGE_SEEN)) {
-					g_ptr_array_add (filtered_uids, (gpointer) uid);
+					g_ptr_array_add (filtered_uids, g_strdup (uid));
 				}
 				g_object_unref (msg_info);
 			}
 		}
 
-		/* Replace the original uids array with the filtered one */
-		if (searchuids != NULL)
-			g_ptr_array_unref (searchuids);
-		searchuids = uids;
+		/* Replace the original uids array with the filtered one.
+		   Keep searchuids pointing to the Camel-owned array so it gets
+		   properly cleaned up at exit. */
 		uids = filtered_uids;
 	}
 
@@ -6682,10 +6681,14 @@ message_list_regen_thread (GTask *task,
 exit_successfully:
 	g_task_return_boolean (task, TRUE);
 exit:
-	if (searchuids != NULL)
+	if (searchuids != NULL) {
 		g_ptr_array_unref (searchuids);
-	else if (uids != NULL)
+		/* If we filtered the search results, also unref the filtered array */
+		if (uids != NULL && uids != searchuids)
+			g_ptr_array_unref (uids);
+	} else if (uids != NULL) {
 		g_ptr_array_unref (uids);
+	}
 
 	g_object_unref (folder);
 	g_clear_error (&local_error);
