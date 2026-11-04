@@ -6620,7 +6620,7 @@ message_list_regen_thread (GTask *task,
 	   This must be done before building threads to ensure read messages
 	   don't appear as single-message threads. */
 	if (message_list_search_hides_read (regen_data->search)) {
-		GPtrArray *filtered_uids = g_ptr_array_new ();
+		GPtrArray *filtered_uids = g_ptr_array_new_with_free_func (NULL);
 		guint ii;
 
 		camel_folder_summary_prepare_fetch_all (camel_folder_get_folder_summary (folder), NULL);
