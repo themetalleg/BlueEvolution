@@ -265,7 +265,8 @@ test('release candidates stay drafts and the persistent regression uses its inst
   const create = steps.find(step => step.name === 'Create or replace draft release').run;
   assert.match(create, /args=\([^\n]* --draft /);
   assert.match(create, /gh release edit "\$TAG" --draft --prerelease=false/);
-  assert.ok(steps.some(step => step.name === 'Verify draft is ready for review'));
+  const verify = steps.find(step => step.name === 'Verify draft is ready for review');
+  assert.equal(verify.env.GH_TOKEN, '${{ github.token }}');
   const cmake = readFileSync(resolve(root, 'src/e-util/CMakeLists.txt'), 'utf8');
   assert.ok(cmake.includes('install(TARGETS test-settings-persistence DESTINATION ${LIBEXEC_INSTALL_DIR}/blueevolution/tests)'));
   for (const name of ['ci.yml', 'release.yml']) {
