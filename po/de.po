@@ -20896,16 +20896,12 @@ msgid "Add a note for the selected message"
 msgstr "Der gewählten Nachricht eine Notiz hinzufügen"
 
 #: ../src/mail/e-mail-reader.c:3146
-#, fuzzy
-#| msgid "Compose Message"
 msgid "Copy Message _Link"
-msgstr "Nachricht verfassen"
+msgstr "Nachrichten_link kopieren"
 
 #: ../src/mail/e-mail-reader.c:3148
-#, fuzzy
-#| msgid "Choose reply options for the selected message"
 msgid "Copy mid: link for the selected message"
-msgstr "Antwortoptionen für die gewählte Nachricht wählen"
+msgstr "mid:-Link für die gewählte Nachricht kopieren"
 
 #: ../src/mail/e-mail-reader.c:3153
 msgid "Delete no_te"
