@@ -55,6 +55,31 @@ origin. Verify the result with `flatpak info --user --show-origin APP_ID`.
 The historical `io.github.themetalleg.BlueEvolution` identity belongs to stable,
 even if a locally installed development version was labelled beta.
 
+### Settings Preservation
+
+Stable 0.2.14 introduces the locked settings backend. Each channel keeps its
+existing `$XDG_CONFIG_HOME/glib-2.0/settings/keyfile`
+inside its Flatpak profile. The `blueevolution-keyfile` GIO backend uses the same
+GLib keyfile format and location; no settings, account, or keyring migration is
+performed. It must be available to all sandbox processes, including EDS and
+`gsettings`, through `GIO_EXTRA_MODULES=/app/lib/gio/modules`.
+
+GLib's ordinary `keyfile` backend can overwrite a whole file using an outdated
+in-memory copy before it processes another process's file-change notification.
+That can discard unrelated tracking configuration and view preferences, without
+an update being required. The locked backend reloads the file while holding a
+shared advisory lock before each write, batch, or reset. It preserves unrelated
+and unknown keys and refuses to overwrite an unreadable or malformed file.
+Do not override the sandbox backend with `GSETTINGS_BACKEND=keyfile`, or edit the
+settings file while the application and its background services are running.
+
+Existing preferences that have already been overwritten cannot be reconstructed
+by this fix. Restore them only from a verified profile backup or configure them
+again. Back up profiles before recovery; do not remove profiles, copy one
+channel's profile over the other, or delete desktop keyring entries. Restart
+normally after installing a fixed release so the UI and its background services
+all use the new backend. This does not publish or install a release by itself.
+
 ## GitHub Setup
 
 1. Set Pages to GitHub Actions as its build/deployment source.
@@ -211,6 +236,14 @@ version. Keep the patch applicable when updating that dependency. The installed
 account-setting persistence, and the Receiving Options selector. Both bundle CI
 gates require the extension; tests against an unpatched native Camel skip this
 feature instead.
+
+The installed `test-settings-persistence` regression executable uses synthetic
+tracking and view preferences in a temporary profile. Both bundle CI gates run
+it with the real persistent backend, independently of the memory-only UI tests.
+It checks existing-profile compatibility, stale and simultaneous writers,
+delayed batches, resets, cross-process notifications, process restarts, lock
+failures, and malformed-file preservation. It never uses the normal installed
+profile or the desktop keyring.
 
 The release tests need Node.js, `jq`, `xsltproc`, and `xmllint`.
 The integration test additionally needs `flatpak`, `ostree`, and `gpg`. It uses synthetic

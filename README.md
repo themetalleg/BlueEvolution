@@ -31,6 +31,12 @@ Updates are delivered through Discover, GNOME Software, or `flatpak update --use
 Users choose when to install updates. Automatic installation is optional and
 controlled through their software manager's settings, not by BlueEvolution.
 
+Settings stay in the same channel-specific profile across updates. Starting
+with stable 0.2.14, Flatpak builds serialize settings writes from the mail UI and
+background services to prevent one process from discarding another's tracking
+or view preferences.
+See [settings preservation](packaging/README.md#settings-preservation) for details.
+
 KDE Discover lists Flatpak applications only when its Flatpak backend is
 installed. On Kubuntu, install `plasma-discover-backend-flatpak`; without it,
 user-installed BlueEvolution apps do not appear in Discover's Installed or

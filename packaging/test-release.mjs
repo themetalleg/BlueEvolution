@@ -230,6 +230,8 @@ test('generated manifests separate application, window and EDS service identitie
       const manifest = JSON.parse(readFileSync(join(buildRoot, 'manifest.json')));
       assert.equal(manifest['app-id'], metadata.app_id);
       assert.equal(manifest.branch, metadata.channel);
+      assert.ok(manifest['finish-args'].includes('--env=GSETTINGS_BACKEND=blueevolution-keyfile'));
+      assert.ok(manifest['finish-args'].includes('--env=GIO_EXTRA_MODULES=/app/lib/gio/modules'));
       const evolution = manifest.modules.find(module => module.name === 'evolution');
       const eds = manifest.modules.find(module => module.name === 'evolution-data-server');
       assert.ok(evolution['config-opts'].includes(`-DOVERRIDE_APPLICATION_ID=${metadata.app_id}`));

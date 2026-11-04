@@ -59,7 +59,8 @@ jobs:
           jq -e '
             .["app-id"] == "io.github.themetalleg.BlueEvolution" and
             .command == "blueevolution" and
-            (.["finish-args"] | any(. == "--env=GSETTINGS_BACKEND=keyfile"))
+            (.["finish-args"] | any(. == "--env=GSETTINGS_BACKEND=blueevolution-keyfile")) and
+            (.["finish-args"] | any(. == "--env=GIO_EXTRA_MODULES=/app/lib/gio/modules"))
           ' flatpak/io.github.themetalleg.BlueEvolution.json
 
       - name: Build Flatpak bundle
@@ -106,6 +107,7 @@ jobs:
               for test in test-blueevolution-mail-list test-mail-download-policy test-ui-action test-blueevolution-appearance test-integrations; do
                 "/app/libexec/blueevolution/tests/$test"
               done
+              /app/libexec/blueevolution/tests/test-settings-persistence
             '
 
       - uses: actions/upload-artifact@v4

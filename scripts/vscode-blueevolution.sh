@@ -96,7 +96,6 @@ launch|preview)
 		XDG_CONFIG_HOME="$profile_root/config"
 		XDG_DATA_HOME="$profile_root/data"
 		XDG_CACHE_HOME="$profile_root/cache"
-		GSETTINGS_BACKEND=keyfile
 		GSETTINGS_SCHEMA_DIR=/app/share/glib-2.0/schemas
 		BLUEEVOLUTION_PREVIEW_MODE=1
 	)

@@ -38,7 +38,8 @@
     "--talk-name=org.freedesktop.secrets",
     "--talk-name=org.gnome.keyring.SystemPrompter",
     "--talk-name=org.gnome.OnlineAccounts",
-    "--env=GSETTINGS_BACKEND=keyfile"
+    "--env=GIO_EXTRA_MODULES=/app/lib/gio/modules",
+    "--env=GSETTINGS_BACKEND=blueevolution-keyfile"
   ],
   "add-extensions": {
     "org.gnome.Evolution.Extension": {

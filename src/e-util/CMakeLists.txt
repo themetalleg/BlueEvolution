@@ -709,6 +709,21 @@ install(FILES ${HEADERS}
 	DESTINATION ${privincludedir}/e-util
 )
 
+if(UNIX)
+	pkg_check_modules(SETTINGS_GIO REQUIRED gio-2.0 gmodule-2.0)
+	add_library(blueevolutionsettings MODULE e-locked-keyfile-settings-backend.c)
+	target_compile_options(blueevolutionsettings PRIVATE ${SETTINGS_GIO_CFLAGS})
+	target_include_directories(blueevolutionsettings PRIVATE ${SETTINGS_GIO_INCLUDE_DIRS})
+	target_link_libraries(blueevolutionsettings ${SETTINGS_GIO_LDFLAGS})
+	install(TARGETS blueevolutionsettings DESTINATION ${LIB_INSTALL_DIR}/gio/modules)
+	add_executable(test-settings-persistence test-settings-persistence.c)
+	target_compile_options(test-settings-persistence PRIVATE ${SETTINGS_GIO_CFLAGS})
+	target_include_directories(test-settings-persistence PRIVATE ${SETTINGS_GIO_INCLUDE_DIRS})
+	target_link_libraries(test-settings-persistence ${SETTINGS_GIO_LDFLAGS})
+	add_dependencies(test-settings-persistence blueevolutionsettings)
+	install(TARGETS test-settings-persistence DESTINATION ${privlibexecdir}/tests)
+endif(UNIX)
+
 # Private gsettings module
 
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/test-gio-modules

@@ -140,6 +140,7 @@ jobs:
               for test in test-blueevolution-mail-list test-mail-download-policy test-ui-action test-blueevolution-appearance test-integrations; do
                 "/app/libexec/blueevolution/tests/$test"
               done
+              /app/libexec/blueevolution/tests/test-settings-persistence
             '
 
       - name: Prepare release notes
