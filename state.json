@@ -1,12 +1,12 @@
 {
   "schema": 1,
-  "latest_tag": "blueevolution-v0.2.12",
+  "latest_tag": "blueevolution-v0.2.13",
   "signing_fingerprint": "734676590FD2ADF649082D5A73DDAD99CC28243C",
-  "archive_name": "BlueEvolution-updates-41804321191-1.tar.gz",
+  "archive_name": "BlueEvolution-updates-41809776731-1.tar.gz",
   "channels": {
     "stable": {
-      "version": "0.2.12",
-      "tag": "blueevolution-v0.2.12"
+      "version": "0.2.13",
+      "tag": "blueevolution-v0.2.13"
     },
     "beta": {
       "version": "0.2.11-beta.4",
