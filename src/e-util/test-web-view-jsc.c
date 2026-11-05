@@ -867,6 +867,51 @@ test_set_element_attribute (TestFixture *fixture)
 }
 
 static void
+test_inline_cid_images (TestFixture *fixture)
+{
+	test_utils_load_string (fixture,
+		"<html><body>"
+		"<img id='inline' src='CID:Screenshot+one/two?three%25@example.invalid'>"
+		"<img id='local' src='file:///synthetic.png'>"
+		"<img id='remote' src='https://example.invalid/tracking.png'>"
+		"</body></html>");
+
+	test_utils_jsc_call_sync (fixture, "Evo.initialize(document);", NULL);
+	test_utils_jsc_call_string_and_verify (fixture,
+		"document.getElementById('inline').getAttribute('src')",
+		"cid://localhost/Screenshot%2Bone%2Ftwo%3Fthree%2525%40example.invalid");
+	test_utils_jsc_call_string_and_verify (fixture,
+		"document.getElementById('local').getAttribute('src')",
+		"evo-file:///synthetic.png");
+	test_utils_jsc_call_string_and_verify (fixture,
+		"document.getElementById('remote').getAttribute('src')",
+		"https://example.invalid/tracking.png");
+	test_utils_jsc_call_string_and_verify (fixture,
+		"Evo.GetElementContent('', 'inline', 2, true)",
+		"<img id=\"inline\" src=\"cid:Screenshot+one/two?three%25@example.invalid\">");
+	g_assert_true (test_utils_jsc_call_bool_sync (fixture,
+		"Evo.GetDocumentContent('', 3).html.includes('src=\"cid:Screenshot+one/two?three%25@example.invalid\"')"));
+	test_utils_jsc_call_sync (fixture,
+		"var range = document.createRange();"
+		"range.selectNode(document.getElementById('inline'));"
+		"document.getSelection().removeAllRanges();"
+		"document.getSelection().addRange(range);"
+		"var copied = {};"
+		"EvoClipboard.Copy({currentTarget:document,clipboardData:{"
+		"setData:function(type, value) { copied[type] = value; }},"
+		"preventDefault:function() {}});", NULL);
+	g_assert_true (test_utils_jsc_call_bool_sync (fixture,
+		"copied['text/html'].includes('src=\"cid:Screenshot+one/two?three%25@example.invalid\"')"));
+	test_utils_jsc_call_string_and_verify (fixture,
+		"Evo.GetSelection(2)",
+		"<img id=\"inline\" src=\"cid:Screenshot+one/two?three%25@example.invalid\">");
+	test_utils_jsc_call_sync (fixture, "Evo.initialize(document);", NULL);
+	test_utils_jsc_call_string_and_verify (fixture,
+		"document.getElementById('inline').getAttribute('src')",
+		"cid://localhost/Screenshot%2Bone%2Ftwo%3Fthree%2525%40example.invalid");
+}
+
+static void
 test_style_sheets (TestFixture *fixture)
 {
 	test_utils_load_body (fixture, LOAD_ALL);
@@ -3633,6 +3678,7 @@ main (gint argc,
 	test_utils_add_test ("/EWebView/SetElementChecked", test_set_element_checked);
 	test_utils_add_test ("/EWebView/SetElementStyleProperty", test_set_element_style_property);
 	test_utils_add_test ("/EWebView/SetElementAttribute", test_set_element_attribute);
+	test_utils_add_test ("/EWebView/InlineCIDImages", test_inline_cid_images);
 	test_utils_add_test ("/EWebView/StyleSheets", test_style_sheets);
 	test_utils_add_test ("/EWebView/ElementClicked", test_element_clicked);
 	test_utils_add_test ("/EWebView/NeedInputChanged", test_need_input_changed);

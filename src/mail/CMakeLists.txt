@@ -349,5 +349,20 @@ set_tests_properties(test-mail-download-policy PROPERTIES
 install(TARGETS test-mail-download-policy
 	DESTINATION ${LIBEXEC_INSTALL_DIR}/blueevolution/tests)
 
+add_executable(test-mail-inline-images test-mail-inline-images.c)
+target_compile_options(test-mail-inline-images PRIVATE
+	${EVOLUTION_DATA_SERVER_CFLAGS} ${GNOME_PLATFORM_CFLAGS})
+target_include_directories(test-mail-inline-images PRIVATE
+	${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/src ${CMAKE_SOURCE_DIR}/src
+	${EVOLUTION_DATA_SERVER_INCLUDE_DIRS} ${GNOME_PLATFORM_INCLUDE_DIRS})
+target_link_libraries(test-mail-inline-images
+	evolution-mail evolution-mail-formatter evolution-util
+	${EVOLUTION_DATA_SERVER_LDFLAGS} ${GNOME_PLATFORM_LDFLAGS})
+add_check_test(test-mail-inline-images)
+set_tests_properties(test-mail-inline-images PROPERTIES
+	ENVIRONMENT "GSETTINGS_BACKEND=memory")
+install(TARGETS test-mail-inline-images
+	DESTINATION ${LIBEXEC_INSTALL_DIR}/blueevolution/tests)
+
 add_subdirectory(default)
 add_subdirectory(importers)

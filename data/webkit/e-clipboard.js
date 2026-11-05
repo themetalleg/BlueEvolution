@@ -2,6 +2,32 @@
 
 var EvoClipboard = {};
 
+EvoClipboard.GetHTML = function(node, useOuterHTML)
+{
+	var clone = node.cloneNode(true);
+	var images = Array.from(clone.querySelectorAll("img[src]"));
+
+	if (clone.tagName == "IMG")
+		images.push(clone);
+
+	for (var image of images) {
+		var src = image.getAttribute("src");
+
+		if (!/^cid:\/\/localhost\//i.test(src))
+			continue;
+
+		try {
+			image.setAttribute("src", "cid:" + decodeURIComponent(src.substring(16)));
+		} catch (error) {
+			if (!(error instanceof URIError))
+				throw error;
+			console.warn("Invalid escaped inline image reference");
+		}
+	}
+
+	return useOuterHTML ? clone.outerHTML : clone.innerHTML;
+};
+
 EvoClipboard.Copy = function(event)
 {
 	var doc = event.currentTarget;
@@ -26,7 +52,7 @@ EvoClipboard.Copy = function(event)
 
 	var container = doc.createElement("DIV");
 	container.appendChild(content);
-	event.clipboardData.setData("text/html", container.innerHTML);
+	event.clipboardData.setData("text/html", EvoClipboard.GetHTML(container, false));
 	event.clipboardData.setData("text/plain", selection.toString());
 	event.preventDefault();
 };

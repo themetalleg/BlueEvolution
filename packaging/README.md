@@ -237,6 +237,14 @@ account-setting persistence, and the Receiving Options selector. Both bundle CI
 gates require the extension; tests against an unpatched native Camel skip this
 feature instead.
 
+The installed `test-mail-inline-images` regression executable checks that
+original and WebKit-compatible CID URLs resolve to the same embedded bytes,
+including escaped identifiers and named-image attachment wrappers. Both bundle
+CI gates run it without accounts or network access. Both gates also run the
+installed `test-web-view-jsc -p /EWebView/InlineCIDImages` against the installed
+WebKit scripts. It checks CID rewriting without changing remote-image URLs, and
+restores ordinary CID references when copying or replying to selected HTML.
+
 The installed `test-settings-persistence` regression executable uses synthetic
 tracking and view preferences in a temporary profile. Both bundle CI gates run
 it with the real persistent backend, independently of the memory-only UI tests.

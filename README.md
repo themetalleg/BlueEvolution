@@ -68,6 +68,10 @@ settings still apply. External images keep their existing privacy controls.
 Flatpak builds include the required Camel extension. Native builds against an
 unpatched Evolution Data Server retain the existing synchronization checkbox.
 
+Embedded screenshots in HTML mail are loaded from the message itself, including
+on WebKit versions that require hierarchical CID URLs. They do not require
+allowing remote images; external-image and tracking protections remain unchanged.
+
 ## Mail Assistant
 
 The Mail Assistant is included in `main`. Its composer sidebar starts closed

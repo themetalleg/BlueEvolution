@@ -1,27 +1,34 @@
-# BlueEvolution 0.2.10 Release Notes
+# BlueEvolution 0.2.16-beta.1 Release Notes
 
-This release adds optional WordPress email tracking. Evaluate it with a test
-mailbox and the WordPress Tracking Pixel plugin before using it with live mail.
+This beta fixes embedded screenshots missing from HTML mail after WebKit
+runtime updates. Stable remains unchanged.
 
 ## Changes
 
-- The tracking box now shows only the numeric count. All details remain in its tooltip; the box stays hidden until a count is available.
-- Connection testing now validates a generated pixel URL and write permissions as well as the API and resolver. It reuses one synthetic registration per project without sending mail or loading its pixel.
-- Settings document WordPress's exact Site Address requirement, including `www`, port, and subdirectory matching.
-- Replaced tracking banners with a compact count box beneath the remote-content control and a multiline timestamp tooltip. The visible image-request disclaimer was removed; privacy limitations remain documented below.
-- Successful history snapshots are saved locally with private permissions and atomic writes. Opening a tracked message always requests fresh API data while keeping saved data available if the API fails.
-- Counts, status messages, and timestamps are language-aware, with German translations and local-time formatting. Up to the latest 10,000 timestamps are listed; incomplete lists are marked.
-- Saving the first WordPress API key now enables connection testing immediately. Tracking controls also refresh after changing options or removing a key, and testing is disabled while connection details are unsaved.
-- WordPress URL, project ID, and API-key fields now expand across the settings page; URL and key fields have a wider baseline.
-- Configure an HTTPS WordPress site, project ID, and project API key under Settings > Integrations > Email Tracking. The key is stored in the desktop keyring.
-- Enable tracking globally and choose whether new messages track by default; each message can override that choice in the composer Options menu.
-- Review recorded image-request totals and individual request timestamps in the preview of a tracked sent message.
-- Registration failures stop sending. Tracking is unavailable for digitally signed or encrypted mail and requires an HTML body.
+- Embedded `cid:` images use a WebKit-compatible local display URL, so screenshots
+  inside HTML messages can load without enabling remote images.
+- Copying HTML or replying to selected content restores ordinary CID references;
+  internal display URLs do not become outgoing image references.
+- External-image loading policy and tracking protections remain unchanged.
+- Includes the settings-preservation fix introduced in stable 0.2.15, without
+  migrating profiles or overwriting existing account settings.
+- Adds installed CID and WebView regressions to both CI and release gates,
+  using synthetic content without accounts or network access.
 
-## Privacy and Limitations
+## Testing
 
-- Image requests are not proof that a person read a message. Mail providers and privacy proxies can fetch or cache images independently of a recipient.
-- Use a WordPress Tracking Pixel release that supports the project message resolver. See https://github.com/themetalleg/wordpress-tracking-pixel/releases/.
-- Review message content and recipient expectations before enabling tracking.
+Update the beta application through your software manager or run:
+
+```sh
+flatpak update --user io.github.themetalleg.BlueEvolution.Beta
+```
+
+Restart BlueEvolution Beta normally, open an affected message in HTML view, and
+check that its embedded screenshot is visible with remote images still blocked.
+Also check copying selected HTML and replying to a selection containing an image.
+
+Beta uses an independent profile and can coexist with stable. Accounts must be
+configured separately; using the same real account still affects the same server
+mailbox. Prefer a test account. Do not copy one channel's profile over the other.
 
 This project is not affiliated with Microsoft or GNOME.

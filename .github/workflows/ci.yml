@@ -104,9 +104,11 @@ jobs:
             BLUEEVOLUTION_REQUIRE_DOWNLOAD_POLICY=1 \
             GSETTINGS_SCHEMA_DIR=/app/share/glib-2.0/schemas \
             /bin/sh -eu -c '
-              for test in test-blueevolution-mail-list test-mail-download-policy test-ui-action test-blueevolution-appearance test-integrations; do
+              for test in test-blueevolution-mail-list test-mail-download-policy test-mail-inline-images test-ui-action test-blueevolution-appearance test-integrations; do
                 "/app/libexec/blueevolution/tests/$test"
               done
+              EVOLUTION_SOURCE_WEBKITDATADIR=/app/share/evolution/webkit \
+                /app/libexec/blueevolution/tests/test-web-view-jsc -p /EWebView/InlineCIDImages
               /app/libexec/blueevolution/tests/test-settings-persistence
             '
 

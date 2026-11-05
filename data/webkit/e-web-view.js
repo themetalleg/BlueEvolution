@@ -473,11 +473,11 @@ Evo.getElementContent = function(node, format, useOuterHTML)
 	if (format == 1) {
 		data = EvoConvert.ToPlainText(node);
 	} else if (format == 2) {
-		data = useOuterHTML ? node.outerHTML : node.innerHTML;
+		data = EvoClipboard.GetHTML(node, useOuterHTML);
 	} else if (format == 3) {
 		data = {};
 		data["plain"] = EvoConvert.ToPlainText(node);
-		data["html"] = useOuterHTML ? node.outerHTML : node.innerHTML;
+		data["html"] = EvoClipboard.GetHTML(node, useOuterHTML);
 	}
 
 	return data;
@@ -709,10 +709,17 @@ Evo.initialize = function(elem)
 		elems[ii].onblur = function() { window.webkit.messageHandlers.needInputChanged.postMessage(false); };
 	}
 
-	elems = doc.querySelectorAll("img[src^=\"file://\"]");
+	elems = doc.querySelectorAll("img[src]");
 
 	for (ii = 0; ii < elems.length; ii++) {
-		elems[ii].src = "evo-" + elems[ii].src;
+		var src = elems[ii].src;
+
+		if (src.startsWith("file://"))
+			elems[ii].src = "evo-" + src;
+		else if (/^cid:/i.test(src) && !/^cid:\/\/localhost\//i.test(src)) {
+			/* WebKit's CORS allowlist requires a hierarchical URI. */
+			elems[ii].src = "cid://localhost/" + encodeURIComponent(src.substring(4));
+		}
 	}
 
 	if (doc.body && doc.querySelector("[data-evo-signature-plain-text-mode]")) {

@@ -304,9 +304,23 @@ e_mail_part_list_ref_part (EMailPartList *part_list,
 	EMailPart *match = NULL;
 	GList *head, *link;
 	gboolean by_cid;
+	gchar *decoded_cid = NULL;
 
 	g_return_val_if_fail (E_IS_MAIL_PART_LIST (part_list), NULL);
 	g_return_val_if_fail (part_id != NULL, NULL);
+
+	if (g_ascii_strncasecmp (part_id, "cid://localhost/", 16) == 0) {
+		gchar *content_id = g_uri_unescape_string (part_id + 16, NULL);
+
+		if (!content_id) {
+			g_warning ("Invalid escaped inline image reference");
+			return NULL;
+		}
+
+		decoded_cid = g_strconcat ("cid:", content_id, NULL);
+		g_free (content_id);
+		part_id = decoded_cid;
+	}
 
 	by_cid = (g_ascii_strncasecmp (part_id, "cid:", 4) == 0);
 
@@ -330,6 +344,8 @@ e_mail_part_list_ref_part (EMailPartList *part_list,
 	}
 
 	g_mutex_unlock (&part_list->priv->queue_lock);
+
+	g_free (decoded_cid);
 
 	return match;
 }

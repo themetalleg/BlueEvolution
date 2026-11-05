@@ -259,7 +259,7 @@ test('generated manifests separate application, window and EDS service identitie
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
-test('release candidates stay drafts and the persistent regression uses its installed path', () => {
+test('release candidates stay drafts and regressions use their installed paths', () => {
   const workflow = YAML.parse(readFileSync(resolve(root, '.github/workflows/release.yml'), 'utf8'));
   const steps = workflow.jobs['draft-release'].steps;
   const create = steps.find(step => step.name === 'Create or replace draft release').run;
@@ -269,9 +269,14 @@ test('release candidates stay drafts and the persistent regression uses its inst
   assert.equal(verify.env.GH_TOKEN, '${{ github.token }}');
   const cmake = readFileSync(resolve(root, 'src/e-util/CMakeLists.txt'), 'utf8');
   assert.ok(cmake.includes('install(TARGETS test-settings-persistence DESTINATION ${LIBEXEC_INSTALL_DIR}/blueevolution/tests)'));
+  assert.match(cmake, /install\(TARGETS [^)]*\btest-web-view-jsc\b\s+DESTINATION \$\{LIBEXEC_INSTALL_DIR\}\/blueevolution\/tests\)/);
+  const mailCmake = readFileSync(resolve(root, 'src/mail/CMakeLists.txt'), 'utf8');
+  assert.match(mailCmake, /install\(TARGETS test-mail-inline-images\s+DESTINATION \$\{LIBEXEC_INSTALL_DIR\}\/blueevolution\/tests\)/);
   for (const name of ['ci.yml', 'release.yml']) {
-    assert.ok(readFileSync(resolve(root, '.github/workflows', name), 'utf8')
-      .includes('/app/libexec/blueevolution/tests/test-settings-persistence'));
+    const text = readFileSync(resolve(root, '.github/workflows', name), 'utf8');
+    assert.ok(text.includes('/app/libexec/blueevolution/tests/test-settings-persistence'));
+    assert.match(text, /for test in [^\n]*\btest-mail-inline-images\b/);
+    assert.ok(text.includes('/app/libexec/blueevolution/tests/test-web-view-jsc -p /EWebView/InlineCIDImages'));
   }
 });
 
