@@ -263,6 +263,12 @@ test('release candidates stay drafts and regressions use their installed paths',
   const workflow = YAML.parse(readFileSync(resolve(root, '.github/workflows/release.yml'), 'utf8'));
   const steps = workflow.jobs['draft-release'].steps;
   const create = steps.find(step => step.name === 'Create or replace draft release').run;
+  assert.equal(steps.find(step => step.uses === 'actions/checkout@v4').with.ref,
+    '${{ inputs.source_ref || github.ref }}');
+  const resolveVersion = steps.find(step => step.name === 'Resolve release version');
+  assert.equal(resolveVersion.env.SOURCE_REF, '${{ inputs.source_ref }}');
+  assert.ok(resolveVersion.run.includes('"$SOURCE_REF" != "$tag"'));
+  assert.ok(resolveVersion.run.includes('"$(git rev-parse HEAD)"'));
   assert.match(create, /args=\([^\n]* --draft /);
   assert.match(create, /gh release edit "\$TAG" --draft --prerelease=false/);
   const verify = steps.find(step => step.name === 'Verify draft is ready for review');
@@ -279,6 +285,7 @@ test('release candidates stay drafts and regressions use their installed paths',
     assert.ok(text.includes('/app/libexec/blueevolution/tests/test-web-view-jsc -p /EWebView/InlineCIDImages'));
     assert.ok(text.includes('appstream-compose'));
     assert.ok(text.includes('librsvg2-common'));
+    assert.match(text, /apt-get install [^\n]*\belfutils\b/);
   }
   const build = readFileSync(resolve(root, 'packaging/build-flatpak.sh'), 'utf8');
   assert.ok(build.includes('appstreamcli compose --no-net'));

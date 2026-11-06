@@ -122,6 +122,10 @@ replace/rebuild those drafts first so their signed repository assets exist.
 An existing version tag must point to the commit being built. A draft whose
 tag points to older source cannot silently distribute a build from newer main;
 prefer a fresh version tag, or deliberately correct that unpublished tag first.
+If a tagged build failed only because of workflow tooling, dispatch the current
+workflow from `main` with `version` and `source_ref` set to the existing release
+version and its exact tag. This uses current runner tooling while checking out
+and building the unchanged tagged source; published assets still cannot be replaced.
 
 The publisher consumes the tested repository asset rather than rebuilding the
 application. It verifies checksums and commit signatures, rejects downgrades
@@ -269,6 +273,7 @@ The release tests need Node.js, `jq`, `xsltproc`, and `xmllint`.
 Builds, publication, and the integration test additionally need `appstream-compose`
 and `librsvg2-common` (the SVG icon loader). Install these explicitly when
 using `--no-install-recommends`; optional multimedia tools are not required.
+Flatpak Builder also requires `elfutils` for stripping and compressing binaries.
 The integration test also needs `flatpak`, `ostree`, and `gpg`. It uses synthetic
 applications, a temporary signing key, and an isolated Flatpak installation.
 It verifies co-installation, both catalogue versions, available updates before

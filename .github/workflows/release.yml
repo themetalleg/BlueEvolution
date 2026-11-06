@@ -10,6 +10,10 @@ on:
         description: BlueEvolution version, for example 0.1.0 or 0.2.0-rc.1
         required: true
         type: string
+      source_ref:
+        description: Existing release tag to rebuild with current workflow tooling
+        required: false
+        type: string
       replace_draft:
         description: Replace assets and notes only if the existing release is still a draft
         required: false
@@ -27,6 +31,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.source_ref || github.ref }}
 
       - uses: actions/setup-node@v4
         with:
@@ -40,6 +45,7 @@ jobs:
         shell: bash
         env:
           INPUT_VERSION: ${{ inputs.version }}
+          SOURCE_REF: ${{ inputs.source_ref }}
         run: |
           if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
             tag="$GITHUB_REF_NAME"
@@ -50,8 +56,12 @@ jobs:
           fi
           node packaging/release.mjs metadata "$version" |
             jq -r 'to_entries[] | "\(.key)=\(.value)"' >> "$GITHUB_OUTPUT"
+          if [[ -n "$SOURCE_REF" && "$SOURCE_REF" != "$tag" ]]; then
+            echo "source_ref must be the release's exact version tag." >&2
+            exit 1
+          fi
           if tagged_commit=$(git rev-parse --verify "refs/tags/$tag^{commit}" 2>/dev/null); then
-            if [[ "$tagged_commit" != "$GITHUB_SHA" ]]; then
+            if [[ "$tagged_commit" != "$(git rev-parse HEAD)" ]]; then
               echo "Tag $tag points to another commit. Use a new version or explicitly correct the unpublished draft tag first." >&2
               exit 1
             fi
@@ -74,7 +84,7 @@ jobs:
       - name: Install build tools and GNOME runtime
         run: |
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends flatpak flatpak-builder jq libxml2-utils xsltproc xvfb xauth appstream-compose librsvg2-common
+          sudo apt-get install --yes --no-install-recommends flatpak flatpak-builder elfutils jq libxml2-utils xsltproc xvfb xauth appstream-compose librsvg2-common
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           flatpak install --user --assumeyes flathub org.gnome.Sdk//49 org.gnome.Platform//49
 
