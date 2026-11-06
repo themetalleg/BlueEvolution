@@ -84,7 +84,7 @@ function composeRepositoryCatalog(repository, fingerprint) {
     }
     assert.ok(sources.length, 'No application refs available for Discover catalogue');
     const catalog = join(directory, 'catalog');
-    run('appstreamcli', ['compose', '--no-net', '--prefix=/', '--origin=flatpak',
+    run('appstreamcli', ['compose', '--no-net', '--print-report=full', '--prefix=/', '--origin=flatpak',
       `--components=${components.join(',')}`, `--data-dir=${catalog}`, `--icons-dir=${catalog}/icons`, ...sources]);
     const xml = gunzipSync(readFileSync(join(catalog, 'flatpak.xml.gz')));
     const stylesheet = fileURLToPath(new URL('./catalog-flatpak.xsl', import.meta.url));

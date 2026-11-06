@@ -266,7 +266,9 @@ failures, and malformed-file preservation. It never uses the normal installed
 profile or the desktop keyring.
 
 The release tests need Node.js, `jq`, `xsltproc`, and `xmllint`.
-Builds and the integration test additionally need `appstream-compose`.
+Builds, publication, and the integration test additionally need `appstream-compose`
+and `librsvg2-common` (the SVG icon loader). Install these explicitly when
+using `--no-install-recommends`; optional multimedia tools are not required.
 The integration test also needs `flatpak`, `ostree`, and `gpg`. It uses synthetic
 applications, a temporary signing key, and an isolated Flatpak installation.
 It verifies co-installation, both catalogue versions, available updates before

@@ -120,6 +120,7 @@ flatpak build-finish \
 	--sdk="$sdk/x86_64/$runtime_version" \
 	"${finish_args[@]}" "$build_dir"
 appstreamcli compose --no-net --prefix=/ --origin="$app_id" \
+	--print-report=full \
 	--components="$app_id.desktop" \
 	--data-dir="$build_dir/files/share/app-info/xmls" \
 	--icons-dir="$build_dir/files/share/app-info/icons/flatpak" \

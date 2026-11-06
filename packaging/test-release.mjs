@@ -278,6 +278,7 @@ test('release candidates stay drafts and regressions use their installed paths',
     assert.match(text, /for test in [^\n]*\btest-mail-inline-images\b/);
     assert.ok(text.includes('/app/libexec/blueevolution/tests/test-web-view-jsc -p /EWebView/InlineCIDImages'));
     assert.ok(text.includes('appstream-compose'));
+    assert.ok(text.includes('librsvg2-common'));
   }
   const build = readFileSync(resolve(root, 'packaging/build-flatpak.sh'), 'utf8');
   assert.ok(build.includes('appstreamcli compose --no-net'));
@@ -312,6 +313,7 @@ test('CI and publication workflow YAML and embedded shell scripts are valid', ()
   assert.equal(publication.concurrency['cancel-in-progress'], false);
   const steps = publication.jobs.publish.steps;
   assert.ok(steps.some(step => step.run?.includes('appstream-compose')));
+  assert.ok(steps.some(step => step.run?.includes('librsvg2-common')));
   assert.equal(steps.find(step => step.name === 'Deploy updates').with.publication_sha,
     '${{ steps.prepare.outputs.publication_sha }}');
   assert.equal(steps.find(step => step.name === 'Deploy updates').uses, './packaging/pages-deploy');
