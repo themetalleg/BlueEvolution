@@ -129,6 +129,16 @@ within each channel, preserves the other channel, and signs the repository
 summary. Two previous application commits per channel are retained as rollback
 history; these history refs are not installable app refs.
 
+Discover also requires a nonempty AppStream catalogue; a signed app ref alone
+is not sufficient. Builds compose `share/app-info` before exporting. The
+publisher composes metadata and icons from both signed application refs,
+including older releases without `share/app-info`, and signs the catalogue
+without altering application commits. Publication stops if either recorded
+channel's application ID, Flatpak bundle ref, or release version is missing
+from the catalogue. A successful deployment must also be checked with
+`flatpak update --user --appstream blueevolution` and
+`flatpak remote-ls --user --app --columns=application,branch,version blueevolution`.
+
 ## Publication State and Recovery
 
 Publication jobs are serialized, and a running job is not cancelled by a newer
@@ -162,9 +172,11 @@ version/asset contents to perform a rollback; publish a higher-version repair.
 
 For hosting recovery after state was already recorded, run the publisher from
 `main`, select the latest snapshot's release tag, and set `redeploy` to true.
-This reconstructs both channel refs from their immutable signed release assets
+This restores both channel refs and rollback history from the verified immutable snapshot
 and republishes them with a fresh deployment identity; it does not rebuild or
 replace the versioned release binaries.
+This procedure also repairs missing Discover metadata for existing releases;
+no new app version, profile migration, or application reinstall is needed.
 
 The publisher stops before deploying a site of 950 MB or more. GitHub Pages has
 size/bandwidth limits; monitor repository growth and move to Flathub or another
@@ -254,9 +266,11 @@ failures, and malformed-file preservation. It never uses the normal installed
 profile or the desktop keyring.
 
 The release tests need Node.js, `jq`, `xsltproc`, and `xmllint`.
-The integration test additionally needs `flatpak`, `ostree`, and `gpg`. It uses synthetic
+Builds and the integration test additionally need `appstream-compose`.
+The integration test also needs `flatpak`, `ostree`, and `gpg`. It uses synthetic
 applications, a temporary signing key, and an isolated Flatpak installation.
-It verifies co-installation, independent signed updates and unsigned rejection;
+It verifies co-installation, both catalogue versions, available updates before
+installation, independent signed updates, unsigned rejection, and missing-metadata rejection;
 it never reads mail or changes the normal Flatpak installation.
 
 Use `BLUEEVOLUTION_CHANNEL=stable` or `beta` with `packaging/build-flatpak.sh`.

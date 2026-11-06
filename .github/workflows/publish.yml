@@ -44,7 +44,7 @@ jobs:
       - name: Install publication tools
         run: |
           sudo apt-get update
-          sudo apt-get install --yes flatpak ostree jq xsltproc libxml2-utils
+          sudo apt-get install --yes flatpak ostree jq xsltproc libxml2-utils appstream-compose
           npm --prefix packaging ci --ignore-scripts --no-fund --no-audit
           npm --prefix packaging test
           echo "PUBLISH_ROOT=$RUNNER_TEMP/flatpak-publication" >> "$GITHUB_ENV"

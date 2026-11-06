@@ -119,6 +119,17 @@ flatpak build-finish \
 	--runtime="$runtime/x86_64/$runtime_version" \
 	--sdk="$sdk/x86_64/$runtime_version" \
 	"${finish_args[@]}" "$build_dir"
+appstreamcli compose --no-net --prefix=/ --origin="$app_id" \
+	--components="$app_id.desktop" \
+	--data-dir="$build_dir/files/share/app-info/xmls" \
+	--icons-dir="$build_dir/files/share/app-info/icons/flatpak" \
+	"$build_dir/files"
+gzip -dc "$build_dir/files/share/app-info/xmls/$app_id.xml.gz" |
+	xmllint --nonet --xpath "boolean(/components/component[id='$app_id.desktop']/releases/release[@version='$version'])" - |
+	grep -qx true || {
+		echo "Discover catalogue is missing $app_id version $version." >&2
+		exit 1
+	}
 flatpak build-export --arch=x86_64 --no-update-summary "${export_args[@]}" "$repo_dir" "$build_dir" "$branch"
 flatpak build-bundle \
 	--arch=x86_64 \

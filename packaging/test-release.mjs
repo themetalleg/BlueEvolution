@@ -7,7 +7,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import test from 'node:test';
 import YAML from 'yaml';
 import { releaseMetadata, assertNewerRelease, writeInstallFiles } from './release.mjs';
-import { mergeRepository, nextPublicationState, snapshotName } from './publish-flatpak.mjs';
+import { mergeRepository, nextPublicationState, snapshotName, verifyRepositoryCatalog } from './publish-flatpak.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 
@@ -277,7 +277,13 @@ test('release candidates stay drafts and regressions use their installed paths',
     assert.ok(text.includes('/app/libexec/blueevolution/tests/test-settings-persistence'));
     assert.match(text, /for test in [^\n]*\btest-mail-inline-images\b/);
     assert.ok(text.includes('/app/libexec/blueevolution/tests/test-web-view-jsc -p /EWebView/InlineCIDImages'));
+    assert.ok(text.includes('appstream-compose'));
   }
+  const build = readFileSync(resolve(root, 'packaging/build-flatpak.sh'), 'utf8');
+  assert.ok(build.includes('appstreamcli compose --no-net'));
+  assert.ok(build.indexOf('appstreamcli compose') < build.indexOf('flatpak build-export'));
+  assert.ok(build.includes('files/share/app-info/xmls'));
+  assert.ok(build.includes("releases/release[@version='$version']"));
 });
 
 test('CI and publication workflow YAML and embedded shell scripts are valid', () => {
@@ -305,6 +311,7 @@ test('CI and publication workflow YAML and embedded shell scripts are valid', ()
     releaseSteps.findIndex(step => step.name === 'Verify release tooling'));
   assert.equal(publication.concurrency['cancel-in-progress'], false);
   const steps = publication.jobs.publish.steps;
+  assert.ok(steps.some(step => step.run?.includes('appstream-compose')));
   assert.equal(steps.find(step => step.name === 'Deploy updates').with.publication_sha,
     '${{ steps.prepare.outputs.publication_sha }}');
   assert.equal(steps.find(step => step.name === 'Deploy updates').uses, './packaging/pages-deploy');
@@ -367,7 +374,7 @@ test('signed stable and beta install together and both receive updates', {
     const key = join(directory, 'public.gpg');
     command('gpg', ['--batch', '--export', '--output', key, fingerprint]);
     const repository = join(directory, 'repository');
-    const exportApp = (version, signed = true) => {
+    const exportApp = (version, signed = true, includeMetainfo = true, includeAppInfo = false) => {
       const metadata = releaseMetadata(version);
       const app = join(directory, version);
       mkdirSync(join(app, 'files/bin'), { recursive: true });
@@ -375,19 +382,45 @@ test('signed stable and beta install together and both receive updates', {
       writeFileSync(join(app, 'metadata'), `[Application]\nname=${metadata.app_id}\nruntime=org.gnome.Platform/x86_64/49\ncommand=blueevolution\n`);
       writeFileSync(join(app, 'files/bin/blueevolution'), `#!/bin/sh\necho '${version}'\n`, { mode: 0o755 });
       writeFileSync(join(app, `files/share/applications/${metadata.app_id}.desktop`),
-        `[Desktop Entry]\nType=Application\nName=${metadata.app_name}\nExec=blueevolution\n`);
+        `[Desktop Entry]\nType=Application\nName=${metadata.app_name}\nExec=blueevolution\nIcon=${metadata.app_id}\nCategories=Network;Email;\n`);
+      if (includeMetainfo) {
+        mkdirSync(join(app, 'files/share/metainfo'), { recursive: true });
+        mkdirSync(join(app, 'files/share/icons/hicolor/scalable/apps'), { recursive: true });
+        writeFileSync(join(app, `files/share/icons/hicolor/scalable/apps/${metadata.app_id}.svg`),
+          '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#246"/></svg>');
+        writeFileSync(join(app, `files/share/metainfo/${metadata.app_id}.metainfo.xml`),
+          `<component type="desktop-application"><id>${metadata.app_id}.desktop</id>
+          <metadata_license>CC0-1.0</metadata_license><project_license>GPL-2.0-or-later</project_license>
+          <name>${metadata.app_name}</name><summary>Synthetic mail application</summary>
+          <description><p>A synthetic application for signed publication regression tests.</p></description>
+          <launchable type="desktop-id">${metadata.app_id}.desktop</launchable>
+          <releases><release version="${version}" date="2026-01-01"/></releases></component>`);
+      }
       command('flatpak', ['build-finish', app]);
+      if (includeAppInfo) {
+        command('appstreamcli', ['compose', '--no-net', '--prefix=/', `--origin=${metadata.app_id}`,
+          `--components=${metadata.app_id}.desktop`,
+          `--data-dir=${app}/files/share/app-info/xmls`,
+          `--icons-dir=${app}/files/share/app-info/icons/flatpak`, `${app}/files`]);
+      }
       const incoming = join(directory, `incoming-${version}`);
       command('flatpak', ['build-export', ...(signed ? [`--gpg-sign=${fingerprint}`] : []), incoming, app, metadata.channel]);
+      if (includeAppInfo) {
+        command('flatpak', ['build-update-repo', `--gpg-sign=${fingerprint}`, incoming]);
+        verifyRepositoryCatalog(incoming, { [metadata.channel]: { version } });
+      }
       return { metadata, incoming };
     };
-    const publish = version => {
-      const { metadata, incoming } = exportApp(version);
+    const publish = (version, includeAppInfo = false) => {
+      const { metadata, incoming } = exportApp(version, true, true, includeAppInfo);
       mergeRepository(repository, incoming, metadata, key, fingerprint);
       return metadata;
     };
     const stable = publish('1.0.0');
+    const initialStable = command('ostree', ['rev-parse', `--repo=${repository}`, stable.ref]);
     const beta = publish('1.1.0-beta.1');
+    assert.equal(command('ostree', ['rev-parse', `--repo=${repository}`, stable.ref]), initialStable);
+    verifyRepositoryCatalog(repository, { stable: { version: stable.version }, beta: { version: beta.version } });
     const env = { ...process.env, FLATPAK_USER_DIR: join(directory, 'installation'),
       XDG_DATA_HOME: join(directory, 'data'), XDG_CONFIG_HOME: join(directory, 'config'), XDG_CACHE_HOME: join(directory, 'cache') };
     const flatpak = args => command('flatpak', args, { env });
@@ -398,7 +431,19 @@ test('signed stable and beta install together and both receive updates', {
     const oldStable = flatpak(['info', '--user', '--show-commit', stable.app_id]);
     const oldBeta = flatpak(['info', '--user', '--show-commit', beta.app_id]);
     publish('1.0.1');
-    publish('1.1.0-beta.2');
+    verifyRepositoryCatalog(repository, { stable: { version: '1.0.1' }, beta: { version: beta.version } });
+    publish('1.1.0-beta.2', true);
+    verifyRepositoryCatalog(repository, { stable: { version: '1.0.1' }, beta: { version: '1.1.0-beta.2' } });
+    assert.throws(() => verifyRepositoryCatalog(repository, { beta: { version: '1.1.0-beta.3' } }), /Discover catalogue is missing/);
+    flatpak(['update', '--user', '--appstream', 'blueevolution-test']);
+    const catalogueCommit = command('ostree', ['rev-parse', `--repo=${repository}`, 'appstream2/x86_64']);
+    const cachedCatalogue = readFileSync(join(env.FLATPAK_USER_DIR, 'appstream/blueevolution-test/x86_64',
+      catalogueCommit, 'appstream.xml'), 'utf8');
+    assert.ok(cachedCatalogue.includes('<bundle type="flatpak">'));
+    assert.ok(cachedCatalogue.includes('version="1.1.0-beta.2"'));
+    const updates = flatpak(['remote-ls', '--user', '--updates', '--columns=application,branch,version', 'blueevolution-test']);
+    assert.ok(updates.includes(`${stable.app_id}\tstable\t1.0.1`), updates);
+    assert.ok(updates.includes(`${beta.app_id}\tbeta\t1.1.0-beta.2`), updates);
     flatpak(['update', '--user', '--assumeyes', '--no-deps', '--no-related']);
     assert.notEqual(flatpak(['info', '--user', '--show-commit', stable.app_id]), oldStable);
     assert.notEqual(flatpak(['info', '--user', '--show-commit', beta.app_id]), oldBeta);
@@ -407,8 +452,14 @@ test('signed stable and beta install together and both receive updates', {
     const refs = command('ostree', ['refs', `--repo=${repository}`]);
     assert.ok(refs.includes(`history/${stable.app_id}/1`));
     assert.ok(refs.includes(`history/${beta.app_id}/1`));
+    const stableHistory = command('ostree', ['rev-parse', `--repo=${repository}`, `history/${stable.app_id}/1`]);
+    mergeRepository(repository, join(directory, 'incoming-1.0.1'), releaseMetadata('1.0.1'), key, fingerprint);
+    assert.equal(command('ostree', ['rev-parse', `--repo=${repository}`, `history/${stable.app_id}/1`]), stableHistory);
+    verifyRepositoryCatalog(repository, { stable: { version: '1.0.1' }, beta: { version: '1.1.0-beta.2' } });
     const unsigned = exportApp('1.0.2', false);
     assert.throws(() => mergeRepository(join(directory, 'reject-unsigned'), unsigned.incoming, unsigned.metadata, key, fingerprint));
+    const missing = exportApp('1.0.3', true, false);
+    assert.throws(() => mergeRepository(join(directory, 'reject-missing-catalog'), missing.incoming, missing.metadata, key, fingerprint));
   } finally {
     command('gpgconf', ['--kill', 'gpg-agent']);
     if (previousHome === undefined) delete process.env.GNUPGHOME;

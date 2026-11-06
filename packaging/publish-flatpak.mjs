@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, createReadStream, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { gunzipSync, gzipSync } from 'node:zlib';
 import { assertNewerRelease, releaseMetadata, writeInstallFiles } from './release.mjs';
 
 function run(command, args, options = {}) {
@@ -44,47 +46,74 @@ export function mergeRepository(repository, incoming, metadata, publicKey, finge
   if (!existsSync(join(repository, 'config'))) run('ostree', ['init', `--repo=${repository}`, '--mode=archive-z2']);
   const refs = new Set(run('ostree', ['refs', `--repo=${repository}`]).trim().split('\n'));
   const history = `history/${metadata.app_id}`;
-  for (const [source, target] of [[`${history}/1`, `${history}/2`], [metadata.ref, `${history}/1`]]) {
-    if (refs.has(source)) run('ostree', ['refs', `--repo=${repository}`, '--force', `--create=${target}`, source]);
+  const unchanged = refs.has(metadata.ref) &&
+    run('ostree', ['rev-parse', `--repo=${repository}`, metadata.ref]).trim() ===
+    run('ostree', ['rev-parse', `--repo=${incoming}`, metadata.ref]).trim();
+  if (!unchanged) {
+    for (const [source, target] of [[`${history}/1`, `${history}/2`], [metadata.ref, `${history}/1`]]) {
+      if (refs.has(source)) run('ostree', ['refs', `--repo=${repository}`, '--force', `--create=${target}`, source]);
+    }
   }
   run('ostree', ['remote', 'add', `--repo=${repository}`, '--if-not-exists', `--gpg-import=${publicKey}`,
     'release', pathToFileURL(incoming).href]);
   run('ostree', ['pull-local', `--repo=${repository}`, '--remote=release', '--gpg-verify', '--untrusted', incoming, metadata.ref]);
   run('ostree', ['refs', `--repo=${repository}`, '--force', `--create=${metadata.ref}`, `release:${metadata.ref}`]);
   run('ostree', ['remote', 'delete', `--repo=${repository}`, 'release']);
-  
-  // Extract and prepare appdata/appstream metadata directory for Discover integration
-  const xmlDir = join(repository, 'metadata');
-  mkdirSync(xmlDir, { recursive: true });
-  try {
-    // Extract appdata from the app's metadata
-    run('ostree', ['checkout', `--repo=${repository}`, '--user-mode', `--union`,
-      `${metadata.ref}:/usr/share/metainfo`, join(xmlDir, 'metainfo')]);
-    run('ostree', ['checkout', `--repo=${repository}`, '--user-mode', `--union`,
-      `${metadata.ref}:/usr/share/appdata`, join(xmlDir, 'appdata')]);
-  } catch (err) {
-    console.warn(`⚠ Could not extract appdata from ${metadata.ref}. Discover will show limited information.`);
-  }
-  
-  const updateRepoArgs = ['build-update-repo', '--title=BlueEvolution', '--default-branch=stable',
-    `--gpg-import=${publicKey}`, `--gpg-sign=${fingerprint}`, '--prune', '--prune-depth=3'];
-  
-  // Include appstream metadata if directory exists and has content
-  if (hasXmlMetadata(xmlDir)) {
-    updateRepoArgs.push(`--xml-dir=${xmlDir}`);
-  }
-  updateRepoArgs.push(repository);
-  
-  run('flatpak', updateRepoArgs);
+
+  composeRepositoryCatalog(repository, fingerprint);
+  run('flatpak', ['build-update-repo', '--no-update-appstream', '--title=BlueEvolution', '--default-branch=stable',
+    `--gpg-import=${publicKey}`, `--gpg-sign=${fingerprint}`, '--prune', '--prune-depth=3', repository]);
+  verifyRepositoryCatalog(repository, { [metadata.channel]: { version: metadata.version } });
   run('ostree', ['fsck', `--repo=${repository}`]);
 }
 
-function hasXmlMetadata(directory) {
+function composeRepositoryCatalog(repository, fingerprint) {
+  const refs = run('ostree', ['refs', `--repo=${repository}`]).trim().split('\n');
+  const directory = mkdtempSync(join(tmpdir(), 'blueevolution-catalog-'));
   try {
-    const files = run('find', [directory, '-maxdepth', '2', '-name', '*.xml', '-type', 'f']);
-    return files.trim().length > 0;
-  } catch (err) {
-    return false;
+    const sources = [];
+    const components = [];
+    for (const channel of ['stable', 'beta']) {
+      const appId = `io.github.themetalleg.BlueEvolution${channel === 'beta' ? '.Beta' : ''}`;
+      const ref = `app/${appId}/x86_64/${channel}`;
+      if (!refs.includes(ref)) continue;
+      const source = join(directory, channel);
+      run('ostree', ['checkout', `--repo=${repository}`, '--user-mode', '--subpath=/files', ref, source]);
+      sources.push(source);
+      components.push(`${appId}.desktop`);
+    }
+    assert.ok(sources.length, 'No application refs available for Discover catalogue');
+    const catalog = join(directory, 'catalog');
+    run('appstreamcli', ['compose', '--no-net', '--prefix=/', '--origin=flatpak',
+      `--components=${components.join(',')}`, `--data-dir=${catalog}`, `--icons-dir=${catalog}/icons`, ...sources]);
+    const xml = gunzipSync(readFileSync(join(catalog, 'flatpak.xml.gz')));
+    const stylesheet = fileURLToPath(new URL('./catalog-flatpak.xsl', import.meta.url));
+    const transformed = run('xsltproc', ['--nonet', stylesheet, '-'], { input: xml });
+    writeFileSync(join(catalog, 'appstream.xml.gz'), gzipSync(transformed));
+    rmSync(join(catalog, 'flatpak.xml.gz'));
+    // Rebuild only catalogue refs; published application commits remain untouched.
+    for (const branch of ['appstream/x86_64', 'appstream2/x86_64']) {
+      if (branch === 'appstream2/x86_64') {
+        rmSync(join(catalog, 'appstream.xml.gz'));
+        writeFileSync(join(catalog, 'appstream.xml'), transformed);
+      }
+      run('ostree', ['commit', `--repo=${repository}`, `--branch=${branch}`,
+        `--gpg-sign=${fingerprint}`, `--tree=dir=${catalog}`]);
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
+export function verifyRepositoryCatalog(repository, channels) {
+  const xml = run('ostree', ['cat', `--repo=${repository}`, 'appstream2/x86_64', '/appstream.xml']);
+  for (const [channel, release] of Object.entries(channels)) {
+    const metadata = releaseMetadata(release.version);
+    assert.equal(metadata.channel, channel);
+    const component = `/components/component[id='${metadata.app_id}.desktop' and bundle[@type='flatpak' and text()='${metadata.ref}']]`;
+    const present = run('xmllint', ['--nonet', '--xpath',
+      `boolean(${component}/releases/release[1][@version='${metadata.version}'])`, '-'], { input: xml }).trim();
+    assert.equal(present, 'true', `Discover catalogue is missing ${metadata.ref} version ${metadata.version}`);
   }
 }
 
@@ -131,43 +160,16 @@ async function prepare(root, repository, tag, baseUrl) {
   run('sha256sum', ['--check', `${archive}.sha256`], { cwd: candidate });
   const keyFile = join(site, 'signing-key.gpg');
   run('gpg', ['--batch', '--export', '--output', keyFile, fingerprint]);
-  if (previous && !alreadyPublished) {
-    try {
-      download(previous.latest_tag, previous.archive_name, root);
-      assert.equal(await checksum(join(root, previous.archive_name)), previous.archive_sha256, 'Saved repository checksum mismatch');
-      run('tar', ['-xzf', join(root, previous.archive_name), '-C', repo]);
-    } catch (err) {
-      console.warn(`⚠ Previous release ${previous.latest_tag} not found or corrupted. Building repository from scratch.`);
-      console.warn(`  Error: ${err.message}`);
-      console.warn('  This can happen when the previous release was not successfully published to GitHub.');
-      // Continue with empty repository - will build all objects fresh
-    }
-  }
-  if (alreadyPublished) {
-    for (const channel of Object.values(previous.channels)) {
-      const savedMetadata = releaseMetadata(channel.version);
-      if (savedMetadata.tag === tag) continue;
-      const directory = join(root, savedMetadata.channel);
-      mkdirSync(directory);
-      const savedArchive = `BlueEvolution-${savedMetadata.version}-repository.tar.gz`;
-      try {
-        for (const asset of [savedArchive, `${savedArchive}.sha256`, 'release.json']) download(savedMetadata.tag, asset, directory);
-        assert.deepEqual(JSON.parse(readFileSync(join(directory, 'release.json'))), savedMetadata);
-        run('sha256sum', ['--check', `${savedArchive}.sha256`], { cwd: directory });
-        const savedRepo = join(directory, 'repository');
-        mkdirSync(savedRepo);
-        run('tar', ['-xzf', join(directory, savedArchive), '-C', savedRepo]);
-        mergeRepository(repo, savedRepo, savedMetadata, keyFile, fingerprint);
-      } catch (err) {
-        console.warn(`⚠ Channel release ${savedMetadata.tag} not found. Skipping.`);
-        console.warn(`  Error: ${err.message}`);
-      }
-    }
+  if (previous) {
+    download(previous.latest_tag, previous.archive_name, root);
+    assert.equal(await checksum(join(root, previous.archive_name)), previous.archive_sha256, 'Saved repository checksum mismatch');
+    run('tar', ['-xzf', join(root, previous.archive_name), '-C', repo]);
   }
   const incoming = join(root, 'incoming');
   mkdirSync(incoming);
   run('tar', ['-xzf', join(candidate, archive), '-C', incoming]);
   mergeRepository(repo, incoming, metadata, keyFile, fingerprint);
+  verifyRepositoryCatalog(repo, state.channels);
   writeInstallFiles(site, baseUrl, readFileSync(keyFile), state.channels);
   const bytes = Number(run('du', ['-sb', site]).split(/\s/)[0]);
   assert.ok(bytes < 950_000_000, 'Update repository exceeds the GitHub Pages size budget');

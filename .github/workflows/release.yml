@@ -74,7 +74,7 @@ jobs:
       - name: Install build tools and GNOME runtime
         run: |
           sudo apt-get update
-          sudo apt-get install --yes flatpak flatpak-builder jq libxml2-utils xsltproc xvfb xauth
+          sudo apt-get install --yes flatpak flatpak-builder jq libxml2-utils xsltproc xvfb xauth appstream-compose
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           flatpak install --user --assumeyes flathub org.gnome.Sdk//49 org.gnome.Platform//49
 

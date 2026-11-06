@@ -28,6 +28,8 @@ and beta follows `beta`; beta never replaces stable. Using the same account in
 both applications still affects the same server mailbox.
 
 Updates are delivered through Discover, GNOME Software, or `flatpak update --user`.
+Publication verifies both channels' AppStream catalogue entries and release
+versions, not just the signed app refs, so software managers can identify them.
 Users choose when to install updates. Automatic installation is optional and
 controlled through their software manager's settings, not by BlueEvolution.
 
