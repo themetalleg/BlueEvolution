@@ -331,6 +331,21 @@ tracking_base_url (TrackingTask *task)
 	return url;
 }
 
+static void
+tracking_set_http_error (GError **error,
+                         guint status)
+{
+	if (status == 429)
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+			_("WordPress or its server rate-limited the tracking request (HTTP 429). Wait and try sending again."));
+	else if (status >= 300 && status < 400)
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+			_("The WordPress tracking request was redirected (HTTP %u). Check that the configured site address matches the WordPress Site Address exactly."), status);
+	else
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+			_("WordPress tracking request failed (HTTP %u). Check the WordPress server and tracking plugin."), status);
+}
+
 static JsonNode *
 tracking_request (SoupSession *session,
                  const gchar *url,
@@ -338,6 +353,7 @@ tracking_request (SoupSession *session,
                  const gchar *key,
                  const gchar *json_body,
                  guint *out_status,
+                 const gchar **out_failure,
                  GCancellable *cancellable,
                  GError **error)
 {
@@ -347,9 +363,13 @@ tracking_request (SoupSession *session,
 	gsize response_length;
 	JsonParser *parser;
 	JsonNode *root = NULL;
+	GError *parse_error = NULL;
 	guint status;
+	*out_status = 0;
+	*out_failure = NULL;
 	message = soup_message_new (method, url);
 	if (!message) {
+		*out_failure = "invalid-url";
 		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
 			_("The WordPress API URL is invalid."));
 		return NULL;
@@ -367,17 +387,25 @@ tracking_request (SoupSession *session,
 	if (out_status)
 		*out_status = status;
 	g_object_unref (message);
-	if (!response)
+	if (!response) {
+		*out_failure = "transport";
 		return NULL;
+	}
 	response_data = g_bytes_get_data (response, &response_length);
 	parser = json_parser_new ();
-	if (response_length > 1024 * 1024 || !json_parser_load_from_data (parser, response_data, response_length, error)) {
-		if (!error || !*error)
-			g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
-				_("WordPress returned an invalid response."));
+	if (response_length == 0 || response_length > 1024 * 1024 ||
+	    !json_parser_load_from_data (parser, response_data, response_length, &parse_error)) {
+		*out_failure = response_length == 0 ? "empty-response" :
+			response_length > 1024 * 1024 ? "response-too-large" : "invalid-json";
+		if (status < 200 || status >= 300)
+			tracking_set_http_error (error, status);
+		else
+			g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+				_("WordPress returned an invalid JSON response (HTTP %u). Check the WordPress server and tracking plugin."), status);
 	} else {
 		root = json_node_copy (json_parser_get_root (parser));
 	}
+	g_clear_error (&parse_error);
 	g_object_unref (parser);
 	g_bytes_unref (response);
 	return root;
@@ -547,6 +575,9 @@ tracking_task_thread (GTask *task,
 	gchar *key = NULL, *base_url = NULL, *url = NULL, *payload = NULL;
 	gchar *authorization = NULL;
 	gchar *snapshot_at = NULL, *snapshot_query = NULL;
+	const gchar *operation = data->kind == TRACKING_TASK_REGISTER ? "registration" :
+		data->kind == TRACKING_TASK_TEST ? "connection-test" : "history";
+	const gchar *stage = "key-lookup", *failure = NULL;
 	guint status = 0;
 	GError *error = NULL;
 	g_assert (E_IS_WORDPRESS_TRACKING_MANAGER (self));
@@ -559,9 +590,10 @@ tracking_task_thread (GTask *task,
 	base_url = tracking_base_url (data);
 	session = soup_session_new_with_options ("timeout", 15, NULL);
 	if (data->kind == TRACKING_TASK_REGISTER) {
+		stage = "registration";
 		url = g_strconcat (base_url, "/messages", NULL);
 		payload = g_strdup_printf ("{\"external_id\":\"%s\"}", data->external_id);
-		root = tracking_request (session, url, "POST", authorization, payload, &status, cancellable, &error);
+		root = tracking_request (session, url, "POST", authorization, payload, &status, &failure, cancellable, &error);
 		if (!root || status < 200 || status >= 300 || !JSON_NODE_HOLDS_OBJECT (root))
 			goto failed;
 		object = json_node_get_object (root);
@@ -578,7 +610,8 @@ tracking_task_thread (GTask *task,
 		g_date_time_unref (now);
 		snapshot_query = g_uri_escape_string (snapshot_at, NULL, FALSE);
 		url = g_strdup_printf ("%s/summary?external_id=%s&to=%s", base_url, data->external_id, snapshot_query);
-		root = tracking_request (session, url, "GET", authorization, NULL, &status, cancellable, &error);
+		stage = "summary";
+		root = tracking_request (session, url, "GET", authorization, NULL, &status, &failure, cancellable, &error);
 		if (!root || status < 200 || status >= 300 || !JSON_NODE_HOLDS_OBJECT (root))
 			goto failed;
 		object = json_node_get_object (root);
@@ -613,7 +646,8 @@ tracking_task_thread (GTask *task,
 					root = NULL;
 					g_free (url);
 					url = g_strdup_printf ("%s/events?external_id=%s&per_page=100&page=%u&to=%s", base_url, data->external_id, page, snapshot_query);
-					root = tracking_request (session, url, "GET", authorization, NULL, &status, cancellable, &error);
+					stage = "events";
+					root = tracking_request (session, url, "GET", authorization, NULL, &status, &failure, cancellable, &error);
 					if (!root || status < 200 || status >= 300 || !JSON_NODE_HOLDS_OBJECT (root)) {
 						tracking_summary_free (summary);
 						goto failed;
@@ -644,7 +678,10 @@ tracking_task_thread (GTask *task,
 				}
 				summary->history_complete = summary->request_times->len == summary->count;
 			}
+			stage = "history-save";
 			if (!tracking_history_save (data, summary, &error)) {
+				status = 0;
+				failure = "local-storage";
 				tracking_summary_free (summary);
 				goto failed;
 			}
@@ -652,7 +689,8 @@ tracking_task_thread (GTask *task,
 		}
 	} else {
 		gchar *probe_url = g_strconcat (base_url, "/summary", NULL);
-		root = tracking_request (session, probe_url, "GET", authorization, NULL, &status, cancellable, &error);
+		stage = "summary";
+		root = tracking_request (session, probe_url, "GET", authorization, NULL, &status, &failure, cancellable, &error);
 		g_free (probe_url);
 		if (!root || status < 200 || status >= 300 || !JSON_NODE_HOLDS_OBJECT (root) ||
 		    g_strcmp0 (tracking_json_string (json_node_get_object (root), "project_id"), data->project_id) != 0) {
@@ -666,7 +704,8 @@ tracking_task_thread (GTask *task,
 		g_free (url);
 		url = g_strconcat (base_url, "/messages/resolve", NULL);
 		payload = g_strdup_printf ("{\"token\":\"%s\"}", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-		root = tracking_request (session, url, "POST", authorization, payload, &status, cancellable, &error);
+		stage = "resolver";
+		root = tracking_request (session, url, "POST", authorization, payload, &status, &failure, cancellable, &error);
 		if (error)
 			goto failed;
 		if (!root || !JSON_NODE_HOLDS_OBJECT (root) ||
@@ -688,7 +727,8 @@ tracking_task_thread (GTask *task,
 			const gchar *prefix = "BlueEvolutionConnectionTest";
 			memcpy (external_id, prefix, strlen (prefix));
 			payload = g_strdup_printf ("{\"external_id\":\"%s\"}", external_id);
-			root = tracking_request (session, url, "POST", authorization, payload, &status, cancellable, &error);
+			stage = "registration";
+			root = tracking_request (session, url, "POST", authorization, payload, &status, &failure, cancellable, &error);
 			if (!root || status < 200 || status >= 300 || !JSON_NODE_HOLDS_OBJECT (root) ||
 			    !tracking_registration_matches (json_node_get_object (root), data->site_url, data->project_id, external_id, &error)) {
 				g_free (external_id);
@@ -700,8 +740,18 @@ tracking_task_thread (GTask *task,
 	}
 	goto finished;
 failed:
+	if (!g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+		const gchar *domain = error && error->domain == G_IO_ERROR ? "gio" :
+			error && error->domain == G_TLS_ERROR ? "tls" : "other";
+		gint code = error && (error->domain == G_IO_ERROR || error->domain == G_TLS_ERROR) ? error->code : 0;
+		if (!failure)
+			failure = status >= 300 ? "http-error" :
+				status >= 200 ? "invalid-response" : "local-error";
+		g_message ("WordPress tracking failure: operation=%s stage=%s reason=%s http=%u error-domain=%s error-code=%d",
+			operation, stage, failure, status, domain, code);
+	}
 	if (!error)
-		g_set_error (&error, G_IO_ERROR, G_IO_ERROR_FAILED, _("WordPress request failed (HTTP %u)."), status);
+		tracking_set_http_error (&error, status);
 	g_task_return_error (task, error);
 finished:
 	if (root)
@@ -738,6 +788,9 @@ tracking_start_task (EWordPressTrackingManager *self,
 	if (!normalized || !tracking_valid_chars (project_id, 10) ||
 	    ((kind == TRACKING_TASK_REGISTER || kind == TRACKING_TASK_SUMMARY) &&
 	     !tracking_valid_chars (external_id, 128))) {
+		g_message ("WordPress tracking failure: operation=%s stage=configuration reason=invalid-configuration http=0 error-domain=other error-code=0",
+			kind == TRACKING_TASK_REGISTER ? "registration" :
+			kind == TRACKING_TASK_TEST ? "connection-test" : "history");
 		if (!error)
 			g_set_error_literal (&error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
 				_("Complete the HTTPS site URL, project ID, and email ID in Integrations settings."));

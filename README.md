@@ -152,8 +152,19 @@ and the generated pixel URL using one reusable synthetic registration per projec
 It does not send a message or fetch a pixel.
 
 BlueEvolution registers the message before sending. A registration failure
-blocks that send. Tracking requires an HTML body and is not combined with
-digitally signed or encrypted mail. In the preview of a tracked sent message,
+blocks that send. An HTTP 429 indicates rate limiting; wait before retrying.
+For redirects, check the configured Site Address; for other server errors or
+invalid JSON, check the WordPress server and tracking plugin. Tracking requires
+an HTML body and is not combined with digitally signed or encrypted mail.
+Failed tracking operations write a `WordPress tracking failure` message to the
+application log with the operation, stage, failure category, HTTP status (0
+means no response status), and a safe numeric GIO or TLS error code. Credentials,
+URLs, message IDs, response bodies, and underlying error text are not logged.
+For a Flatpak installation, inspect recent entries with
+`journalctl --user --since '15 minutes ago' --no-pager | grep 'WordPress tracking failure'`.
+Review logs for unrelated sensitive information before sharing them.
+
+In the preview of a tracked sent message,
 BlueEvolution shows a compact image-request count beneath the remote-content
 control, with individual local-time timestamps in a tooltip rather than a banner.
 Labels follow the application language. Successful request totals and timestamps

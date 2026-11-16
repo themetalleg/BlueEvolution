@@ -13,6 +13,10 @@ static const TrackingProbeCase *tracking_probe_case;
 static guint tracking_probe_registrations;
 static gboolean tracking_history_test, tracking_history_fail;
 static guint tracking_history_requests;
+static gboolean tracking_registration_test;
+static gboolean tracking_registration_transport_fail;
+static guint tracking_registration_status;
+static const gchar *tracking_registration_response;
 
 gchar *
 secret_password_lookup_sync (const SecretSchema *schema, GCancellable *cancellable, GError **error, ...)
@@ -39,6 +43,10 @@ soup_session_send_and_read (SoupSession *session, SoupMessage *message, GCancell
 	gchar *response;
 	guint status = 200;
 	g_assert_nonnull (tracking_probe_case);
+	if (tracking_registration_test && tracking_registration_transport_fail) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_HOST_UNREACHABLE, "Synthetic secret and URL");
+		return NULL;
+	}
 	if (tracking_history_test)
 		tracking_history_requests++;
 	if (tracking_history_fail) {
@@ -71,12 +79,16 @@ soup_session_send_and_read (SoupSession *session, SoupMessage *message, GCancell
 		g_assert_true (json_parser_load_from_data (parser, text, length, NULL));
 		external_id = json_object_get_string_member (json_node_get_object (json_parser_get_root (parser)), "external_id");
 		g_assert_cmpuint (strlen (external_id), ==, 128);
-		g_assert_true (g_str_has_prefix (external_id, "BlueEvolutionConnectionTest"));
+		if (!tracking_registration_test)
+			g_assert_true (g_str_has_prefix (external_id, "BlueEvolutionConnectionTest"));
 		tracking_probe_registrations++;
-		status = tracking_probe_case->read_only ? 401 : 200;
-		response = g_strdup_printf ("{\"project_id\":\"%s\",\"external_id\":\"%s\",\"tracking_url\":\"%s/?wtp_pixel=Ab3dE7fG9h.%s\"}",
-			tracking_probe_case->wrong_project ? "OtherPrj01" : "Ab3dE7fG9h",
-			tracking_probe_case->wrong_external ? "wrong" : external_id, tracking_probe_case->site, token);
+		status = tracking_registration_test ? tracking_registration_status : tracking_probe_case->read_only ? 401 : 200;
+		if (tracking_registration_test && tracking_registration_response)
+			response = g_strdup (tracking_registration_response);
+		else
+			response = g_strdup_printf ("{\"project_id\":\"%s\",\"external_id\":\"%s\",\"tracking_url\":\"%s/?wtp_pixel=Ab3dE7fG9h.%s\"}",
+				tracking_probe_case->wrong_project ? "OtherPrj01" : "Ab3dE7fG9h",
+				tracking_probe_case->wrong_external ? "wrong" : external_id, tracking_probe_case->site, token);
 		g_free (token);
 		g_object_unref (parser);
 	}
@@ -168,6 +180,89 @@ test_tracking_connection_probe (gconstpointer data)
 	g_clear_error (&error);
 	g_object_unref (result);
 	g_object_unref (manager);
+	tracking_probe_case = NULL;
+}
+
+static void
+test_tracking_registration_responses (void)
+{
+	static const TrackingProbeCase fixture = { "registration", "https://tracking.example.test/wordpress", FALSE, FALSE, FALSE, FALSE };
+	static const struct {
+		guint status;
+		const gchar *response;
+		const gchar *expected;
+		const gchar *log;
+	} cases[] = {
+		{ 429, "Rate limit exceeded", "HTTP 429", "reason=invalid-json http=429 error-domain=gio" },
+		{ 429, "{\"code\":\"rate_limited\"}", "HTTP 429", "reason=http-error http=429 error-domain=other" },
+		{ 302, "Redirecting", "HTTP 302", "reason=invalid-json http=302 error-domain=gio" },
+		{ 503, "<html>Unavailable</html>", "HTTP 503", "reason=invalid-json http=503 error-domain=gio" },
+		{ 200, "Rate limit exceeded", "HTTP 200", "reason=invalid-json http=200 error-domain=gio" },
+		{ 200, "", "HTTP 200", "reason=empty-response http=200 error-domain=gio" },
+		{ 200, "[]", "HTTP 200", "reason=invalid-response http=200 error-domain=other" },
+		{ 200, NULL, NULL, NULL }
+	};
+	EWordPressTrackingManager *manager = e_wordpress_tracking_manager_new ();
+	gchar *external_id = e_wordpress_tracking_manager_generate_external_id ();
+	guint index;
+
+	tracking_probe_case = &fixture;
+	tracking_registration_test = TRUE;
+	e_wordpress_tracking_manager_set_site_url (manager, fixture.site);
+	e_wordpress_tracking_manager_set_project_id (manager, "Ab3dE7fG9h");
+	for (index = 0; index < G_N_ELEMENTS (cases); index++) {
+		GAsyncResult *result = NULL;
+		GError *error = NULL;
+		gchar *url;
+
+		tracking_registration_status = cases[index].status;
+		tracking_registration_response = cases[index].response;
+		if (cases[index].log) {
+			gchar *pattern = g_strdup_printf ("WordPress tracking failure: operation=registration stage=registration %s error-code=*", cases[index].log);
+			g_test_expect_message ("evolution-util", G_LOG_LEVEL_MESSAGE, pattern);
+			g_free (pattern);
+		}
+		e_wordpress_tracking_manager_register_async (manager, external_id, NULL, tracking_probe_done, &result);
+		while (!result)
+			g_main_context_iteration (NULL, TRUE);
+		url = e_wordpress_tracking_manager_register_finish (manager, result, &error);
+		if (cases[index].expected) {
+			g_test_assert_expected_messages ();
+			g_assert_null (url);
+			g_assert_nonnull (error);
+			g_assert_nonnull (strstr (error->message, cases[index].expected));
+			g_assert_null (strstr (error->message, "Rate limit exceeded"));
+		} else {
+			g_assert_no_error (error);
+			g_assert_nonnull (url);
+		}
+		g_free (url);
+		g_clear_error (&error);
+		g_object_unref (result);
+	}
+	{
+		GAsyncResult *result = NULL;
+		GError *error = NULL;
+		gchar *url;
+		gchar *pattern = g_strdup_printf ("WordPress tracking failure: operation=registration stage=registration reason=transport http=0 error-domain=gio error-code=%d", G_IO_ERROR_HOST_UNREACHABLE);
+		tracking_registration_transport_fail = TRUE;
+		g_test_expect_message ("evolution-util", G_LOG_LEVEL_MESSAGE, pattern);
+		g_free (pattern);
+		e_wordpress_tracking_manager_register_async (manager, external_id, NULL, tracking_probe_done, &result);
+		while (!result)
+			g_main_context_iteration (NULL, TRUE);
+		url = e_wordpress_tracking_manager_register_finish (manager, result, &error);
+		g_test_assert_expected_messages ();
+		g_assert_null (url);
+		g_assert_error (error, G_IO_ERROR, G_IO_ERROR_HOST_UNREACHABLE);
+		g_clear_error (&error);
+		g_object_unref (result);
+		tracking_registration_transport_fail = FALSE;
+	}
+	g_free (external_id);
+	g_object_unref (manager);
+	tracking_registration_test = FALSE;
+	tracking_registration_response = NULL;
 	tracking_probe_case = NULL;
 }
 
@@ -526,6 +621,7 @@ int main (int argc, char **argv)
 	g_test_init (&argc, &argv, NULL);
 	g_test_add_func ("/openai/settings/consent-and-feedback", test_key_controls);
 	g_test_add_func ("/wordpress-tracking/settings/save-and-controls", test_tracking_settings_controls);
+	g_test_add_func ("/wordpress-tracking/registration/responses", test_tracking_registration_responses);
 	g_test_add_func ("/wordpress-tracking/history/offline-snapshot", test_tracking_history_offline);
 	for (index = 0; index < G_N_ELEMENTS (probe_cases); index++) {
 		gchar *path = g_strconcat ("/wordpress-tracking/connection/", probe_cases[index].name, NULL);
