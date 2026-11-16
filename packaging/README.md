@@ -102,9 +102,10 @@ secret and hoping existing installations accept a different key.
 2. Push an immutable version tag, for example `blueevolution-v0.3.0-beta.1`
    for beta or `blueevolution-v0.2.0` for stable. Alternatively, run Build draft
    release manually with the desired version.
-3. Review the resulting draft, test the signed bundle and inspect its release
-   notes. Stable and beta routing is derived from the semantic version, not
-   from an editable GitHub label. Any prerelease suffix routes to beta.
+3. Review the resulting draft and its release notes, and confirm the signed
+   bundle and automated regression checks succeeded. Stable and beta routing
+   is derived from the semantic version, not from an editable GitHub label.
+   Any prerelease suffix routes to beta.
 4. Publish the draft using the GitHub UI. This user action triggers Publish
    Flatpak updates. Its release prerelease flag must match the version.
 5. Wait for successful Pages deployment and state recording before announcing
@@ -189,11 +190,9 @@ the installed clients' signing trust and update origin.
 
 ## Local Validation
 
-### Preview Before Publishing
+### Local Preview
 
-Test uncommitted changes locally before creating any version tag or GitHub
-release. A local preview does not need to be published as beta and does not
-replace either installed signed channel:
+A local preview does not replace either installed signed channel:
 
 ```sh
 BLUEEVOLUTION_CHANNEL=beta BLUEEVOLUTION_VERSION=0.2.3-dev.1 \
@@ -218,12 +217,8 @@ installed app, not uncommitted source changes.
 
 Close the previous preview before starting another one with the same profile.
 When VS Code is installed as a Snap, launch from a regular desktop terminal if
-its confinement interferes with native portal helpers. Full click-through review
-of message selection, deletion and standalone readers is still required before
-promoting a candidate to a public release.
-
-Only after local testing should a new version tag enter the signed draft/beta
-release workflow. Neither preview mode creates a tag, commits, or publishes.
+its confinement interferes with native portal helpers. Neither preview mode
+creates a tag, commits, or publishes.
 
 In VS Code, run **BlueEvolution: Preview Light** or **BlueEvolution: Preview
 Dark** from Tasks. Each task fingerprints application sources and build
